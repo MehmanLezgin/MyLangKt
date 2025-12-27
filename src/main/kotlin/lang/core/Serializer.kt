@@ -10,7 +10,7 @@ import lang.nodes.DestructorDeclStmtNode
 import lang.nodes.DoWhileStmtNode
 import lang.nodes.ElseEntryNode
 import lang.nodes.EnumItemNode
-import lang.nodes.EnumStmtNode
+import lang.nodes.EnumDeclStmtNode
 import lang.nodes.ExprNode
 import lang.nodes.ForLoopStmtNode
 import lang.nodes.FuncCallNode
@@ -21,7 +21,7 @@ import lang.nodes.IfElseStmtNode
 import lang.nodes.ImportStmtNode
 import lang.nodes.IncrementNode
 import lang.nodes.IndexAccessNode
-import lang.nodes.InterfaceStmtNode
+import lang.nodes.InterfaceDeclStmtNode
 import lang.nodes.LambdaNode
 import lang.nodes.LiteralNode
 import lang.nodes.MatchStmtNode
@@ -225,7 +225,7 @@ object Serializer {
                 "body" to node.body
             )
 
-            is InterfaceStmtNode -> listOf(
+            is InterfaceDeclStmtNode -> listOf(
                 "modifiers" to node.modifiers,
                 "name" to node.name,
                 "typeNames" to node.typeNames,
@@ -264,7 +264,7 @@ object Serializer {
                 "typeNames" to node.typeNames
             )
 
-            is EnumStmtNode -> listOf(
+            is EnumDeclStmtNode -> listOf(
                 "name" to node.name,
                 "items" to node.items
             )

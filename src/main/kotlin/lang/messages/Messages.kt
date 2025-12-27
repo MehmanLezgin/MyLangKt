@@ -1,6 +1,9 @@
 package lang.messages
 
 object Messages {
+    const val CANNOT_RESOLVE_PARAM_OUTSIDE_FUNC = "Cannot resolve parameter outside a function"
+    const val SYMBOL_NOT_DEFINED = "A symbol '%s' is not defined in current scope"
+    const val SYMBOL_ALREADY_DEFINED = "A symbol '%s' is already defined in current scope"
     const val CANNOT_OPEN_SOURCE_FILE = "Cannot open source file"
     const val EXPECTED_ASSIGN: String = "Expected '='"
     const val LITERALS_MUST_BE_SURROUNDED_BY_WHITESPACES = "Literals must be surrounded by whitespaces"

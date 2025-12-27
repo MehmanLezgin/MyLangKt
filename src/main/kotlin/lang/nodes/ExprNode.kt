@@ -1,11 +1,13 @@
 package lang.nodes
 
+import lang.semantics.symbols.Symbol
 import lang.tokens.Pos
 
 typealias NodeTransformFunc = (ExprNode) -> ExprNode
 
 abstract class ExprNode(
-    open val pos: Pos
+    open val pos: Pos,
+    var symbol: Symbol? = null,
 ) {
     abstract fun mapRecursive(mapper: NodeTransformFunc): ExprNode
 }

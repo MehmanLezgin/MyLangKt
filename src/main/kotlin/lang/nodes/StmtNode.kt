@@ -112,19 +112,20 @@ data class ReturnStmtNode(
 
 open class DeclStmtNode(
     open var modifiers: ModifierSetNode?,
-    override val pos: Pos
+    override val pos: Pos,
+    open val name: IdentifierNode? = null,
 ) : StmtNode(pos) {
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
 
 data class VarDeclStmtNode(
     override var modifiers: ModifierSetNode?,
-    val name: IdentifierNode,
+    override val name: IdentifierNode,
     val dataType: BaseDatatypeNode,
     val initializer: ExprNode?,
     override val pos: Pos,
     val isMutable: Boolean
-) : DeclStmtNode(modifiers, pos) {
+) : DeclStmtNode(modifiers, pos, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -137,13 +138,13 @@ data class VarDeclStmtNode(
 
 data class FuncDeclStmtNode(
     override var modifiers: ModifierSetNode?,
-    val name: IdentifierNode,
+    override val name: IdentifierNode,
     val typeNames: TypeNameListNode?,
-    val params: List<VarDeclStmtNode>?,
+    val params: List<VarDeclStmtNode>,
     val returnType: BaseDatatypeNode,
     val body: BlockNode?,
     override val pos: Pos
-) : DeclStmtNode(modifiers, pos) {
+) : DeclStmtNode(modifiers, pos, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -185,14 +186,14 @@ data class DestructorDeclStmtNode(
     }
 }
 
-data class InterfaceStmtNode(
+data class InterfaceDeclStmtNode(
     override var modifiers: ModifierSetNode?,
-    val name: IdentifierNode,
+    override val name: IdentifierNode,
     val typeNames: TypeNameListNode?,
     val superInterface: BaseDatatypeNode?,
     val body: BlockNode?,
     override val pos: Pos
-) : DeclStmtNode(modifiers, pos) {
+) : DeclStmtNode(modifiers, pos, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -206,13 +207,13 @@ data class InterfaceStmtNode(
 
 data class ClassDeclStmtNode(
     override var modifiers: ModifierSetNode?,
-    val name: IdentifierNode,
+    override val name: IdentifierNode,
     val typeNames: TypeNameListNode?,
     val primaryConstrParams: List<VarDeclStmtNode>?,
     val superClass: BaseDatatypeNode?,
     val body: BlockNode?,
     override val pos: Pos
-) : DeclStmtNode(modifiers, pos) {
+) : DeclStmtNode(modifiers, pos, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -224,6 +225,22 @@ data class ClassDeclStmtNode(
         return mapper(newNode)
     }
 }
+
+data class EnumDeclStmtNode(
+    override var modifiers: ModifierSetNode?,
+    override val name: IdentifierNode?,
+    val items: BlockNode,
+    override val pos: Pos
+) : DeclStmtNode(modifiers, pos, name) {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = copy(
+            name = name?.mapRecursive(mapper) as? IdentifierNode ?: name,
+            items = items.mapRecursive(mapper) as? BlockNode ?: items
+        )
+        return mapper(newNode)
+    }
+}
+
 
 data class ContinueStmtNode(
     override val pos: Pos
@@ -241,20 +258,6 @@ data class EnumItemNode(
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
             initializer = initializer?.mapRecursive(mapper)
-        )
-        return mapper(newNode)
-    }
-}
-
-data class EnumStmtNode(
-    val name: IdentifierNode?,
-    val items: BlockNode,
-    override val pos: Pos
-) : StmtNode(pos) {
-    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
-        val newNode = copy(
-            name = name?.mapRecursive(mapper) as? IdentifierNode ?: name,
-            items = items.mapRecursive(mapper) as? BlockNode ?: items
         )
         return mapper(newNode)
     }

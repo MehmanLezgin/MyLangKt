@@ -12,7 +12,8 @@ import lang.messages.Messages
 import lang.parser.IParser
 import lang.parser.Parser
 import lang.nodes.BlockNode
-import lang.nodes.IdentifierNode
+import lang.semantics.ISemanticAnalyzer
+import lang.semantics.SemanticAnalyzer
 import java.io.File
 import java.io.IOException
 
@@ -22,7 +23,7 @@ object Compiler : ICompiler {
 
     private val timing = Timing()
 
-    private fun lexer(src: SourceCode, errorHandler: ErrorHandler): ILexer {
+    fun lexer(src: SourceCode, errorHandler: ErrorHandler): ILexer {
         return NormalLexer(
             sourceFile = src,
             langSpec = LangSpec,
@@ -30,7 +31,7 @@ object Compiler : ICompiler {
         )
     }
 
-    private fun tokenStream(
+    fun tokenStream(
         lexer: ILexer,
         errorHandler: ErrorHandler
     ): ITokenStream {
@@ -41,7 +42,7 @@ object Compiler : ICompiler {
         )
     }
 
-    private fun parser(
+    fun parser(
         tokenStream: ITokenStream,
         errorHandler: ErrorHandler
     ): IParser {
@@ -51,22 +52,21 @@ object Compiler : ICompiler {
         )
     }
 
-    private fun parser(
+    fun parser(
         src: SourceCode,
         errorHandler: ErrorHandler
     ): IParser? {
         timing.begin()
         val lexer = lexer(src = src, errorHandler = errorHandler)
-
         val tokenStream = tokenStream(lexer = lexer, errorHandler = errorHandler)
-        println("Lexer time = ${timing.timeMillis}ms")
+        val time = timing.timeMillis
 
         File(LEXER_RESULT_PATH).printWriter().use { out ->
             tokenStream.getTokens().forEach { out.println(it); }
         }
 
         var parser: IParser? = null
-        checkErrors(CompileStage.LEXICAL_ANALYSIS, errorHandler, src) {
+        checkErrors(CompileStage.LEXICAL_ANALYSIS, errorHandler, src, time) {
             parser = parser(
                 tokenStream = tokenStream,
                 errorHandler = errorHandler
@@ -76,42 +76,49 @@ object Compiler : ICompiler {
         return parser
     }
 
-    private fun ast(
-        src: SourceCode,
+    fun semanticAnalyzer(
         errorHandler: ErrorHandler
-    ): BlockNode? {
-        val parser = parser(src, errorHandler)
+    ): ISemanticAnalyzer {
+        val semanticAnalyzer = SemanticAnalyzer(
+            errorHandler = errorHandler
+        )
 
-        timing.begin()
-
-        val ast = parser?.parseFile()?.mapRecursive { node ->
-            if (node is IdentifierNode) {
-                return@mapRecursive IdentifierNode("BIG_SHIT", node.pos)
-            }
-            node
-        }
-
-        println("Parser time = ${timing.timeMillis}ms")
-
-        File(PARSER_RESULT_PATH).printWriter().use { out ->
-            out.println(Serializer.formatNode(ast ?: BlockNode.EMPTY))
-        }
-
-        checkErrors(CompileStage.SYNTAX_ANALYSIS, errorHandler, src) {
-            // next: semantic analysis
-        }
-
-        return ast as? BlockNode?
+        return semanticAnalyzer
     }
 
     fun compile(
         src: SourceCode,
         errorHandler: ErrorHandler = ErrorHandler()
-    ) {
-        ast(
-            src = src,
+    ): BlockNode? {
+        val parser = parser(src, errorHandler)
+
+        timing.begin()
+        val ast = parser?.parseFile()
+        var time = timing.timeMillis
+
+        checkErrors(CompileStage.SYNTAX_ANALYSIS, errorHandler, src, time)
+
+        File(PARSER_RESULT_PATH).printWriter().use { out ->
+            out.println(Serializer.formatNode(ast ?: BlockNode.EMPTY))
+        }
+
+        if (errorHandler.hasErrors || ast == null)
+            return null
+
+        val analyzer = semanticAnalyzer(
             errorHandler = errorHandler
         )
+
+        timing.begin()
+        analyzer.resolve(node = ast)
+        time = timing.timeMillis
+
+        checkErrors(CompileStage.SEMANTIC_ANALYSIS, errorHandler, src, time)
+
+        if (errorHandler.hasErrors)
+            return null
+
+        return ast
     }
 
     fun compile(path: String) {
@@ -132,7 +139,7 @@ object Compiler : ICompiler {
             )
         }
 
-        checkErrors(CompileStage.SOURCE_READING, errorHandler, src) {
+        checkErrors(CompileStage.SOURCE_READING, errorHandler, src, timing.timeMillis) {
             compile(src = src)
         }
     }
@@ -141,21 +148,24 @@ object Compiler : ICompiler {
         stage: CompileStage,
         errorHandler: ErrorHandler,
         sourceFile: SourceCode,
-        onSuccess: () -> Unit
+        time: Long? = null,
+        onSuccess: (() -> Unit)? = null
     ): Boolean {
+        fun printMsg(a: String) = println("$stage  \t(${time}ms)\t- $a")
+
         return if (errorHandler.hasErrors) {
             val count = errorHandler.errors.size
             val a = AnsiColors.color("ERROR ($count)", AnsiColors.ERROR, null, true)
-            println("$stage - $a")
+            printMsg(a)
 
             val errorsStr = errorHandler.formatErrors(sourceFile)
             println(errorsStr)
             true
         } else {
             val a = AnsiColors.color("SUCCESS!", AnsiColors.SUCCESS, null, true)
-            println("$stage - $a")
+            printMsg(a)
 
-            onSuccess()
+            onSuccess?.invoke()
             false
         }
     }

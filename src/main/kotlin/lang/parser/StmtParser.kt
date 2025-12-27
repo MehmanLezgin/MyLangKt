@@ -21,7 +21,7 @@ import lang.nodes.DeclStmtNode
 import lang.nodes.DestructorDeclStmtNode
 import lang.nodes.DoWhileStmtNode
 import lang.nodes.ElseEntryNode
-import lang.nodes.EnumStmtNode
+import lang.nodes.EnumDeclStmtNode
 import lang.nodes.ExprNode
 import lang.nodes.ForLoopStmtNode
 import lang.nodes.FuncCallNode
@@ -29,7 +29,7 @@ import lang.nodes.FuncDeclStmtNode
 import lang.nodes.IdentifierNode
 import lang.nodes.IfElseStmtNode
 import lang.nodes.ImportStmtNode
-import lang.nodes.InterfaceStmtNode
+import lang.nodes.InterfaceDeclStmtNode
 import lang.nodes.LiteralNode
 import lang.nodes.MatchStmtNode
 import lang.nodes.ModifierNode
@@ -437,7 +437,7 @@ class StmtParser(
         return FuncDeclStmtNode(
             modifiers = null,
             name = name ?: return null,
-            params = params,
+            params = params ?: emptyList(),
             typeNames = typeNames,
             returnType = finalReturnType,
             body = initializerBody?.wrapToBody() ?: body,
@@ -473,7 +473,7 @@ class StmtParser(
         )
     }
 
-    private fun buildInterfaceStmt(header: ExprNode, body: BlockNode?, pos: Pos): InterfaceStmtNode? {
+    private fun buildInterfaceStmt(header: ExprNode, body: BlockNode?, pos: Pos): InterfaceDeclStmtNode? {
         var name: IdentifierNode? = null
         var typeNames: TypeNameListNode? = null
         var superInterface: BaseDatatypeNode? = null
@@ -491,7 +491,7 @@ class StmtParser(
             handleInitializer = { initializerBody = it }
         )
 
-        return InterfaceStmtNode(
+        return InterfaceDeclStmtNode(
             modifiers = null,
             name = name ?: return null,
             typeNames = typeNames,
@@ -617,7 +617,7 @@ class StmtParser(
         )
     }
 
-    private fun parseInterfaceStmt(): InterfaceStmtNode? {
+    private fun parseInterfaceStmt(): InterfaceDeclStmtNode? {
         val pos = ts.next().pos
         val header = parser.parseExpr(ctx = ParsingContext.Header)
         val body = parseBodyForDeclStmt()
@@ -632,7 +632,7 @@ class StmtParser(
     private fun parseVarDeclStmt(): VarDeclStmtNode? {
         val isMutable = ts.peek() isKeyword KeywordType.VAR
         val pos = ts.next().pos
-        val expr = parse()
+        val expr = parser.parseExpr(ctx = ParsingContext.Header)
 
         return buildVarDeclHeader(
             header = expr,
@@ -641,7 +641,7 @@ class StmtParser(
         )
     }
 
-    private fun parseEnumStmt(): EnumStmtNode {
+    private fun parseEnumStmt(): EnumDeclStmtNode {
         val pos = ts.next().pos
 
         val nameToken = ts.peek()
@@ -657,16 +657,26 @@ class StmtParser(
         if (!ts.match(Token.LBrace::class)) {
             syntaxError(Messages.UNEXPECTED_TOKEN, ts.peek().pos)
             ts.skipUntil(Token.LBrace::class, Token.RBrace::class, Token.Keyword::class, Token.Identifier::class)
-            return EnumStmtNode(enumName, BlockNode.EMPTY, pos)
+            return EnumDeclStmtNode(
+                modifiers = null,
+                name = enumName,
+                items = BlockNode.EMPTY,
+                pos = pos
+            )
         }
 
 
         if (!ts.expect(Token.LBrace::class, Messages.EXPECTED_LBRACE))
-            return EnumStmtNode(name = enumName, items = BlockNode.EMPTY, pos = pos)
+            return EnumDeclStmtNode(
+                modifiers = null,
+                name = enumName,
+                items = BlockNode.EMPTY,
+                pos = pos
+            )
 
         val items = parseBlock()
 
-        return EnumStmtNode(enumName, items, pos)
+        return EnumDeclStmtNode(modifiers = null, name = enumName, items = items, pos = pos)
     }
 
     private fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean = false): ExprNode? {
@@ -703,7 +713,7 @@ class StmtParser(
         handleParams(analiseParams(exprList))
     }
 
-    override fun analiseParams(exprList: List<ExprNode>): List<VarDeclStmtNode>? {
+    override fun analiseParams(exprList: List<ExprNode>): List<VarDeclStmtNode> {
         val params: MutableList<VarDeclStmtNode> = mutableListOf()
 
         exprList.forEach { expr ->

@@ -45,7 +45,7 @@ enum class OperatorType {
     AS,                 // as
     IS,                 // is
     IN,                 // is
-    UNTIL,                 // is
+    UNTIL,              // is
     DOT_NULL_SAFE,      // ?.
     ELVIS,              // ?:
     NOT_NULL_ASSERTION, // !!
