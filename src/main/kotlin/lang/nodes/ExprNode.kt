@@ -1,6 +1,7 @@
 package lang.nodes
 
 import lang.semantics.symbols.Symbol
+import lang.tokens.OperatorType
 import lang.tokens.Pos
 
 typealias NodeTransformFunc = (ExprNode) -> ExprNode
@@ -20,7 +21,7 @@ data class UnknownNode(override val pos: Pos) : ExprNode(pos) {
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
 
-data class IdentifierNode(
+open class IdentifierNode(
     val value: String,
     override val pos: Pos
 ) : ExprNode(pos) {
@@ -28,7 +29,22 @@ data class IdentifierNode(
         mapper(this)
 }
 
-data class LiteralNode<T>(
+data class OperNode(
+    val type: OperatorType,
+    override val pos: Pos
+) : IdentifierNode(
+    value = getName(type = type),
+    pos = pos
+) {
+    companion object {
+        fun getName(type: OperatorType) = "\$operator_$type"
+    }
+
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
+        mapper(this)
+}
+
+data class LiteralNode<T: Any>(
     val value: T,
     override val pos: Pos
 ) : ExprNode(pos) {
@@ -47,6 +63,7 @@ open class BinOpNode(
     open val left: ExprNode,
     open val right: ExprNode,
     val operator: BinOpType,
+    val tokenOperatorType: OperatorType,
     override val pos: Pos
 ) : ExprNode(pos) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
@@ -54,21 +71,42 @@ open class BinOpNode(
             left = left.mapRecursive(mapper),
             right = right.mapRecursive(mapper),
             operator = operator,
+            tokenOperatorType = tokenOperatorType,
             pos = pos
         )
         return mapper(newNode)
     }
 }
 
+data class MemberAccessNode(
+    val base: ExprNode,
+    val member: IdentifierNode,
+    val isNullSafe: Boolean,
+    override val pos: Pos
+) : ExprNode(pos) {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = MemberAccessNode(
+            base = base.mapRecursive(mapper),
+            member = member.mapRecursive(mapper) as? IdentifierNode ?: member,
+            isNullSafe = isNullSafe,
+            pos = pos
+        )
+        return mapper(newNode)
+    }
+}
+
+
 open class UnaryOpNode(
     open val operand: ExprNode,
     val operator: UnaryOpType,
+    val tokenOperatorType: OperatorType,
     override val pos: Pos
 ) : ExprNode(pos) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = UnaryOpNode(
             operand = operand.mapRecursive(mapper),
             operator = operator,
+            tokenOperatorType = tokenOperatorType,
             pos = pos
         )
         return mapper(newNode)
@@ -112,6 +150,7 @@ data class IncrementNode(
 ) : UnaryOpNode(
     operand = operand,
     operator = UnaryOpType.INCREMENT,
+    tokenOperatorType = OperatorType.INCREMENT,
     pos = pos
 )
 
@@ -122,6 +161,7 @@ data class DecrementNode(
 ) : UnaryOpNode(
     operand = operand,
     operator = UnaryOpType.DECREMENT,
+    tokenOperatorType = OperatorType.DECREMENT,
     pos = pos
 )
 

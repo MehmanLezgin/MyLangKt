@@ -136,27 +136,84 @@ data class VarDeclStmtNode(
     }
 }
 
-data class FuncDeclStmtNode(
+open class FuncDeclStmtNode(
     override var modifiers: ModifierSetNode?,
     override val name: IdentifierNode,
     val typeNames: TypeNameListNode?,
-    val params: List<VarDeclStmtNode>,
+    open val params: List<VarDeclStmtNode>,
     val returnType: BaseDatatypeNode,
-    val body: BlockNode?,
+    open val body: BlockNode?,
     override val pos: Pos
 ) : DeclStmtNode(modifiers, pos, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
-        val newNode = copy(
+        val newNode = FuncDeclStmtNode(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
             typeNames = typeNames?.mapRecursive(mapper) as? TypeNameListNode ?: typeNames,
             returnType = returnType.mapRecursive(mapper) as? BaseDatatypeNode ?: returnType,
-            body = body?.mapRecursive(mapper) as? BlockNode ?: body
+            body = body?.mapRecursive(mapper) as? BlockNode ?: body,
+            modifiers = modifiers,
+            params = params,
+            pos = pos,
         )
         return mapper(newNode)
     }
 }
 
 data class ConstructorDeclStmtNode(
+    override var modifiers: ModifierSetNode?,
+    override val params: List<VarDeclStmtNode>,
+    override val body: BlockNode?,
+    override val pos: Pos
+) : FuncDeclStmtNode(
+    modifiers = modifiers,
+    name = IdentifierNode(value = getName(), pos = pos),
+    typeNames = null,
+    params = params,
+    returnType = VoidDatatypeNode(pos),
+    body = body,
+    pos = pos,
+) {
+    companion object {
+        fun getName() = "\$constructor"
+    }
+
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = copy(
+            modifiers = (modifiers?.mapRecursive(mapper) as? ModifierSetNode? ?: modifiers) ,
+            params = params.map { it.mapRecursive(mapper) as? VarDeclStmtNode ?: it },
+            body = body?.mapRecursive(mapper) as? BlockNode ?: body,
+        )
+        return mapper(newNode)
+    }
+}
+
+data class DestructorDeclStmtNode(
+    override var modifiers: ModifierSetNode?,
+    override val body: BlockNode?,
+    override val pos: Pos
+) : FuncDeclStmtNode(
+    modifiers = modifiers,
+    name = IdentifierNode(value = getName(), pos = pos),
+    typeNames = null,
+    params = emptyList(),
+    returnType = VoidDatatypeNode(pos),
+    body = body,
+    pos = pos,
+) {
+    companion object {
+        fun getName() = "\$destructor"
+    }
+
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = copy(
+            modifiers = modifiers?.mapRecursive(mapper) as? ModifierSetNode ?: modifiers,
+            body = body?.mapRecursive(mapper) as? BlockNode ?: body
+        )
+        return mapper(newNode)
+    }
+}
+
+/*data class ConstructorDeclStmtNode(
     override var modifiers: ModifierSetNode?,
     val params: List<VarDeclStmtNode>?,
     val body: BlockNode?,
@@ -170,9 +227,12 @@ data class ConstructorDeclStmtNode(
         )
         return mapper(newNode)
     }
-}
+}*/
 
-data class DestructorDeclStmtNode(
+
+
+
+/*data class DestructorDeclStmtNode(
     override var modifiers: ModifierSetNode?,
     val body: BlockNode?,
     override val pos: Pos
@@ -184,7 +244,7 @@ data class DestructorDeclStmtNode(
         )
         return mapper(newNode)
     }
-}
+}*/
 
 data class InterfaceDeclStmtNode(
     override var modifiers: ModifierSetNode?,
@@ -228,14 +288,14 @@ data class ClassDeclStmtNode(
 
 data class EnumDeclStmtNode(
     override var modifiers: ModifierSetNode?,
-    override val name: IdentifierNode?,
-    val items: BlockNode,
+    override val name: IdentifierNode,
+    val body: BlockNode,
     override val pos: Pos
 ) : DeclStmtNode(modifiers, pos, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
-            name = name?.mapRecursive(mapper) as? IdentifierNode ?: name,
-            items = items.mapRecursive(mapper) as? BlockNode ?: items
+            name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
+            body = body.mapRecursive(mapper) as? BlockNode ?: body
         )
         return mapper(newNode)
     }

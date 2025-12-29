@@ -1,5 +1,7 @@
 package lang.parser
 
+import lang.mappers.BinOpTypeMapper
+import lang.mappers.UnaryOpTypeMapper
 import lang.tokens.KeywordType
 import lang.tokens.OperatorType
 import lang.nodes.AutoDatatypeNode
@@ -10,6 +12,8 @@ import lang.nodes.BlockNode
 import lang.nodes.DatatypeNode
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
+import lang.nodes.UnaryOpNode
+import lang.nodes.UnaryOpType
 import lang.nodes.VoidDatatypeNode
 import lang.tokens.Token
 import kotlin.reflect.KClass
@@ -20,17 +24,18 @@ object ParserUtils {
         return BlockNode(nodes = listOf(this), pos = pos)
     }
 
-    infix fun Token.isKeyword(type: KeywordType) =
-        this is Token.Keyword && this.type == type
+    infix fun Token.isKeyword(type: KeywordType) = this is Token.Keyword && this.type == type
 
-    fun Token.isKeyword(vararg types: KeywordType) =
-        this is Token.Keyword && types.any { it == this.type }
+    fun Token.isKeyword(vararg types: KeywordType) = this is Token.Keyword && types.any { it == this.type }
 
-    infix fun Token.isOperator(type: OperatorType) =
-        this is Token.Operator && this.type == type
+    infix fun Token.isOperator(type: OperatorType) = this is Token.Operator && this.type == type
 
-    infix fun Token.isNotOperator(type: OperatorType) =
-        this !is Token.Operator || this.type != type
+    fun Token.isAccessOperator() = this is Token.Operator && (when (this.type) {
+        OperatorType.DOT, OperatorType.DOT_NULL_SAFE -> true
+        else -> false
+    })
+
+    infix fun Token.isNotOperator(type: OperatorType) = this !is Token.Operator || this.type != type
 
     fun Token.isOperator(vararg types: KClass<out OperatorType>) =
         this is Token.Operator && types.any { it.isInstance(this.type) }
@@ -45,11 +50,9 @@ object ParserUtils {
         KeywordType.OVERRIDE
     )
 
-    fun Token.Identifier.toIdentifierNode() =
-        IdentifierNode(
-            value = value,
-            pos = pos
-        )
+    fun Token.Identifier.toIdentifierNode() = IdentifierNode(
+        value = value, pos = pos
+    )
 
     fun ExprNode.flattenCommaNode(): List<ExprNode> {
         if (this !is BinOpNode || operator != BinOpType.COMMA) return listOf(this)
@@ -64,11 +67,7 @@ object ParserUtils {
             AutoDatatypeNode.NAME -> AutoDatatypeNode(pos = pos)
             VoidDatatypeNode.NAME -> VoidDatatypeNode(pos = pos)
             else -> DatatypeNode(
-                identifier = this,
-                typeNames = null,
-                isReference = false,
-                isConst = false,
-                pos = pos
+                identifier = this, typeNames = null, isReference = false, isConst = false, pos = pos
             )
         }
     }
@@ -81,20 +80,39 @@ object ParserUtils {
         }
     }
 
-    infix fun ExprNode.isBinOperator(type: BinOpType) =
-        this is BinOpNode && this.operator == type
+    val unaryOpTypeMapper = UnaryOpTypeMapper()
+    val binOpTypeMapper = BinOpTypeMapper()
 
-    infix fun ExprNode.isNotBinOperator(type: BinOpType) =
-        this !is BinOpNode || this.operator != type
+
+    fun OperatorType.isBinOperator() = binOpTypeMapper.toSecond(this) != null
+
+    fun OperatorType.isUnaryOperator() = unaryOpTypeMapper.toSecond(this) != null
+
+
+    infix fun ExprNode.isBinOperator(type: BinOpType) = this is BinOpNode && this.operator == type
+
+    infix fun ExprNode.isNotBinOperator(type: BinOpType) = this !is BinOpNode || this.operator != type
+
+    infix fun ExprNode.isUnaryOperator(type: UnaryOpType) = this is UnaryOpNode && this.operator == type
+
+    infix fun ExprNode.isNotUnaryOperator(type: UnaryOpType) = this !is UnaryOpNode || this.operator != type
+
 
     val simpleUnaryOps = listOf(
-        OperatorType.PLUS, OperatorType.MINUS,
-        OperatorType.NOT, OperatorType.BIN_NOT,
-        OperatorType.SIZEOF, OperatorType.NEW,
-        OperatorType.DELETE, OperatorType.NOT_NULL_ASSERTION,
-        OperatorType.AMPERSAND, OperatorType.MUL,
+        OperatorType.PLUS,
+        OperatorType.MINUS,
+        OperatorType.NOT,
+        OperatorType.BIN_NOT,
+        OperatorType.SIZEOF,
+        OperatorType.NEW,
+        OperatorType.DELETE,
+        OperatorType.NON_NULL_ASSERT,
+        OperatorType.AMPERSAND,
+        OperatorType.MUL,
         OperatorType.IS
     )
 
     fun OperatorType.isSimpleUnaryOp() = this in simpleUnaryOps
+
+
 }

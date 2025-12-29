@@ -24,12 +24,15 @@ import lang.nodes.IndexAccessNode
 import lang.nodes.InitialiserList
 import lang.nodes.LambdaNode
 import lang.nodes.LiteralNode
+import lang.nodes.MemberAccessNode
 import lang.nodes.NullLiteralNode
+import lang.nodes.OperNode
 import lang.nodes.UnaryOpNode
 import lang.nodes.UnknownNode
 import lang.nodes.VarDeclStmtNode
 import lang.nodes.VoidDatatypeNode
 import lang.parser.ParserUtils.flattenCommaNode
+import lang.parser.ParserUtils.isAccessOperator
 import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isKeyword
 import lang.parser.ParserUtils.isNotOperator
@@ -120,12 +123,54 @@ class ExprParser(
     private fun parseLambda(): LambdaNode =
         blockToLambda(rawBlock = parser.parseBlock())
 
+
+    private fun parseDotChain(startChain: ExprNode): ExprNode {
+        var chain: ExprNode = startChain
+//        var right: IdentifierNode? = null
+
+
+        while (ts.peek().isAccessOperator()) {
+            val op = ts.peek() as Token.Operator
+            val isNullSafe = when (op.type) {
+                OperatorType.DOT -> false
+                OperatorType.DOT_NULL_SAFE -> true
+                else -> break
+            }
+
+            ts.next()
+            val expr = when (val t = ts.peek()) {
+                is Token.Identifier -> {
+                    t.toIdentifierNode()
+                }
+//                is Token.LParen -> parse(ParsingContext.Default)
+                else -> {
+                    syntaxError(Messages.EXPECTED_IDENTIFIER, t.pos)
+                    break
+                }
+            }
+
+            ts.next()
+
+            chain = MemberAccessNode(
+                base = chain,
+                member = expr,
+                isNullSafe = isNullSafe,
+                pos = op.pos
+            )
+
+            chain = parsePostfixExpr(ParsingContext.Default, chain)
+        }
+
+        return chain
+    }
+
     @OptIn(ExperimentalUnsignedTypes::class)
-    private fun parsePrimaryExpr(): ExprNode {
+    private fun parsePrimaryExpr(ctx: ParsingContext): ExprNode {
         return when (val t = ts.peek()) {
             is Token.Identifier -> {
                 ts.next()
-                IdentifierNode(value = t.value, pos = t.pos)
+                val id = IdentifierNode(value = t.value, pos = t.pos)
+                parseDotChain(startChain = id)
             }
 
             is Token.Int32 -> {
@@ -144,7 +189,6 @@ class ExprParser(
                 ts.next(); LiteralNode(value = t.value, pos = t.pos)
             }
 
-
             is Token.Bool -> {
                 ts.next(); LiteralNode(value = t.value, pos = t.pos)
             }
@@ -161,7 +205,12 @@ class ExprParser(
                 ts.next(); LiteralNode(value = t.value, pos = t.pos)
             }
 
-            is Token.Keyword -> parser.parseStmt()
+            is Token.Keyword -> {
+                if (ctx == ParsingContext.FuncHeader)
+                    parseOperator()
+                else
+                    parser.parseStmt()
+            }
 
             is Token.UInt32 -> {
                 ts.next(); LiteralNode(value = t.value, pos = t.pos)
@@ -177,7 +226,10 @@ class ExprParser(
                 if (ts.expect(Token.RParen::class, Messages.EXPECTED_RPAREN))
                     ts.next()
 
-                expr
+
+                if (ts.peek().isAccessOperator())
+                    parseDotChain(startChain = expr)
+                else expr
             }
 
             is Token.LBracket -> parseInitialiserList()
@@ -190,10 +242,7 @@ class ExprParser(
         }
     }
 
-    private fun parsePostfixExpr(ctx: ParsingContext): ExprNode {
-        val expr = parsePrimaryExpr()
-
-
+    private fun parsePostfixExpr(ctx: ParsingContext, expr: ExprNode = parsePrimaryExpr(ctx)): ExprNode {
         return when (val t = ts.peek()) {
             is Token.Operator ->
                 parsePostfixOperator(
@@ -215,7 +264,6 @@ class ExprParser(
                     pos = t.pos
                 )
             }
-
 
             else -> expr
         }
@@ -341,7 +389,7 @@ class ExprParser(
             }
 
             // postfix unary
-            OperatorType.NOT_NULL_ASSERTION -> {
+            OperatorType.NON_NULL_ASSERT -> {
                 val operator = unaryOpTypeMapper.toSecond(t.type) ?: return expr
 
                 ts.next()
@@ -349,6 +397,7 @@ class ExprParser(
                 UnaryOpNode(
                     operand = expr,
                     operator = operator,
+                    tokenOperatorType = t.type,
                     pos = t.pos
                 )
             }
@@ -391,6 +440,21 @@ class ExprParser(
         return list
     }
 
+    private fun parseOperator(): OperNode {
+        ts.next()
+
+        val pos = ts.peek().pos
+
+        val operator = if (ts.expect(Token.Operator::class, Messages.EXPECTED_OPERATOR)) {
+            ts.next() as Token.Operator
+        } else null
+
+        return OperNode(
+            type = operator?.type ?: OperatorType.UNKNOWN,
+            pos = pos
+        )
+    }
+
     private fun parseUnaryExpr(ctx: ParsingContext): ExprNode {
         return when (val t = ts.peek()) {
             is Token.Semicolon -> {
@@ -402,8 +466,9 @@ class ExprParser(
                 when (t.type) {
                     KeywordType.CONST -> parseDatatype()
                     KeywordType.FUNC -> parseFuncDatatype()
+                    KeywordType.OPERATOR -> parsePostfixExpr(ctx)
                     else -> {
-                        syntaxError(Messages.EXPECTED_TYPE_NAME, t.pos)
+                        syntaxError(Messages.UNEXPECTED_TOKEN, t.pos)
                         UnknownNode(t.pos)
                     }
                 }
@@ -416,13 +481,14 @@ class ExprParser(
                         val operator = unaryOpTypeMapper.toSecond(t.type)
 
                         if (operator == null) {
-                            syntaxError(Messages.UNKNOWN_UNARY_OPER, t.pos)
+                            syntaxError(Messages.EXPECTED_AN_EXPRESSION, t.pos)
                             return parsePostfixExpr(ctx)
                         }
 
                         UnaryOpNode(
                             operand = parseUnaryExpr(ctx),
                             operator = operator,
+                            tokenOperatorType = t.type,
                             pos = t.pos
                         )
                     }
@@ -582,6 +648,7 @@ class ExprParser(
     }
 
     private fun parseRight(
+        left: ExprNode,
         op: Token.Operator,
         stopToken: Token?,
         ctx: ParsingContext
@@ -615,6 +682,7 @@ class ExprParser(
             ts.next()
 
             val right = parseRight(
+                left = left,
                 op = op,
                 stopToken = stopToken,
                 ctx = ctx
@@ -623,7 +691,7 @@ class ExprParser(
             val operator = binOpTypeMapper.toSecond(op.type)
 
             if (operator == null) {
-                syntaxError(Messages.UNKNOWN_BIN_OPER, left.pos)
+                syntaxError(Messages.EXPECTED_AN_EXPRESSION, left.pos)
                 break
             }
 
@@ -631,6 +699,7 @@ class ExprParser(
                 left = left,
                 right = right,
                 operator = operator,
+                tokenOperatorType = op.type,
                 pos = op.pos
             )
         }

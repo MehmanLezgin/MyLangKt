@@ -1,14 +1,18 @@
 package lang.semantics.scopes
 
+import lang.messages.ErrorHandler
 import lang.nodes.ConstructorDeclStmtNode
 import lang.nodes.DestructorDeclStmtNode
 import lang.semantics.symbols.ClassSymbol
 import lang.semantics.symbols.Symbol
 
 data class ClassScope(
-    override val parent: ClassScope?,
-    val classSymbol: ClassSymbol
-) : Scope(parent = parent) {
+    override val parent: Scope?,
+    override val errorHandler: ErrorHandler
+) : Scope(
+    parent = parent,
+    errorHandler = errorHandler
+) {
     fun defineConstructor(node: ConstructorDeclStmtNode) : Symbol? {
         /*val type = scopeType
         if (type is ScopeType.Func) {

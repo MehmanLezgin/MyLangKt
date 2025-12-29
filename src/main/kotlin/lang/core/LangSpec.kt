@@ -45,6 +45,7 @@ object LangSpec : ILangSpec {
         KeywordInfo("namespace", KeywordType.NAMESPACE),
         KeywordInfo("using", KeywordType.USING),
         KeywordInfo("type", KeywordType.TYPE),
+        KeywordInfo("operator", KeywordType.OPERATOR),
     )
 
     private val operatorsRaw = arrayOf(
@@ -56,7 +57,7 @@ object LangSpec : ILangSpec {
         arrayOf(
             OperatorInfo("++", OperatorType.INCREMENT),
             OperatorInfo("--", OperatorType.DECREMENT),
-            OperatorInfo("!!", OperatorType.NOT_NULL_ASSERTION),
+            OperatorInfo("!!", OperatorType.NON_NULL_ASSERT),
         ),
         arrayOf(
             OperatorInfo("!", OperatorType.NOT),
@@ -70,12 +71,12 @@ object LangSpec : ILangSpec {
             OperatorInfo("%", OperatorType.REMAINDER),
         ),
         arrayOf(
-            OperatorInfo("+", OperatorType.PLUS),
-            OperatorInfo("-", OperatorType.MINUS),
-        ),
-        arrayOf(
             OperatorInfo("<<", OperatorType.SHIFT_LEFT),
             OperatorInfo(">>", OperatorType.SHIFT_RIGHT),
+        ),
+        arrayOf(
+            OperatorInfo("+", OperatorType.PLUS),
+            OperatorInfo("-", OperatorType.MINUS),
         ),
         arrayOf(
             OperatorInfo(".", OperatorType.DOT),

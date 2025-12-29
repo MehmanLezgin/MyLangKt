@@ -83,8 +83,8 @@ open class BaseLexer(
 
         if (token == null) {
 //            errorHandler.lexicalError(Messages.UNEXPECTED_TOKEN, pos)
-            state.index++
-            state.col++
+//            state.index++
+//            state.col++
             return null
         }
 

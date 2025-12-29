@@ -18,7 +18,7 @@ class UnaryOpTypeMapper : IOneWayMapper<OperatorType, UnaryOpType?> {
         OperatorType.AMPERSAND to UnaryOpType.ADDRESS_OF,
         OperatorType.MUL to UnaryOpType.INDIRECTION,
 
-        OperatorType.NOT_NULL_ASSERTION to UnaryOpType.NOT_NULL_ASSERTION,
+        OperatorType.NON_NULL_ASSERT to UnaryOpType.NON_NULL_ASSERT
     )
 
     override fun toSecond(a: OperatorType) = map[a]

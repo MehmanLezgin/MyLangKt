@@ -1,6 +1,7 @@
 package lang.tokens
 
 enum class OperatorType {
+    UNKNOWN,
     INCREMENT,          // ++
     DECREMENT,          // --
     ARROW,              // ->
@@ -20,7 +21,7 @@ enum class OperatorType {
     GREATER_EQUAL,      // >=
     EQUAL,              // ==
     NOT_EQUAL,          // !=
-    AMPERSAND,                // &
+    AMPERSAND,          // &
     XOR,                // ^
     BIN_OR,             // |
     AND,                // &&
@@ -48,7 +49,7 @@ enum class OperatorType {
     UNTIL,              // is
     DOT_NULL_SAFE,      // ?.
     ELVIS,              // ?:
-    NOT_NULL_ASSERTION, // !!
+    NON_NULL_ASSERT,    // !!
     DOUBLE_DOT,         // ..
 }
 

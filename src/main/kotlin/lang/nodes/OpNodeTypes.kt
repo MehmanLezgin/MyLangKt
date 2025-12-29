@@ -2,7 +2,6 @@ package lang.nodes
 
 enum class BinOpType {
     ARROW,           // ->
-    DOT,             // .
     COMMA,            // ,
     COLON,            // :
     MUL,            // *
@@ -38,7 +37,6 @@ enum class BinOpType {
     IS,
     IN,
     UNTIL,
-    DOT_NULL_SAFE,
     ELVIS,
     DOUBLE_DOT
 }
@@ -56,5 +54,5 @@ enum class UnaryOpType {
     BITWISE_NOT,
     SIZEOF,
     IS,
-    NOT_NULL_ASSERTION
+    NON_NULL_ASSERT
 }

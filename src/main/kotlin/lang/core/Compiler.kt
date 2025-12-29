@@ -21,6 +21,9 @@ object Compiler : ICompiler {
     private const val LEXER_RESULT_PATH = "C:/TMP txt/lang/lexer_result.txt"
     private const val PARSER_RESULT_PATH = "C:/TMP txt/lang/parser_result.txt"
 
+    private const val DEBUG_PRINT_TOKENS = false
+    private const val DEBUG_PRINT_AST = true
+
     private val timing = Timing()
 
     fun lexer(src: SourceCode, errorHandler: ErrorHandler): ILexer {
@@ -61,6 +64,7 @@ object Compiler : ICompiler {
         val tokenStream = tokenStream(lexer = lexer, errorHandler = errorHandler)
         val time = timing.timeMillis
 
+        if (DEBUG_PRINT_TOKENS)
         File(LEXER_RESULT_PATH).printWriter().use { out ->
             tokenStream.getTokens().forEach { out.println(it); }
         }
@@ -94,10 +98,11 @@ object Compiler : ICompiler {
 
         timing.begin()
         val ast = parser?.parseFile()
-        var time = timing.timeMillis
 
+        var time = timing.timeMillis
         checkErrors(CompileStage.SYNTAX_ANALYSIS, errorHandler, src, time)
 
+        if (DEBUG_PRINT_AST)
         File(PARSER_RESULT_PATH).printWriter().use { out ->
             out.println(Serializer.formatNode(ast ?: BlockNode.EMPTY))
         }
@@ -151,7 +156,7 @@ object Compiler : ICompiler {
         time: Long? = null,
         onSuccess: (() -> Unit)? = null
     ): Boolean {
-        fun printMsg(a: String) = println("$stage  \t(${time}ms)\t- $a")
+        fun printMsg(a: String) = println("$stage  \t(${time} ms)\t- $a")
 
         return if (errorHandler.hasErrors) {
             val count = errorHandler.errors.size

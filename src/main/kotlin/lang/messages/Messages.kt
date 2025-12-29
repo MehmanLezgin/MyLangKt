@@ -1,6 +1,17 @@
 package lang.messages
 
 object Messages {
+    const val EXPECTED_CONST_VALUE = "Expected const value"
+    const val CONSTRUCTOR_OUTSIDE_CLASS_ERROR = "Constructor outside class body is not allowed"
+    const val DESTRUCTOR_OUTSIDE_CLASS_ERROR = "Destructor outside class body is not allowed"
+    const val STATIC = "Static"
+    const val NON_STATIC = "Non-static"
+    const val OPERATOR_REQUIRES_NO_PARAMS = "%s operator '%s' requires no parameters"
+    const val OPERATOR_REQUIRES_1_PARAM = "%s operator '%s' requires exactly 1 parameter"
+    const val OPERATOR_REQUIRES_X_PARAMS = "%s operator '%s' requires exactly %d parameters"
+    const val EXPECTED_OPERATOR = "Operator expected"
+    const val CONFLICTING_OVERLOADS = "Conflicting overloads"
+    const val REDECLARATION = "Redeclaration"
     const val CANNOT_RESOLVE_PARAM_OUTSIDE_FUNC = "Cannot resolve parameter outside a function"
     const val SYMBOL_NOT_DEFINED = "A symbol '%s' is not defined in current scope"
     const val SYMBOL_ALREADY_DEFINED = "A symbol '%s' is already defined in current scope"
@@ -11,7 +22,7 @@ object Messages {
     const val INVALID_DOUBLE_LITERAL = "Invalid double literal"
     const val INVALID_INT_LITERAL = "Invalid integer literal"
     const val ILLEGAL_ESCAPE_SEQUENCE = "Illegal escape sequence"
-    const val NMSP_NOT_IMPL = "'namespace' is not implemented yet"
+    const val NAMESPACE_NOT_IMPL = "'namespace' is not implemented yet"
     const val USING_NOT_IMPL = "'using' is not implemented yet"
     const val EXPECTED_TOP_LEVEL_DECL = "Expected top level declaration"
     const val EXPECTED_FILE_PATH = "Expected file path"
@@ -20,7 +31,6 @@ object Messages {
     const val EXPECTED_ARROW_OPERATOR = "Expected '->'"
     const val EXPECTED_INTERFACE_DECL = "Expected an interface declaration"
     const val EXPECTED_CLASS_DECL = "Expected a class declaration"
-
     const val EXPECTED_TYPE_PARAM_NAME = "Expected Type parameter name"
     const val INTERFACES_CANNOT_HAVE_CONSTRUCTORS = "Interfaces cannot have constructors."
     const val POINTER_TO_REFERENCE_IS_NOT_ALLOWED = "Pointer to reference is not allowed"
@@ -42,7 +52,6 @@ object Messages {
     const val REPEATED_MODIFIER = "Repeated modifier"
     const val EXPECTED_IF = "Expected 'if'"
     const val EXPECTED_LBRACE_AFTER_CONDITION = "Expected '{' after condition"
-    //    const val EXPECTED_SEMICOLON_OR_LINEBREAK: String = "Expected ';' or linebreak"
     const val EXPECTED_SEMICOLON: String = "Expected ';'"
     const val EXPECTED_WHILE_AND_POST_CONDITION = "Expected 'while' and post-condition"
     const val EXPECTED_LPAREN = "Expected '('"

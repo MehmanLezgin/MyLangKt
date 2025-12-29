@@ -7,16 +7,22 @@ abstract class BaseDatatypeNode(
 ) : ExprNode(pos) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
         mapper(this)
+
+
 }
 
 data class DatatypeNode(
     val identifier: IdentifierNode,
-    val typeNames: List<ExprNode>?,
+    val typeNames: List<ExprNode>? = null,
     val isConst: Boolean = false,
-    val ptrLvl: Int = 0,
     var isReference: Boolean = false,
+    val ptrLvl: Int = 0,
     override val pos: Pos
 ) : BaseDatatypeNode(pos) {
+
+    val isPointer: Boolean
+        get() = ptrLvl > 0
+
     override fun toString(): String {
         if (typeNames == null) return identifier.value
         return identifier.value + typeNames
@@ -31,6 +37,30 @@ data class DatatypeNode(
             }
         )
         return mapper(newNode)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as DatatypeNode
+
+        if (isConst != other.isConst) return false
+        if (ptrLvl != other.ptrLvl) return false
+        if (isReference != other.isReference) return false
+        if (identifier.value != other.identifier.value) return false
+        if (typeNames != other.typeNames) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = isConst.hashCode()
+        result = 31 * result + ptrLvl
+        result = 31 * result + isReference.hashCode()
+        result = 31 * result + identifier.hashCode()
+        result = 31 * result + (typeNames?.hashCode() ?: 0)
+        return result
     }
 }
 

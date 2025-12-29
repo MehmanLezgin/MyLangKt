@@ -3,20 +3,20 @@ package lang.semantics
 import lang.messages.ErrorHandler
 import lang.messages.Messages
 import lang.nodes.*
-import lang.semantics.scopes.FuncParamsScope
-import lang.semantics.scopes.FuncScope
-import lang.semantics.scopes.GlobalScope
-import lang.semantics.scopes.Scope
-import lang.semantics.symbols.InterfaceSymbol
+import lang.semantics.scopes.*
+import lang.semantics.types.ConstValue
 import lang.tokens.Pos
 
 class SemanticAnalyzer(
     private val errorHandler: ErrorHandler
 ) : ISemanticAnalyzer {
-    private var scope: Scope = GlobalScope()
+    private var scope: Scope = GlobalScope(errorHandler = errorHandler)
 
     init {
-        initBuiltInTypes()
+        BuiltInTypes.initBuiltInTypes(
+            scope = scope,
+            errorHandler = errorHandler
+        )
     }
 
     override fun resolve(node: ExprNode) {
@@ -24,18 +24,25 @@ class SemanticAnalyzer(
             is DeclStmtNode -> resolve(node)
             is BlockNode -> resolve(node = node)
             is BaseDatatypeNode -> resolve(node = node)
+            is TypedefStmtNode -> resolve(node = node)
 //            is LambdaNode -> resolve(node = node.body)
         }
     }
 
-    private fun initBuiltInTypes() {
-        arrayOf(
-            "float", "double", "long", "short", "char", "byte",
-            "int", "int8", "int16", "int32", "int64",
-            "uint", "uint8", "uint16", "uint32", "uint64"
-        ).forEach {
-            scope.define(sym = InterfaceSymbol(name = it))
+    private fun resolve(node: DeclStmtNode) {
+        when (node) {
+            is VarDeclStmtNode -> resolve(node)
+            is ConstructorDeclStmtNode -> resolve(node)
+            is DestructorDeclStmtNode -> resolve(node)
+            is FuncDeclStmtNode -> resolve(node)
+            is InterfaceDeclStmtNode -> resolve(node)
+            is ClassDeclStmtNode -> resolve(node)
+            is EnumDeclStmtNode -> resolve(node)
         }
+    }
+
+    private fun resolve(node: TypedefStmtNode) {
+        scope.defineTypedef(node)
     }
 
     fun exitScope() {
@@ -47,10 +54,17 @@ class SemanticAnalyzer(
         scope = newScope
     }
 
-    private fun withScope(scope: Scope = Scope(parent = this.scope), block: () -> Unit) {
-        enterScope(newScope = scope)
+    private fun withScope(targetScope: Scope = Scope(parent = this.scope, errorHandler), block: () -> Unit) {
+        enterScope(newScope = targetScope)
         block.invoke()
         exitScope()
+    }
+
+    private fun withScopeResolveBody(targetScope: Scope, body: BlockNode?) {
+        if (body == null) return
+        withScope(targetScope = targetScope) {
+            resolve(node = body)
+        }
     }
 
     private fun resolve(node: BaseDatatypeNode) {
@@ -65,44 +79,37 @@ class SemanticAnalyzer(
                 }
             }
 
-            is FuncDatatypeNode -> {}
+            is FuncDatatypeNode -> {
+                node.paramDatatypes.forEach { resolve(it) }
+                resolve(node.returnDatatype)
+            }
+
             is VoidDatatypeNode -> {}
             is AutoDatatypeNode -> {}
             is ErrorDatatypeNode -> {}
         }
     }
 
-    private fun resolve(node: DeclStmtNode) {
-        when (node) {
-            is VarDeclStmtNode -> resolve(node)
-            is FuncDeclStmtNode -> resolve(node)
-            is ConstructorDeclStmtNode -> resolve(node)
-            is DestructorDeclStmtNode -> resolve(node)
-            is InterfaceDeclStmtNode -> resolve(node)
-            is ClassDeclStmtNode -> resolve(node)
-            is EnumDeclStmtNode -> resolve(node)
-        }
-    }
-
     private fun resolve(node: VarDeclStmtNode) {
-        val symbol = scope.defineVar(node)
-        node.apply {
-            this.symbol = symbol
+        val isConst = node.modifiers?.nodes?.any { it is ModifierNode.Const } == true
 
-            if (symbol == null)
-                symDefinedError(name = name.value, pos = pos)
+        if (isConst)
+            scope.defineConstVar(node)
+        else
+            scope.defineVar(node)
 
-            when (dataType) {
-                is AutoDatatypeNode -> {
-                    if (initializer == null) {
-                        semanticError(Messages.EXPECTED_TYPE_NAME, name.pos)
-                    }else {
-                        // get datatype of initializer
-                    }
+        when (node.dataType) {
+            is AutoDatatypeNode -> {
+                if (node.initializer == null) {
+                    semanticError(Messages.EXPECTED_TYPE_NAME, node.name.pos)
+                } else {
+                    // get datatype of initializer
+                    val constValue = calcConstExpr(node.initializer)
+                    println("Const value of '${node.name.value}' = ${constValue?.value}")
                 }
-
-                else -> resolve(dataType)
             }
+
+            else -> resolve(node.dataType)
         }
     }
 
@@ -114,47 +121,71 @@ class SemanticAnalyzer(
             return
         }
 
-        paramsScope.defineParam(node)
+        paramsScope.defineParam(node) ?: node.name.error(::symDefinedError)
+
+        if (node.dataType is AutoDatatypeNode)
+            semanticError(Messages.EXPECTED_TYPE_NAME, node.name.pos)
+
+        resolve(node.dataType)
     }
 
     private fun resolve(node: FuncDeclStmtNode) {
-        val funcScope = FuncParamsScope(parent = scope)
-        enterScope(funcScope)
+        val paramsScope = FuncParamsScope(
+            parent = scope,
+            errorHandler = errorHandler
+        )
 
+        enterScope(paramsScope)
         node.params.forEach { decl ->
             resolveFuncParam(node = decl)
         }
 
-        val params = funcScope.getParams()
+        val params = paramsScope.getParams()
         exitScope()
 
-//        scope.defineFunc()
+        val funcSymbol = scope.defineFunc(node, params)
+        resolve(node.returnType)
+
+        val funcScope = FuncScope(
+            parent = scope,
+            funcSymbol = funcSymbol,
+            errorHandler = errorHandler
+        )
+
+        withScopeResolveBody(targetScope = funcScope, body = node.body)
     }
 
     private fun resolve(node: ConstructorDeclStmtNode) {
+        if (scope !is ClassScope)
+            semanticError(Messages.CONSTRUCTOR_OUTSIDE_CLASS_ERROR, node.pos)
 
+        resolve(node as FuncDeclStmtNode)
     }
 
     private fun resolve(node: DestructorDeclStmtNode) {
+        if (scope !is ClassScope)
+            semanticError(Messages.DESTRUCTOR_OUTSIDE_CLASS_ERROR, node.pos)
 
+        resolve(node as FuncDeclStmtNode)
     }
 
     private fun resolve(node: InterfaceDeclStmtNode) {
-
+        val sym = scope.defineInterface(node)
+        withScopeResolveBody(targetScope = sym.scope, body = node.body)
     }
 
     private fun resolve(node: ClassDeclStmtNode) {
-
+        val sym = scope.defineClass(node)
+        withScopeResolveBody(targetScope = sym.scope, body = node.body)
     }
 
     private fun resolve(node: EnumDeclStmtNode) {
-
+        val sym = scope.defineEnum(node)
+        withScopeResolveBody(targetScope = sym.scope, body = node.body)
     }
 
     override fun resolve(node: BlockNode) {
-        withScope {
-            node.nodes.forEach { node -> resolve(node) }
-        }
+        node.nodes.forEach { node -> resolve(node) }
     }
 
     private fun symNotDefinedError(name: String, pos: Pos) {
@@ -169,5 +200,21 @@ class SemanticAnalyzer(
 
     private fun semanticError(msg: String, pos: Pos) {
         errorHandler.semanticError(msg, pos)
+    }
+
+//    private fun getExprDatatype(expr: ExprNode) : BaseDatatypeNode {
+//        when (expr) {
+//            is LiteralNode<*> ->...
+//        }
+//    }
+
+//    private fun getExprDatatype(expr: LiteralNode<*>) : BaseDatatypeNode {
+//        when (expr.value) {
+//            is Int -> DatatypeNode(...)
+//        }
+//    }
+
+    private fun calcConstExpr(expr: ExprNode): ConstValue<*>? {
+        return ConstResolver.resolve(expr, scope)
     }
 }

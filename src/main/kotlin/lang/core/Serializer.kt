@@ -25,8 +25,10 @@ import lang.nodes.InterfaceDeclStmtNode
 import lang.nodes.LambdaNode
 import lang.nodes.LiteralNode
 import lang.nodes.MatchStmtNode
+import lang.nodes.MemberAccessNode
 import lang.nodes.NamespaceStmtNode
 import lang.nodes.NullLiteralNode
+import lang.nodes.OperNode
 import lang.nodes.ReturnStmtNode
 import lang.nodes.TryCatchStmtNode
 import lang.nodes.TypedefStmtNode
@@ -122,12 +124,17 @@ object Serializer {
 
         }
 
-        return builder.toString()
+        return builder.toString().replace("\n\n", "\n")
     }
 
     private fun getChildren(node: ExprNode): List<Pair<String, Any?>> {
         return when (node) {
             is UnknownNode -> emptyList()
+
+            is OperNode -> listOf(
+                "type" to node.type,
+                "value" to node.value
+            )
 
             is IdentifierNode -> listOf(
                 "value" to node.value
@@ -250,8 +257,8 @@ object Serializer {
 
             is FuncDatatypeNode -> listOf(
                 "isConst" to node.isConst,
-                "ptrLvl" to node.ptrLvl,
                 "isReference" to node.isReference,
+                "ptrLvl" to node.ptrLvl,
                 "paramDatatypes" to node.paramDatatypes,
                 "returnDatatype" to node.returnDatatype
             )
@@ -259,14 +266,14 @@ object Serializer {
             is DatatypeNode -> listOf(
                 "name" to node.identifier,
                 "isConst" to node.isConst,
-                "ptrLvl" to node.ptrLvl,
                 "isReference" to node.isReference,
+                "ptrLvl" to node.ptrLvl,
                 "typeNames" to node.typeNames
             )
 
             is EnumDeclStmtNode -> listOf(
                 "name" to node.name,
-                "items" to node.items
+                "items" to node.body
             )
 
             is EnumItemNode -> listOf(
@@ -305,6 +312,12 @@ object Serializer {
             is TypedefStmtNode -> listOf(
                 "identifier" to node.identifier,
                 "dataType" to node.dataType
+            )
+
+            is MemberAccessNode -> listOf(
+                "base" to node.base,
+                "member" to node.member,
+                "isNullSafe" to node.isNullSafe
             )
 
             else -> emptyList()

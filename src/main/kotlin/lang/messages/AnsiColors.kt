@@ -23,6 +23,9 @@ object AnsiColors {
     const val BRIGHT_PURPLE = "\u001B[95m"
     const val BRIGHT_CYAN = "\u001B[96m"
     const val BRIGHT_WHITE = "\u001B[97m"
+    const val DARK_GREY = "\u001b[30m"
+    const val LIGHT_GREY = "\u001b[90m"
+
 
     // Background colors
     const val BG_BLACK = "\u001B[40m"
@@ -43,6 +46,8 @@ object AnsiColors {
     const val BG_BRIGHT_PURPLE = "\u001B[105m"
     const val BG_BRIGHT_CYAN = "\u001B[106m"
     const val BG_BRIGHT_WHITE = "\u001B[107m"
+
+
 
     val ERROR = RED
     val SUCCESS = fg256(42)

@@ -29,13 +29,14 @@ class ErrorMsg(
                 val lineText = src.getLine(lineIndex)
 
                 val posStr = pos.line.toString()
-                val separatorStr = "   | "
+                val separatorStr = "    | "
                 val pointerOffset = posStr.length + separatorStr.length
 
-                append(AnsiColors.CYAN)
-                    .append("\n\n ")
+
+                append("\n\n ")
                     .append(posStr)
                     .append(separatorStr)
+                    .append(AnsiColors.CYAN)
                     .append(lineText)
                     .append('\n')
                     .append(" ".repeat(pos.col - 1 + pointerOffset))

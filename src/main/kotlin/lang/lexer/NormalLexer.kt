@@ -376,8 +376,14 @@ class NormalLexer(
             c.isDigit() || c == Symbols.DOT && at(index + 1).isDigit() -> matchNumber() // d or .d
             c.isIdentifierChar() -> matchId()                                  // id or kw
             c.isQuote() -> matchStringLiteral()                                         // str and char literals
-            else -> lexOperator() ?: lexOther()                                         // oper or other
+            else -> {
+                val t = lexOperator() ?: lexOther()
+                if (t == null) errorHandler.lexicalError(Messages.UNEXPECTED_TOKEN, getPos())
+                t
+            }
         }
+        // oper or other
+
 
         trackNewlines(token?.raw)
 

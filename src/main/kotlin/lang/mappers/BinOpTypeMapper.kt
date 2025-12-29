@@ -6,7 +6,6 @@ import lang.nodes.BinOpType
 class BinOpTypeMapper : IOneWayMapper<OperatorType, BinOpType?> {
     private val map = mapOf(
         OperatorType.ARROW to BinOpType.ARROW,
-        OperatorType.DOT to BinOpType.DOT,
         OperatorType.COMMA to BinOpType.COMMA,
         OperatorType.COLON to BinOpType.COLON,
         OperatorType.MUL to BinOpType.MUL,
@@ -42,7 +41,6 @@ class BinOpTypeMapper : IOneWayMapper<OperatorType, BinOpType?> {
         OperatorType.IS to BinOpType.IS,
         OperatorType.IN to BinOpType.IN,
         OperatorType.UNTIL to BinOpType.UNTIL,
-        OperatorType.DOT_NULL_SAFE to BinOpType.DOT_NULL_SAFE,
         OperatorType.ELVIS to BinOpType.ELVIS,
         OperatorType.DOUBLE_DOT to BinOpType.DOUBLE_DOT,
     )

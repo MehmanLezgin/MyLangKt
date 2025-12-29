@@ -1,25 +1,33 @@
 package lang.semantics.scopes
 
+import lang.messages.ErrorHandler
 import lang.nodes.VarDeclStmtNode
+import lang.semantics.symbols.FuncParamListSymbol
 import lang.semantics.symbols.FuncParamSymbol
 import lang.semantics.symbols.Symbol
 
 data class FuncParamsScope(
     override val parent: Scope?,
-) : Scope(parent = parent) {
+    override val errorHandler: ErrorHandler
+) : Scope(
+    parent = parent,
+    errorHandler = errorHandler
+) {
+
+    private val params = mutableListOf<FuncParamSymbol>()
+
     fun defineParam(node: VarDeclStmtNode) : Symbol? {
-        val name = node.name.value
+        val name = node.name
 
         val param = FuncParamSymbol(
-            name = name,
+            name = name.value,
             datatype = node.dataType,
             defaultValue = node.initializer
         )
 
-        return define(param)
+        params.add(param)
+        return define(param, name.pos)
     }
 
-    fun getParams(): List<Symbol?> {
-        return symbols.keys.map { symbols[it] }
-    }
+    fun getParams() = FuncParamListSymbol(list = params.toList())
 }

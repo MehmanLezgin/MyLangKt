@@ -38,7 +38,7 @@ class ErrorHandler {
         )
     }
 
-    fun semanticError(message: String, pos: Pos) {
+    fun semanticError(message: String, pos: Pos?) {
         addError(
             ErrorMsg(
                 stage = CompileStage.SEMANTIC_ANALYSIS,

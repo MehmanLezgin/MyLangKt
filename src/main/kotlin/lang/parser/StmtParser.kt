@@ -126,9 +126,10 @@ class StmtParser(
             KeywordType.FOR -> ::parseForLoopStmt
             KeywordType.TRY -> ::parseTryCatchStmt
             KeywordType.IMPORT -> ::parseImportStmt
-            KeywordType.NAMESPACE -> errorStmt(Messages.NMSP_NOT_IMPL)//::parseNamespaceStmt
+            KeywordType.NAMESPACE -> errorStmt(Messages.NAMESPACE_NOT_IMPL)//::parseNamespaceStmt
             KeywordType.USING -> errorStmt(Messages.USING_NOT_IMPL)
             KeywordType.TYPE -> ::parseTypedefStmt
+            KeywordType.OPERATOR -> errorStmt(Messages.EXPECTED_FUNC_DECL)
         }
 
         return parserFunc() ?: VoidNode
@@ -275,7 +276,7 @@ class StmtParser(
 
         return ConstructorDeclStmtNode(
             modifiers = null,
-            params = params,
+            params = params ?: emptyList(),
             body = body,
             pos = pos
         )
@@ -596,7 +597,7 @@ class StmtParser(
         val typeNames = if (ts.matchOperator(OperatorType.LESS))
             analiseTemplateList(parser.parseTypenameList()) else null
 
-        val header = parser.parseExpr(ctx = ParsingContext.Header)
+        val header = parser.parseExpr(ctx = ParsingContext.FuncHeader)
 
         val body = parseBodyForDeclStmt()
 
@@ -641,7 +642,7 @@ class StmtParser(
         )
     }
 
-    private fun parseEnumStmt(): EnumDeclStmtNode {
+    private fun parseEnumStmt(): EnumDeclStmtNode? {
         val pos = ts.next().pos
 
         val nameToken = ts.peek()
@@ -651,7 +652,7 @@ class StmtParser(
             nameToken.toIdentifierNode()
         } else {
             syntaxError(Messages.NAME_EXPECTED, nameToken.pos)
-            null
+            return null
         }
 
         if (!ts.match(Token.LBrace::class)) {
@@ -660,7 +661,7 @@ class StmtParser(
             return EnumDeclStmtNode(
                 modifiers = null,
                 name = enumName,
-                items = BlockNode.EMPTY,
+                body = BlockNode.EMPTY,
                 pos = pos
             )
         }
@@ -670,13 +671,13 @@ class StmtParser(
             return EnumDeclStmtNode(
                 modifiers = null,
                 name = enumName,
-                items = BlockNode.EMPTY,
+                body = BlockNode.EMPTY,
                 pos = pos
             )
 
         val items = parseBlock()
 
-        return EnumDeclStmtNode(modifiers = null, name = enumName, items = items, pos = pos)
+        return EnumDeclStmtNode(modifiers = null, name = enumName, body = items, pos = pos)
     }
 
     private fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean = false): ExprNode? {
