@@ -50,92 +50,90 @@ object LangSpec : ILangSpec {
 
     private val operatorsRaw = arrayOf(
         arrayOf(
-            OperatorInfo("sizeof", OperatorType.SIZEOF),
-            OperatorInfo("new", OperatorType.NEW),
-            OperatorInfo("delete", OperatorType.DELETE),
+            OperatorInfo(OperatorType.SIZEOF),
+            OperatorInfo(OperatorType.NEW),
+            OperatorInfo(OperatorType.DELETE),
         ),
         arrayOf(
-            OperatorInfo("++", OperatorType.INCREMENT),
-            OperatorInfo("--", OperatorType.DECREMENT),
-            OperatorInfo("!!", OperatorType.NON_NULL_ASSERT),
+            OperatorInfo(OperatorType.INCREMENT),
+            OperatorInfo(OperatorType.DECREMENT),
+            OperatorInfo(OperatorType.NON_NULL_ASSERT),
         ),
         arrayOf(
-            OperatorInfo("!", OperatorType.NOT),
-            OperatorInfo("~", OperatorType.BIN_NOT),
-            OperatorInfo("as", OperatorType.AS),
-            OperatorInfo("is", OperatorType.IS),
+            OperatorInfo(OperatorType.NOT),
+            OperatorInfo(OperatorType.BIN_NOT),
+            OperatorInfo(OperatorType.AS),
+            OperatorInfo(OperatorType.IS),
         ),
         arrayOf(
-            OperatorInfo("*", OperatorType.MUL),
-            OperatorInfo("/", OperatorType.DIV),
-            OperatorInfo("%", OperatorType.REMAINDER),
+            OperatorInfo(OperatorType.MUL),
+            OperatorInfo(OperatorType.DIV),
+            OperatorInfo(OperatorType.REMAINDER),
         ),
         arrayOf(
-            OperatorInfo("<<", OperatorType.SHIFT_LEFT),
-            OperatorInfo(">>", OperatorType.SHIFT_RIGHT),
+            OperatorInfo(OperatorType.SHIFT_LEFT),
+            OperatorInfo(OperatorType.SHIFT_RIGHT),
         ),
         arrayOf(
-            OperatorInfo("+", OperatorType.PLUS),
-            OperatorInfo("-", OperatorType.MINUS),
+            OperatorInfo(OperatorType.PLUS),
+            OperatorInfo(OperatorType.MINUS),
         ),
         arrayOf(
-            OperatorInfo(".", OperatorType.DOT),
-            OperatorInfo("?.", OperatorType.DOT_NULL_SAFE),
+            OperatorInfo(OperatorType.DOT),
+            OperatorInfo(OperatorType.DOT_NULL_SAFE),
+        ),
+//        arrayOf(
+//        ),
+        arrayOf(
+            OperatorInfo(OperatorType.AMPERSAND),
         ),
         arrayOf(
-            OperatorInfo("<", OperatorType.LESS),
-            OperatorInfo("<=", OperatorType.LESS_EQUAL),
-            OperatorInfo(">", OperatorType.GREATER),
-            OperatorInfo(">=", OperatorType.GREATER_EQUAL),
+            OperatorInfo(OperatorType.BIN_XOR),
         ),
         arrayOf(
-            OperatorInfo("==", OperatorType.EQUAL),
-            OperatorInfo("!=", OperatorType.NOT_EQUAL),
+            OperatorInfo(OperatorType.BIN_OR),
         ),
         arrayOf(
-            OperatorInfo("&", OperatorType.AMPERSAND),
+            OperatorInfo(OperatorType.LESS),
+            OperatorInfo(OperatorType.LESS_EQUAL),
+            OperatorInfo(OperatorType.GREATER),
+            OperatorInfo(OperatorType.GREATER_EQUAL),
+            OperatorInfo(OperatorType.EQUAL),
+            OperatorInfo(OperatorType.NOT_EQUAL),
         ),
         arrayOf(
-            OperatorInfo("^", OperatorType.XOR),
+            OperatorInfo(OperatorType.AND),
         ),
         arrayOf(
-            OperatorInfo("|", OperatorType.BIN_OR),
+            OperatorInfo(OperatorType.OR),
         ),
         arrayOf(
-            OperatorInfo("&&", OperatorType.AND),
+            OperatorInfo(OperatorType.QUESTION),
+            OperatorInfo(OperatorType.COLON),
         ),
         arrayOf(
-            OperatorInfo("||", OperatorType.OR),
-        ),
-        arrayOf(
-            OperatorInfo("?", OperatorType.QUESTION),
-            OperatorInfo(":", OperatorType.COLON),
-        ),
-
-
-        arrayOf(
-            OperatorInfo("=", OperatorType.ASSIGN),
-            OperatorInfo("+=", OperatorType.PLUS_ASSIGN),
-            OperatorInfo("-=", OperatorType.MINUS_ASSIGN),
-            OperatorInfo("*=", OperatorType.MUL_ASSIGN),
-            OperatorInfo("/=", OperatorType.DIV_ASSIGN),
-            OperatorInfo("%=", OperatorType.REMAINDER_ASSIGN),
-            OperatorInfo("&=", OperatorType.BIN_AND_ASSIGN),
-            OperatorInfo("|=", OperatorType.BIN_OR_ASSIGN),
-            OperatorInfo("^=", OperatorType.BIN_XOR_ASSIGN),
-            OperatorInfo("<<=", OperatorType.SHIFT_LEFT_ASSIGN),
-            OperatorInfo(">>=", OperatorType.SHIFT_RIGHT_ASSIGN),
+            OperatorInfo(OperatorType.ASSIGN),
+            OperatorInfo(OperatorType.PLUS_ASSIGN),
+            OperatorInfo(OperatorType.MINUS_ASSIGN),
+            OperatorInfo(OperatorType.MUL_ASSIGN),
+            OperatorInfo(OperatorType.DIV_ASSIGN),
+            OperatorInfo(OperatorType.REMAINDER_ASSIGN),
+            OperatorInfo(OperatorType.BIN_AND_ASSIGN),
+            OperatorInfo(OperatorType.BIN_OR_ASSIGN),
+            OperatorInfo(OperatorType.BIN_XOR_ASSIGN),
+            OperatorInfo(OperatorType.SHIFT_LEFT_ASSIGN),
+            OperatorInfo(OperatorType.SHIFT_RIGHT_ASSIGN),
         ),
 
         arrayOf(
-            OperatorInfo("..", OperatorType.DOUBLE_DOT)
+            OperatorInfo(OperatorType.DOUBLE_DOT)
         ),
         arrayOf(
-            OperatorInfo("in", OperatorType.IN),
-            OperatorInfo("until", OperatorType.UNTIL),
-            OperatorInfo("?:", OperatorType.ELVIS),
-            OperatorInfo("->", OperatorType.ARROW),
-            OperatorInfo(",", OperatorType.COMMA)
+            OperatorInfo(OperatorType.IN),
+            OperatorInfo(OperatorType.UNTIL),
+            OperatorInfo(OperatorType.ELVIS),
+            OperatorInfo(OperatorType.ARROW),
+            OperatorInfo(OperatorType.COMMA)
         )
     )
 

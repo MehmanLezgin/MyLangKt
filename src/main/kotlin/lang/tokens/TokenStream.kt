@@ -62,45 +62,16 @@ class TokenStream(
         savedIndices.removeLast()
     }
 
-
-    private val triBracketsMap = mapOf(
-        OperatorType.LESS_EQUAL to listOf(OperatorType.LESS, OperatorType.ASSIGN),
-        OperatorType.GREATER_EQUAL to listOf(OperatorType.GREATER, OperatorType.ASSIGN),
-
-        OperatorType.SHIFT_LEFT to listOf(OperatorType.LESS, OperatorType.LESS),
-        OperatorType.SHIFT_LEFT_ASSIGN to listOf(OperatorType.LESS, OperatorType.LESS, OperatorType.ASSIGN),
-
-        OperatorType.SHIFT_RIGHT to listOf(OperatorType.GREATER, OperatorType.GREATER),
-        OperatorType.SHIFT_RIGHT_ASSIGN to listOf(OperatorType.GREATER, OperatorType.GREATER, OperatorType.ASSIGN),
-    )
-
-    private val ampersandMap = mapOf(
-        OperatorType.AMPERSAND to listOf(OperatorType.AMPERSAND),
-        OperatorType.AND to listOf(OperatorType.AMPERSAND, OperatorType.AMPERSAND),
-        OperatorType.BIN_AND_ASSIGN to listOf(OperatorType.AMPERSAND, OperatorType.ASSIGN)
-    )
-
-    private val multiplyMap = mapOf(
-        OperatorType.MUL to listOf(OperatorType.MUL),
-        OperatorType.MUL_ASSIGN to listOf(OperatorType.MUL, OperatorType.ASSIGN),
-    )
-
-    private val superMap = mapOf(
-        OperatorType.LESS to triBracketsMap,
-        OperatorType.AMPERSAND to ampersandMap,
-        OperatorType.MUL to multiplyMap,
-    )
-
     private fun splitOperator(mapTag: OperatorType) {
-        val map = superMap[mapTag] ?: return
+        val map = OperatorMaps.superMap[mapTag] ?: return
 
         val t = peek()
         if (t !is Token.Operator) return
-        val splitted = map[t.type] ?: return
+        val splits = map[t.type] ?: return
 
         var offset = 0
 
-        val newTokens = splitted.map {
+        val newTokens = splits.map {
             val newToken = t.copy(
                 type = it,
                 raw = langSpec.getOperatorInfo(it)?.symbol ?: "",
@@ -116,7 +87,7 @@ class TokenStream(
 
     override fun splitOperators(mapTag: OperatorType) {
         save()
-        val map = superMap[mapTag] ?: return
+        val map = OperatorMaps.superMap[mapTag] ?: return
 
         while (true) {
             val t = peek()

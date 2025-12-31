@@ -7,7 +7,6 @@ data class TypeNameNode(
     val bound: DatatypeNode?,   // T : Base
     override val pos: Pos
 ) : ExprNode(pos) {
-
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,

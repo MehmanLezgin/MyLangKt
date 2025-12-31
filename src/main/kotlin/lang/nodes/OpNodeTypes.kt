@@ -23,16 +23,16 @@ enum class BinOpType {
     AND,         // &&
     OR,           // ||
     ASSIGN,           // =
-    PLUS_ASSIGN,      // +=
-    MINUS_ASSIGN,     // -=
-    MUL_ASSIGN,      // *=
-    DIV_ASSIGN,     // /=
-    REMAINDER_ASSIGN,   // %=
-    AND_ASSIGN,       // &=
-    OR_ASSIGN,      // |=
-    XOR_ASSIGN,     // ^=
-    SHIFT_LEFT_ASSIGN,// <<=
-    SHIFT_RIGHT_ASSIGN,// >>=
+//    PLUS_ASSIGN,      // +=
+//    MINUS_ASSIGN,     // -=
+//    MUL_ASSIGN,      // *=
+//    DIV_ASSIGN,     // /=
+//    REMAINDER_ASSIGN,   // %=
+//    AND_ASSIGN,       // &=
+//    OR_ASSIGN,      // |=
+//    XOR_ASSIGN,     // ^=
+//    SHIFT_LEFT_ASSIGN,// <<=
+//    SHIFT_RIGHT_ASSIGN,// >>=
     CAST,
     IS,
     IN,

@@ -1,25 +1,25 @@
 package lang.semantics.symbols
 
-import lang.nodes.BaseDatatypeNode
 import lang.nodes.ExprNode
-import lang.nodes.TypeNameListNode
-import lang.nodes.VoidDatatypeNode
+import lang.semantics.types.FuncType
+import lang.semantics.types.Type
+import lang.semantics.types.TypeFlags
 import lang.tokens.OperatorType
 
 data class FuncParamSymbol(
     override val name: String,
-    val datatype: BaseDatatypeNode,
+    val type: Type,
     val defaultValue: ExprNode?
 ) : Symbol(name) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is FuncParamSymbol) return false
 
-        return datatype == other.datatype
+        return type == other.type
     }
 
     override fun hashCode(): Int {
-        return datatype.hashCode()
+        return type.hashCode()
     }
 }
 
@@ -43,7 +43,7 @@ data class FuncParamListSymbol(
 /*data class FuncDefinition(
     val typeNames: TypeNameListNode?,
     val params: FuncParamListSymbol,
-    val returnType: BaseDatatypeNode
+    val returnType: Type
 )*/
 
 data class OverloadedFuncSymbol(
@@ -58,44 +58,94 @@ data class OverloadedFuncSymbol(
 
 open class FuncSymbol(
     override val name: String,
-    open val typeNames: TypeNameListNode?,
+//    open val typeNames: TypeNameListNode?,
     open val params: FuncParamListSymbol,
-    open val returnType: BaseDatatypeNode
+    open val returnType: Type
 ) : Symbol(name) {
+    val paramTypes: List<Type>
+        get() = params.list.map { it.type }
+
     fun toOverloadedFuncSymbol() = OverloadedFuncSymbol(
         name = name,
         overloads = mutableListOf(this)
     )
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as FuncSymbol
+
+        if (name != other.name) return false
+//        if (typeNames != other.typeNames) return false
+        if (params != other.params) return false
+        if (returnType != other.returnType) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+//        result = 31 * result + (typeNames?.hashCode() ?: 0)
+        result = 31 * result + params.hashCode()
+        result = 31 * result + returnType.hashCode()
+        return result
+    }
+
+    fun toFuncType() =
+        FuncType(
+            paramTypes = paramTypes,
+            returnType = returnType,
+            flags = TypeFlags(
+                isExprType = true
+            )
+        )
+
+    override fun toString(): String {
+        return "FuncSymbol(name='$name', params=$params, returnType=$returnType)"
+    }
 }
 
 data class OperatorFuncSymbol(
     val operator: OperatorType,
-    override val typeNames: TypeNameListNode?,
+//    override val typeNames: TypeNameListNode?,
     override val params: FuncParamListSymbol,
-    override val returnType: BaseDatatypeNode
+    override val returnType: Type
 ) : FuncSymbol(
-    name = operator.name,
-    typeNames = typeNames,
+    name = operator.fullName,
+//    typeNames = typeNames,
     params = params,
     returnType = returnType,
 )
 
+data class BuiltInOperatorFuncSymbol(
+    val operator: OperatorType,
+    override val params: FuncParamListSymbol,
+    override val returnType: Type
+) : FuncSymbol(
+    name = operator.fullName,
+//    typeNames = null,
+    params = params,
+    returnType = returnType,
+)
+
+
 data class ConstructorSymbol(
     override val name: String,
     override val params: FuncParamListSymbol,
-    override val returnType: BaseDatatypeNode
+    override val returnType: Type
 ) : FuncSymbol(
     name = name,
-    typeNames = null,
+//    typeNames = null,
     params = params,
     returnType = returnType,
 )
 data class DestructorSymbol(
     override val name: String,
-    override val returnType: BaseDatatypeNode
+    override val returnType: Type
 ) : FuncSymbol(
     name = name,
-    typeNames = null,
+//    typeNames = null,
     params = FuncParamListSymbol(list = emptyList()),
     returnType = returnType,
 )

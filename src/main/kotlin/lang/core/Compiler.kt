@@ -102,11 +102,6 @@ object Compiler : ICompiler {
         var time = timing.timeMillis
         checkErrors(CompileStage.SYNTAX_ANALYSIS, errorHandler, src, time)
 
-        if (DEBUG_PRINT_AST)
-        File(PARSER_RESULT_PATH).printWriter().use { out ->
-            out.println(Serializer.formatNode(ast ?: BlockNode.EMPTY))
-        }
-
         if (errorHandler.hasErrors || ast == null)
             return null
 
@@ -117,6 +112,11 @@ object Compiler : ICompiler {
         timing.begin()
         analyzer.resolve(node = ast)
         time = timing.timeMillis
+
+        if (DEBUG_PRINT_AST)
+            File(PARSER_RESULT_PATH).printWriter().use { out ->
+                out.println(Serializer.formatNode(ast))
+            }
 
         checkErrors(CompileStage.SEMANTIC_ANALYSIS, errorHandler, src, time)
 
@@ -132,7 +132,7 @@ object Compiler : ICompiler {
 
         try {
             src = readFile(path = path)
-        } catch (e: IOException) {
+        } catch (_: IOException) {
             val fileName = File(path).absoluteFile.path
             src = SourceCode("")
 

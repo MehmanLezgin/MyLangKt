@@ -46,7 +46,9 @@ object Serializer {
         val branch = if (isLast) "└── " else "├── "
         val nextIndent = indent + if (isLast) "    " else "│   "
 
-        val header = "${getName(node)} pos=${node.pos}"
+        val header = "${getName(node)} pos=${node.pos}\n" +
+                "${nextIndent}├── symbol: ${node.symbol}\n" +
+                "${nextIndent}├── type: ${node.type}"
         val children = getChildren(node)
 
         if (children.isEmpty()) {
@@ -132,7 +134,7 @@ object Serializer {
             is UnknownNode -> emptyList()
 
             is OperNode -> listOf(
-                "type" to node.type,
+                "type" to node.operatorType,
                 "value" to node.value
             )
 
@@ -142,7 +144,7 @@ object Serializer {
 
             is LiteralNode<*> -> listOf(
                 "value" to node.value,
-                "type" to node.value!!::class.simpleName.toString()
+                "type" to node.value::class.simpleName.toString()
             )
 
             is NullLiteralNode -> emptyList()
@@ -212,15 +214,6 @@ object Serializer {
                 "initializer" to node.initializer
             )
 
-            is FuncDeclStmtNode -> listOf(
-                "modifiers" to node.modifiers,
-                "name" to node.name,
-                "typeNames" to node.typeNames,
-                "params" to node.params,
-                "returnType" to node.returnType,
-                "body" to node.body,
-            )
-
             is ConstructorDeclStmtNode -> listOf(
                 "modifiers" to node.modifiers,
                 "params" to node.params,
@@ -230,6 +223,15 @@ object Serializer {
             is DestructorDeclStmtNode -> listOf(
                 "modifiers" to node.modifiers,
                 "body" to node.body
+            )
+
+            is FuncDeclStmtNode -> listOf(
+                "modifiers" to node.modifiers,
+                "name" to node.name,
+                "typeNames" to node.typeNames,
+                "params" to node.params,
+                "returnType" to node.returnType,
+                "body" to node.body,
             )
 
             is InterfaceDeclStmtNode -> listOf(
@@ -324,9 +326,5 @@ object Serializer {
         }
     }
 
-    private fun listChildren(list: List<*>): List<Pair<String, Any?>> {
-        return list.mapIndexed { i, expr -> "[$i]" to expr }
-    }
-
-    fun getName(node: ExprNode) = node.javaClass.simpleName
+    fun getName(node: ExprNode): String = node.javaClass.simpleName
 }

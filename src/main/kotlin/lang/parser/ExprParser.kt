@@ -39,6 +39,7 @@ import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.isOperator
 import lang.parser.ParserUtils.isSimpleUnaryOp
 import lang.parser.ParserUtils.toIdentifierNode
+import lang.tokens.OperatorMaps
 
 class ExprParser(
     private val ts: ITokenStream,
@@ -47,12 +48,7 @@ class ExprParser(
     private val unaryOpTypeMapper = UnaryOpTypeMapper()
     private val binOpTypeMapper = BinOpTypeMapper()
 
-    private var parseCallCount = 0
-
     override fun parse(ctx: ParsingContext): ExprNode {
-//        if (++parseCallCount % 1000 == 0) {
-//            true
-//        }
         ts.skipTokens(Token.Semicolon::class)
         return parseBinaryExpr(minPrec = 1, null, ctx)
     }
@@ -78,10 +74,10 @@ class ExprParser(
         return list.toList()
     }
 
-    private fun hasLambdaSignature(rawBlock: BlockNode): Boolean {
+    /*private fun hasLambdaSignature(rawBlock: BlockNode): Boolean {
         val first = rawBlock.nodes.firstOrNull() ?: return false
         return first isBinOperator BinOpType.ARROW
-    }
+    }*/
 
     private fun blockToLambda(rawBlock: BlockNode): LambdaNode {
         val pos = rawBlock.pos
@@ -331,7 +327,7 @@ class ExprParser(
 
             OperatorType.AMPERSAND -> {
                 if (expr !is IdentifierNode) return expr
-                return parseDatatype(startIdentifier = expr)
+                parseDatatype(startIdentifier = expr)
             }
 
             OperatorType.MUL -> {
@@ -364,7 +360,7 @@ class ExprParser(
 
             OperatorType.LESS -> {
 //                if (!ctx || expr !is IdentifierNode)
-                if (ctx == ParsingContext.Condition || expr !is IdentifierNode)
+                if (!ctx.canParseTypeArgs() || expr !is IdentifierNode)
                     return expr
 
                 val datatypeNode = parseDatatype(startIdentifier = expr)
@@ -432,10 +428,12 @@ class ExprParser(
             return emptyList()
         }
 
-        val list = parseBinaryExpr(1, closeToken).flattenCommaNode()
+        val list = parseBinaryExpr(1, closeToken, ParsingContext.TypeArg).flattenCommaNode()
 
         if (ts.peek() isOperator OperatorType.GREATER)
             ts.next()
+        else
+            syntaxError(Messages.EXPECTED_GREATER_OP, ts.peek().pos)
 
         return list
     }
@@ -450,7 +448,7 @@ class ExprParser(
         } else null
 
         return OperNode(
-            type = operator?.type ?: OperatorType.UNKNOWN,
+            operatorType = operator?.type ?: OperatorType.UNKNOWN,
             pos = pos
         )
     }
@@ -648,7 +646,6 @@ class ExprParser(
     }
 
     private fun parseRight(
-        left: ExprNode,
         op: Token.Operator,
         stopToken: Token?,
         ctx: ParsingContext
@@ -669,6 +666,32 @@ class ExprParser(
         }
     }
 
+    private fun splitCompound(
+        left: ExprNode,
+        right: ExprNode,
+        opType: OperatorType,
+        pos: Pos
+    ) : ExprNode? {
+        val compound = opType.compoundToBinary() ?: return null
+        val operator = binOpTypeMapper.toSecond(compound) ?: return null
+
+        val compoundExpr = BinOpNode(
+            left = left,
+            right = right,
+            operator = operator,
+            tokenOperatorType = compound,
+            pos = pos
+        )
+
+        return BinOpNode(
+            left = left,
+            right = compoundExpr,
+            operator = BinOpType.ASSIGN,
+            tokenOperatorType = OperatorType.ASSIGN,
+            pos = pos
+        )
+    }
+
     private fun parseBinaryExpr(
         minPrec: Int,
         stopToken: Token? = null,
@@ -676,19 +699,41 @@ class ExprParser(
     ): ExprNode {
         var left = parseUnaryExpr(ctx)
 
+
         while (true) {
             val op = ts.peek() as? Token.Operator ?: break
+            val opType = op.type
+
             if (op == stopToken || op.precedence < minPrec) break
+            if (
+                ctx.canParseTypeArgs() &&
+                (opType == OperatorType.LESS ||
+                        opType == OperatorType.GREATER ||
+                        OperatorMaps.triBracketsMap[opType] != null)
+            ) break
+
             ts.next()
 
             val right = parseRight(
-                left = left,
                 op = op,
                 stopToken = stopToken,
                 ctx = ctx
             )
 
-            val operator = binOpTypeMapper.toSecond(op.type)
+            val compoundExpr = splitCompound(
+                left = left,
+                right = right,
+                opType = opType,
+                pos = op.pos
+            )
+
+            if (compoundExpr != null) {
+                left = compoundExpr
+                continue
+            }
+
+
+            val operator = binOpTypeMapper.toSecond(opType)
 
             if (operator == null) {
                 syntaxError(Messages.EXPECTED_AN_EXPRESSION, left.pos)
@@ -699,7 +744,7 @@ class ExprParser(
                 left = left,
                 right = right,
                 operator = operator,
-                tokenOperatorType = op.type,
+                tokenOperatorType = opType,
                 pos = op.pos
             )
         }

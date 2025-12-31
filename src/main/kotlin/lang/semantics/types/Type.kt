@@ -1,58 +1,170 @@
 package lang.semantics.types
 
-import lang.semantics.symbols.Symbol
+import lang.messages.Messages
+import lang.nodes.ExprNode
 
-open class Type(
-    open val isConst: Boolean,
-    open val isReference: Boolean,
-)
+abstract class Type(
+    open var flags: TypeFlags = TypeFlags()
+) {
+    val isConst: Boolean get() = flags.isConst
+    val isLvalue: Boolean get() = flags.isLvalue
+    val isExprType: Boolean get() = flags.isExprType
+    val isMutable: Boolean get() = flags.isMutable
 
-open class PrimitiveType(
-    open val name: String,
-    override val isConst: Boolean = false,
-    override val isReference: Boolean = false,
-) : Type(
-    isConst = isConst,
-    isReference = isReference,
-)
+    fun setFlags(
+        isConst: Boolean = flags.isConst,
+        isLvalue: Boolean = flags.isLvalue,
+        isExprType: Boolean = flags.isExprType,
+        isMutable: Boolean = flags.isMutable
+    ): Type {
+        return copyWithFlags(
+            flags = TypeFlags(
+                isConst = isConst,
+                isLvalue = isLvalue,
+                isExprType = isExprType,
+                isMutable = isMutable
+            )
+        )
+    }
 
-data class PointerType(
-    val base: Type,
-    override val isConst: Boolean = false,
-    override val isReference: Boolean = false
-) : Type(
-    isConst = isConst,
-    isReference = isReference,
-)
+    abstract fun copyWithFlags(flags: TypeFlags = this.flags): Type
 
-data class FuncType(
-    val name: String,
-    val params: List<Type>,
-    val returnType: Type,
-    override val isConst: Boolean = false,
-    override val isReference: Boolean = false
-) : Type(
-    isConst = isConst,
-    isReference = isReference,
-)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
 
-sealed class TypeArg {
-    data class ArgType(
-        val type: Type,
-    ) : TypeArg()
+        other as Type
 
-    data class ArgConstValue<T: Any>(
-        val value: ConstValue<T>
-    ) : TypeArg()
+        if (isConst && !other.isConst) return false
+        if (isLvalue != other.isLvalue) return false
+        if (isExprType != other.isExprType) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = isConst.hashCode()
+        result = 31 * result + isLvalue.hashCode()
+        result = 31 * result + isExprType.hashCode()
+        return result
+    }
+
+    override fun toString() = stringify()
+
+    fun Type.castCost(to: Type): Int? {
+        val from = this
+        if (!from.canCastTo(to)) return null
+        if (from == to) return 0
+
+        return when {
+            from is PrimitiveType && to is PrimitiveType ->
+                to.prec - from.prec
+
+            from is PointerType && to is PointerType ->
+                if (to == BuiltInTypes.voidPtr) 10 else 0
+
+            else -> 100
+        }
+    }
+
+    fun canCastTo(to: Type): Boolean {
+        val from = this
+        if (from == to) return true
+        if (!from.isLvalue && to.isLvalue) return false
+        if (!from.isConst && to.isConst) return false
+
+        when (from) {
+            BuiltInTypes.voidPtr -> {
+                if (to is PointerType) return true
+                if (to is FuncType) return true
+                return false
+            }
+
+            is PrimitiveType -> {
+                if (to !is PrimitiveType) return false
+                if (to == BuiltInTypes.void) return false
+//                if (to == BuiltInTypes.) return false
+                if (from.isConst && from.isExprType)
+                    return true
+
+                return from.prec <= to.prec
+            }
+
+            is PointerType -> {
+                return when (to) {
+                    is PointerType -> to == BuiltInTypes.voidPtr || from.level == to.level
+                    else -> false
+                }
+            }
+
+            is FuncType -> {
+                if (to == BuiltInTypes.voidPtr) return true
+                if (to !is FuncType) return false
+                if (from.returnType != to.returnType) return false
+                if (from.paramTypes != to.paramTypes) return false
+                return true
+            }
+
+            is UserType -> {
+                if (to !is UserType) return false
+                if (from.name != to.name) return false
+                if (from.declaration != to.declaration) return false
+                return from.templateArgs == to.templateArgs
+            }
+        }
+
+        return false
+    }
+
+    fun stringify(pointerLevel: Int = 0): String {
+        val type = this
+
+        if (type is ErrorType) return Messages.ERROR_TYPE
+        val ptrStr = "*".repeat(pointerLevel)
+
+        return buildString {
+            if (type.isConst) {
+                append(Messages.CONST)
+                append(' ')
+            }
+
+            when (type) {
+                is PrimitiveType -> {
+                    append(type.name)
+                    append(ptrStr)
+                }
+
+                is PointerType -> {
+                    append(type.base.stringify(pointerLevel = type.level))
+                }
+
+                is FuncType -> {
+                    append("func")
+                    append(ptrStr)
+                    append('(')
+                    append(type.paramTypes.joinToString())
+                    append("): ")
+                    append(type.returnType.stringify())
+                }
+
+                is UserType -> {
+                    append(type.name)
+                    append(ptrStr)
+                    if (type.templateArgs.isNotEmpty()) {
+                        append('<')
+                        append(type.templateArgs.joinToString(", "))
+                        append('>')
+                    }
+                }
+            }
+
+//            if (type.isLvalue && withBase && type !is FuncType)
+//                append('&')
+        }
+    }
+
 }
 
-data class UserType(
-    val name: String,
-    val typeArgs: List<TypeArg>,
-    val declaration: Symbol,
-    override val isConst: Boolean = false,
-    override val isReference: Boolean = false
-) : Type(
-    isConst = isConst,
-    isReference = isReference,
-)
+fun <T: Type> T.attachType(node: ExprNode): T {
+    node.type = this
+    return this
+}

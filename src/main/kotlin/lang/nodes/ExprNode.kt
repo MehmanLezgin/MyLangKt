@@ -1,6 +1,7 @@
 package lang.nodes
 
 import lang.semantics.symbols.Symbol
+import lang.semantics.types.Type
 import lang.tokens.OperatorType
 import lang.tokens.Pos
 
@@ -9,6 +10,7 @@ typealias NodeTransformFunc = (ExprNode) -> ExprNode
 abstract class ExprNode(
     open val pos: Pos,
     var symbol: Symbol? = null,
+    var type: Type? = null
 ) {
     abstract fun mapRecursive(mapper: NodeTransformFunc): ExprNode
 }
@@ -30,16 +32,12 @@ open class IdentifierNode(
 }
 
 data class OperNode(
-    val type: OperatorType,
+    val operatorType: OperatorType,
     override val pos: Pos
 ) : IdentifierNode(
-    value = getName(type = type),
+    value = operatorType.fullName,
     pos = pos
 ) {
-    companion object {
-        fun getName(type: OperatorType) = "\$operator_$type"
-    }
-
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
         mapper(this)
 }

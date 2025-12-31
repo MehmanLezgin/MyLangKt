@@ -5,6 +5,7 @@ import lang.nodes.VarDeclStmtNode
 import lang.semantics.symbols.FuncParamListSymbol
 import lang.semantics.symbols.FuncParamSymbol
 import lang.semantics.symbols.Symbol
+import lang.semantics.types.Type
 
 data class FuncParamsScope(
     override val parent: Scope?,
@@ -16,12 +17,12 @@ data class FuncParamsScope(
 
     private val params = mutableListOf<FuncParamSymbol>()
 
-    fun defineParam(node: VarDeclStmtNode) : Symbol? {
+    fun defineParam(node: VarDeclStmtNode, type: Type) : Symbol {
         val name = node.name
 
         val param = FuncParamSymbol(
             name = name.value,
-            datatype = node.dataType,
+            type = type,
             defaultValue = node.initializer
         )
 
