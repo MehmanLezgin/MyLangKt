@@ -2,26 +2,38 @@ package lang.semantics.resolvers
 
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
-import lang.semantics.symbols.ConstVarSymbol
+import lang.semantics.symbols.ConstValueSymbol
 import lang.semantics.types.ConstValue
+import lang.semantics.types.Type
 
 class ConstResolver(
-    override val ctx: ISemanticAnalyzer
-) : BaseResolver<ExprNode?, ConstValue<*>?>(ctx = ctx) {
+    override val analyzer: ISemanticAnalyzer
+) : BaseResolver<ExprNode?, ConstValue<*>?>(analyzer = analyzer) {
     override fun resolve(target: ExprNode?): ConstValue<*>? {
         if (target == null) return null
         return when (target) {
-            is LiteralNode<*> -> ConstValue(target.value)
+            is LiteralNode<*> -> ConstValue.from(target)
             is IdentifierNode -> resolve(target)
+            is ScopedDatatypeNode -> resolve(target)
             is UnaryOpNode -> resolve(target)
             is BinOpNode -> resolve(target)
+            is DatatypeNode -> resolve(target)
             else -> null
         }
     }
 
+    private fun resolve(expr: ScopedDatatypeNode): ConstValue<*>? {
+        val type = analyzer.typeResolver.resolve(expr.base)
+        val scope = type.declaration?.staticScope
+        val name = expr.member.identifier.value
+        val sym = scope?.resolve(name = name, asMember = true)
+        if (sym !is ConstValueSymbol) return null
+        return sym.value
+    }
+
     private fun resolve(expr: IdentifierNode): ConstValue<*>? {
-        val sym = ctx.scope.resolve(expr.value)
-        if (sym !is ConstVarSymbol) return null
+        val sym = analyzer.scope.resolve(expr.value)
+        if (sym !is ConstValueSymbol) return null
         return sym.value
     }
 
@@ -37,7 +49,25 @@ class ConstResolver(
         }
     }
 
+    fun resolveCast(
+        constValue: ConstValue<*>, type: Type
+    ): ConstValue<*>? {
+        if (!type.isConst || type.isExprType) return null
+        val value = constValue.toNumber()
+        val casted = ConstValue.convertToType(type, value) ?: return null
+        return ConstValue(casted)
+    }
+
+    private fun resolveCast(expr: BinOpNode): ConstValue<*>? {
+        val left = resolve(expr.left) ?: return null
+        val type = analyzer.typeResolver.resolve(expr.right)
+        return resolveCast(left, type)
+    }
+
     private fun resolve(expr: BinOpNode): ConstValue<*>? {
+        if (expr.operator == BinOpType.CAST)
+            return resolveCast(expr)
+
         val l = resolve(expr.left) ?: return null
         val r = resolve(expr.right) ?: return null
 
@@ -75,7 +105,6 @@ class ConstResolver(
                 BinOpType.BIN_OR -> l or r
                 BinOpType.AND -> l logicalAnd r
                 BinOpType.OR -> l logicalOr r
-//            BinOpType.CAST -> TODO()
                 else -> return null
             }
 

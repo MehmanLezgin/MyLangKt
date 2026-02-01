@@ -30,10 +30,10 @@ object ParserUtils {
 
     infix fun Token.isOperator(type: OperatorType) = this is Token.Operator && this.type == type
 
-    fun Token.isAccessOperator() = this is Token.Operator && (when (this.type) {
-        OperatorType.DOT, OperatorType.DOT_NULL_SAFE -> true
+    /*fun Token.isAccessOperator() = this is Token.Operator && (when (this.type) {
+        OperatorType.DOT, OperatorType.SCOPE,  -> true
         else -> false
-    })
+    })*/
 
     infix fun Token.isNotOperator(type: OperatorType) = this !is Token.Operator || this.type != type
 
@@ -47,7 +47,9 @@ object ParserUtils {
         KeywordType.PROTECTED,
         KeywordType.STATIC,
         KeywordType.OPEN,
-        KeywordType.OVERRIDE
+        KeywordType.OVERRIDE,
+        KeywordType.ABSTRACT
+
     )
 
     fun Token.Identifier.toIdentifierNode() = IdentifierNode(

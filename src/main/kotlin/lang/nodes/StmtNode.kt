@@ -363,13 +363,17 @@ data class NamespaceStmtNode(
 }
 
 data class TypedefStmtNode(
-    val identifier: IdentifierNode,
-    val dataType: BaseDatatypeNode,
-    override val pos: Pos
-) : StmtNode(pos) {
+    override val name: IdentifierNode,
+    override val pos: Pos,
+    val dataType: BaseDatatypeNode
+) : DeclStmtNode(
+    modifiers = null,
+    name = name,
+    pos = pos
+) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
-            identifier = identifier.mapRecursive(mapper) as? IdentifierNode ?: identifier,
+            name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
             dataType = dataType.mapRecursive(mapper) as? BaseDatatypeNode ?: dataType,
         )
         return mapper(newNode)

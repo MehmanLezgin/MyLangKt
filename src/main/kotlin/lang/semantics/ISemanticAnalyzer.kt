@@ -16,12 +16,14 @@ interface ISemanticAnalyzer {
     val constResolver: ConstResolver
     val typeResolver: TypeResolver
 
+    val semanticContext: SemanticContext
+
     fun resolve(node: ExprNode)
     fun resolve(node: BlockNode)
 
     fun exitScope()
     fun enterScope(newScope: Scope)
-    fun withScope(targetScope: Scope = Scope(parent = this.scope, errorHandler), block: () -> Unit)
+    fun <T> withScope(targetScope: Scope = Scope(parent = this.scope, errorHandler), block: () -> T) : T
 
     fun withScopeResolveBody(targetScope: Scope, body: BlockNode?)
 }

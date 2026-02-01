@@ -2,13 +2,15 @@
 
 package lang.semantics.types
 
+import lang.nodes.LiteralNode
+
 
 @OptIn(ExperimentalStdlibApi::class)
 data class ConstValue<T : Any>(val value: T) {
 
-    val type: Type = BuiltInTypes.fromValue(value) ?: throw Exception("Invalid constant value")
+    val type: Type = PrimitiveTypes.fromValue(value) ?: throw Exception("Invalid constant value")
 
-    private fun toNumber(): Number = when (value) {
+    fun toNumber(): Number = when (value) {
         is Boolean -> if (value) 1 else 0
 
         is Byte, is Short,
@@ -33,34 +35,9 @@ data class ConstValue<T : Any>(val value: T) {
 
     private fun promoteType(other: ConstValue<*>): PrimitiveType? {
         if (this.type !is PrimitiveType || other.type !is PrimitiveType) return null
-        val t1 = if (this.type == BuiltInTypes.bool) BuiltInTypes.int32 else this.type
-        val t2 = if (other.type == BuiltInTypes.bool) BuiltInTypes.int32 else other.type
-        return BuiltInTypes.highest(t1, t2)
-    }
-
-    private fun convertToType(targetType: Type, n: Number): Any? = when (targetType) {
-        BuiltInTypes.boolConst -> n.toDouble() != 0.0
-        BuiltInTypes.int8Const -> n.toByte()
-        BuiltInTypes.uint8Const -> (n.toInt() and 0xFF).toUByte()
-        BuiltInTypes.int16Const -> n.toShort()
-        BuiltInTypes.uint16Const -> (n.toInt() and 0xFFFF).toUShort()
-        BuiltInTypes.int32Const -> n.toInt()
-        BuiltInTypes.uint32Const -> (n.toLong() and 0xFFFFFFFF).toUInt()
-        BuiltInTypes.int64Const -> n.toLong()
-        BuiltInTypes.uint64Const -> (n.toLong()).toULong()
-        BuiltInTypes.float32Const -> when (n) {
-            is Float -> n
-            else -> n.toFloat()
-        }
-
-        BuiltInTypes.float64Const -> when (n) {
-            is Double -> n
-            else -> n.toDouble()
-        }
-
-        BuiltInTypes.charConst -> n.toInt().toChar()
-        BuiltInTypes.ucharConst -> (n.toInt() and 0xFF).toUByte()
-        else -> null
+        val t1 = if (this.type == PrimitiveTypes.bool) PrimitiveTypes.int32 else this.type
+        val t2 = if (other.type == PrimitiveTypes.bool) PrimitiveTypes.int32 else other.type
+        return PrimitiveTypes.highest(t1, t2)
     }
 
     // Arithmetic
@@ -108,5 +85,48 @@ data class ConstValue<T : Any>(val value: T) {
         val targetType = promoteType(other) ?: return null
         val result = op(this.toNumber(), other.toNumber())
         return convertToType(targetType, result)?.let { ConstValue(it) }
+    }
+
+    companion object {
+        fun from(literal: LiteralNode<*>): ConstValue<*>? {
+            return when (literal) {
+                is LiteralNode.BooleanLiteral -> ConstValue(literal.value)
+                is LiteralNode.CharLiteral -> ConstValue(literal.value)
+                is LiteralNode.DoubleLiteral -> ConstValue(literal.value)
+                is LiteralNode.FloatLiteral -> ConstValue(literal.value)
+                is LiteralNode.IntLiteral -> ConstValue(literal.value)
+                is LiteralNode.LongLiteral -> ConstValue(literal.value)
+                is LiteralNode.StringLiteral -> ConstValue(literal.value)
+                is LiteralNode.UIntLiteral -> ConstValue(literal.value)
+                is LiteralNode.ULongLiteral -> ConstValue(literal.value)
+            }
+        }
+
+        fun convertToType(targetType: Type, n: Number): Any? {
+            return when (targetType) {
+                PrimitiveTypes.boolConst -> n.toDouble() != 0.0
+                PrimitiveTypes.int8Const -> n.toByte()
+                PrimitiveTypes.uint8Const -> (n.toInt() and 0xFF).toUByte()
+                PrimitiveTypes.int16Const -> n.toShort()
+                PrimitiveTypes.uint16Const -> (n.toInt() and 0xFFFF).toUShort()
+                PrimitiveTypes.int32Const -> n.toInt()
+                PrimitiveTypes.uint32Const -> (n.toLong() and 0xFFFFFFFF).toUInt()
+                PrimitiveTypes.int64Const -> n.toLong()
+                PrimitiveTypes.uint64Const -> (n.toLong()).toULong()
+                PrimitiveTypes.float32Const -> when (n) {
+                    is Float -> n
+                    else -> n.toFloat()
+                }
+
+                PrimitiveTypes.float64Const -> when (n) {
+                    is Double -> n
+                    else -> n.toDouble()
+                }
+
+                PrimitiveTypes.charConst -> n.toInt().toChar()
+                PrimitiveTypes.ucharConst -> (n.toInt() and 0xFF).toUByte()
+                else -> null
+            }
+        }
     }
 }

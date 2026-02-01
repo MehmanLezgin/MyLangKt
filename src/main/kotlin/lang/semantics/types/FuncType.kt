@@ -1,11 +1,14 @@
 package lang.semantics.types
 
+import lang.semantics.symbols.TypeSymbol
+
 class FuncType(
     val paramTypes: List<Type>,
     val returnType: Type,
     override var flags: TypeFlags = TypeFlags()
 ) : Type(
     flags = flags,
+    declaration = null
 ) {
     override fun copyWithFlags(flags: TypeFlags) =
         FuncType(

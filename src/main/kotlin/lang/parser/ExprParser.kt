@@ -1,45 +1,16 @@
 package lang.parser
 
-import lang.tokens.KeywordType
-import lang.messages.Messages
-import lang.tokens.OperatorType
-import lang.tokens.ITokenStream
-import lang.tokens.Pos
-import lang.tokens.Token
 import lang.mappers.BinOpTypeMapper
 import lang.mappers.UnaryOpTypeMapper
-import lang.nodes.BaseDatatypeNode
-import lang.nodes.BinOpNode
-import lang.nodes.BinOpType
-import lang.nodes.BlockNode
-import lang.nodes.DatatypeNode
-import lang.nodes.DecrementNode
-import lang.nodes.ErrorDatatypeNode
-import lang.nodes.ExprNode
-import lang.nodes.FuncCallNode
-import lang.nodes.FuncDatatypeNode
-import lang.nodes.IdentifierNode
-import lang.nodes.IncrementNode
-import lang.nodes.IndexAccessNode
-import lang.nodes.InitialiserList
-import lang.nodes.LambdaNode
-import lang.nodes.LiteralNode
-import lang.nodes.MemberAccessNode
-import lang.nodes.NullLiteralNode
-import lang.nodes.OperNode
-import lang.nodes.UnaryOpNode
-import lang.nodes.UnknownNode
-import lang.nodes.VarDeclStmtNode
-import lang.nodes.VoidDatatypeNode
+import lang.messages.Messages
+import lang.nodes.*
 import lang.parser.ParserUtils.flattenCommaNode
-import lang.parser.ParserUtils.isAccessOperator
-import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isKeyword
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.isOperator
 import lang.parser.ParserUtils.isSimpleUnaryOp
 import lang.parser.ParserUtils.toIdentifierNode
-import lang.tokens.OperatorMaps
+import lang.tokens.*
 
 class ExprParser(
     private val ts: ITokenStream,
@@ -122,23 +93,14 @@ class ExprParser(
 
     private fun parseDotChain(startChain: ExprNode): ExprNode {
         var chain: ExprNode = startChain
-//        var right: IdentifierNode? = null
 
-
-        while (ts.peek().isAccessOperator()) {
+        while (ts.peek() isOperator OperatorType.DOT) {
             val op = ts.peek() as Token.Operator
-            val isNullSafe = when (op.type) {
-                OperatorType.DOT -> false
-                OperatorType.DOT_NULL_SAFE -> true
-                else -> break
-            }
 
             ts.next()
             val expr = when (val t = ts.peek()) {
-                is Token.Identifier -> {
-                    t.toIdentifierNode()
-                }
-//                is Token.LParen -> parse(ParsingContext.Default)
+                is Token.Identifier -> t.toIdentifierNode()
+
                 else -> {
                     syntaxError(Messages.EXPECTED_IDENTIFIER, t.pos)
                     break
@@ -147,12 +109,19 @@ class ExprParser(
 
             ts.next()
 
-            chain = MemberAccessNode(
-                base = chain,
-                member = expr,
-                isNullSafe = isNullSafe,
-                pos = op.pos
-            )
+            chain = when (op.type) {
+                OperatorType.DOT ->
+                    DotAccessNode(
+                        base = chain,
+                        member = expr,
+                        pos = op.pos
+                    )
+
+                else -> {
+                    syntaxError(Messages.UNEXPECTED_TOKEN, op.pos) // unreachable
+                    break
+                }
+            }
 
             chain = parsePostfixExpr(ParsingContext.Default, chain)
         }
@@ -170,35 +139,35 @@ class ExprParser(
             }
 
             is Token.Int32 -> {
-                ts.next(); LiteralNode(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.IntLiteral(value = t.value, pos = t.pos)
             }
 
             is Token.Float32 -> {
-                ts.next(); LiteralNode(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.FloatLiteral(value = t.value, pos = t.pos)
             }
 
             is Token.Double64 -> {
-                ts.next(); LiteralNode(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.DoubleLiteral(value = t.value, pos = t.pos)
             }
 
             is Token.Int64 -> {
-                ts.next(); LiteralNode(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.LongLiteral(value = t.value, pos = t.pos)
             }
 
             is Token.Bool -> {
-                ts.next(); LiteralNode(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.BooleanLiteral(value = t.value, pos = t.pos)
             }
 
             is Token.Null -> {
                 ts.next(); NullLiteralNode(pos = t.pos)
             }
 
-            is Token.QuotesStr -> {
-                ts.next(); LiteralNode(value = t.value, pos = t.pos)
+            is Token.Str -> {
+                ts.next(); LiteralNode.StringLiteral(value = t.value, pos = t.pos)
             }
 
-            is Token.QuotesChar -> {
-                ts.next(); LiteralNode(value = t.value, pos = t.pos)
+            is Token.Character -> {
+                ts.next(); LiteralNode.CharLiteral(value = t.value, pos = t.pos)
             }
 
             is Token.Keyword -> {
@@ -209,11 +178,11 @@ class ExprParser(
             }
 
             is Token.UInt32 -> {
-                ts.next(); LiteralNode(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.UIntLiteral(value = t.value, pos = t.pos)
             }
 
             is Token.UInt64 -> {
-                ts.next(); LiteralNode(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.ULongLiteral(value = t.value, pos = t.pos)
             }
 
             is Token.LParen -> {
@@ -223,7 +192,7 @@ class ExprParser(
                     ts.next()
 
 
-                if (ts.peek().isAccessOperator())
+                if (ts.peek() isOperator OperatorType.DOT)
                     parseDotChain(startChain = expr)
                 else expr
             }
@@ -358,6 +327,21 @@ class ExprParser(
                 expr
             }
 
+            OperatorType.SCOPE -> {
+                when (expr) {
+                    is IdentifierNode ->
+                        parseDatatype(startIdentifier = expr, ctx = ParsingContext.ScopeChain)
+
+                    is QualifiedDatatypeNode ->
+                        parseDatatype(startDatatype = expr, ctx = ParsingContext.ScopeChain)
+
+                    else -> {
+                        syntaxError(Messages.EXPECTED_TYPE_NAME, t.pos)
+                        ErrorDatatypeNode(t.pos)
+                    }
+                }
+            }
+
             OperatorType.LESS -> {
 //                if (!ctx || expr !is IdentifierNode)
                 if (!ctx.canParseTypeArgs() || expr !is IdentifierNode)
@@ -462,7 +446,7 @@ class ExprParser(
 
             is Token.Keyword -> {
                 when (t.type) {
-                    KeywordType.CONST -> parseDatatype()
+                    KeywordType.CONST -> parseDatatype(startIdentifier = null)
                     KeywordType.FUNC -> parseFuncDatatype()
                     KeywordType.OPERATOR -> parsePostfixExpr(ctx)
                     else -> {
@@ -543,7 +527,7 @@ class ExprParser(
 
         val returnDatatype = if (ts.matchOperator(OperatorType.COLON)) {
             ts.next()
-            parseDatatype()
+            parseDatatype(startIdentifier = null)
         } else VoidDatatypeNode(ts.peek().pos)
 
         return FuncDatatypeNode(
@@ -556,9 +540,57 @@ class ExprParser(
         )
     }
 
-    private fun parseDatatype(startIdentifier: IdentifierNode? = null): BaseDatatypeNode {
+    private fun parseDatatype(
+        startIdentifier: IdentifierNode? = null,
+        ctx: ParsingContext = ParsingContext.Datatype
+    ): BaseDatatypeNode {
+        val datatype = parseSimpleDatatype(startIdentifier = startIdentifier)
+        return parseDatatype(startDatatype = datatype, ctx = ctx)
+    }
+
+    private fun parseDatatype(
+        startDatatype: BaseDatatypeNode? = null,
+        ctx: ParsingContext = ParsingContext.Datatype
+    ): BaseDatatypeNode {
         if (ts.peek() isKeyword KeywordType.FUNC)
             return parseFuncDatatype()
+
+        var datatype = startDatatype ?: parseSimpleDatatype(startIdentifier = null)
+        var memberDatatype = datatype
+
+        while (
+            datatype is QualifiedDatatypeNode &&
+            ts.matchOperator(OperatorType.SCOPE)
+        ) {
+            ts.next()
+            val member = parseSimpleDatatype()
+
+            if (member !is DatatypeNode) {
+                syntaxError(Messages.EXPECTED_TYPE_NAME, member.pos)
+                break
+            }
+
+            datatype = ScopedDatatypeNode(
+                base = datatype,
+                member = member,
+                pos = member.pos
+            )
+
+            memberDatatype = member
+        }
+
+        if (memberDatatype is DatatypeNode && ctx is ParsingContext.Datatype) {
+            memberDatatype.ptrLvl = calcPtrLvl()
+            memberDatatype.isReference = checkReference()
+        }
+
+        return datatype
+    }
+
+
+    private fun parseSimpleDatatype(startIdentifier: IdentifierNode? = null): BaseDatatypeNode {
+//        if (ts.peek() isKeyword KeywordType.FUNC)
+//            return parseFuncDatatype()
 
         var isConst = false
 
@@ -567,8 +599,7 @@ class ExprParser(
 
             isConst = t isKeyword KeywordType.CONST
 
-            if (isConst)
-                t = ts.next()
+            if (isConst) t = ts.next()
 
             when {
                 t is Token.Identifier -> t.toIdentifierNode()
@@ -583,27 +614,33 @@ class ExprParser(
 
         val pos = identifier.pos
 
-        val typeNames =
+        var typeNames: List<ExprNode>? = null
+
+
+        if (ts.matchOperator(OperatorType.SCOPE)) {
+            ts.save()
+            ts.next()
+
             if (ts.matchOperator(OperatorType.LESS)) {
-                val typeNames = parseTypenameList()
-                if (typeNames != null)
-                    typeNames
-                else {
-                    syntaxError(Messages.EXPECTED_TYPE_NAME, pos)
-                    return ErrorDatatypeNode(pos)
-                }
-            } else null
+                ts.clearLastSave()
+            } else ts.restore()
+        }
 
+        if (ts.matchOperator(OperatorType.LESS)) {
+            typeNames = parseTypenameList()
 
-        val ptrLvl = calcPtrLvl()
-        val isReference = checkReference()
+            if (typeNames == null) {
+                syntaxError(Messages.EXPECTED_TYPE_NAME, pos)
+                return ErrorDatatypeNode(pos)
+            }
+        }
 
         return DatatypeNode(
             identifier = identifier,
             typeNames = typeNames,
             pos = pos,
-            ptrLvl = ptrLvl,
-            isReference = isReference,
+            ptrLvl = 0,
+            isReference = false,
             isConst = isConst
         )
     }
@@ -653,7 +690,7 @@ class ExprParser(
         return when (op.type) {
             OperatorType.ASSIGN -> parser.parseStmt(isSingleLine = true)
 
-            OperatorType.COLON, OperatorType.AS -> parseDatatype()
+            OperatorType.COLON, OperatorType.AS -> parseDatatype(startIdentifier = null)
 
             OperatorType.ARROW -> {
                 if (ts.match(Token.RBrace::class))
@@ -671,7 +708,7 @@ class ExprParser(
         right: ExprNode,
         opType: OperatorType,
         pos: Pos
-    ) : ExprNode? {
+    ): ExprNode? {
         val compound = opType.compoundToBinary() ?: return null
         val operator = binOpTypeMapper.toSecond(compound) ?: return null
 
@@ -698,7 +735,7 @@ class ExprParser(
         ctx: ParsingContext = ParsingContext.Default
     ): ExprNode {
         var left = parseUnaryExpr(ctx)
-
+        left = parseDotChain(startChain = left)
 
         while (true) {
             val op = ts.peek() as? Token.Operator ?: break

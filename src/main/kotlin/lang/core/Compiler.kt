@@ -21,7 +21,7 @@ object Compiler : ICompiler {
     private const val LEXER_RESULT_PATH = "C:/TMP txt/lang/lexer_result.txt"
     private const val PARSER_RESULT_PATH = "C:/TMP txt/lang/parser_result.txt"
 
-    private const val DEBUG_PRINT_TOKENS = false
+    private const val DEBUG_PRINT_TOKENS = true
     private const val DEBUG_PRINT_AST = true
 
     private val timing = Timing()
@@ -115,13 +115,13 @@ object Compiler : ICompiler {
 
         if (DEBUG_PRINT_AST)
             File(PARSER_RESULT_PATH).printWriter().use { out ->
-                out.println(Serializer.formatNode(ast))
+                out.println(Serializer.formatNode(
+                    node = ast,
+                    semanticContext = analyzer.semanticContext
+                ))
             }
 
         checkErrors(CompileStage.SEMANTIC_ANALYSIS, errorHandler, src, time)
-
-        if (errorHandler.hasErrors)
-            return null
 
         return ast
     }
@@ -156,19 +156,22 @@ object Compiler : ICompiler {
         time: Long? = null,
         onSuccess: (() -> Unit)? = null
     ): Boolean {
-        fun printMsg(a: String) = println("$stage  \t(${time} ms)\t- $a")
+//        fun printMsg(a: String) = println("$stage  \t(${time} ms)\t- $a")
+        fun printMsg(a: String, b: String) = println("$a $stage\t\t(${time} ms)$b")
 
         return if (errorHandler.hasErrors) {
             val count = errorHandler.errors.size
-            val a = AnsiColors.color("ERROR ($count)", AnsiColors.ERROR, null, true)
-            printMsg(a)
+//            val a = AnsiColors.color("ERROR ($count)", AnsiColors.ERROR, null, true)
+            val errorText = if (count == 1) "($count error)" else "$count errors"
+            val a = AnsiColors.color(errorText, AnsiColors.ERROR, null, true)
+            printMsg(AnsiColors.color("✗", AnsiColors.ERROR), "\t- $a")
 
             val errorsStr = errorHandler.formatErrors(sourceFile)
             println(errorsStr)
             true
         } else {
-            val a = AnsiColors.color("SUCCESS!", AnsiColors.SUCCESS, null, true)
-            printMsg(a)
+//            val a = AnsiColors.color("SUCCESS!", AnsiColors.SUCCESS, null, true)
+            printMsg(AnsiColors.color("✓", AnsiColors.SUCCESS), "")
 
             onSuccess?.invoke()
             false

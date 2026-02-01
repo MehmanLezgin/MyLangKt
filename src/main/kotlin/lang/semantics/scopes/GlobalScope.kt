@@ -14,6 +14,5 @@ class GlobalScope(
 ) : Scope(
     parent = null,
     errorHandler = errorHandler,
-) {
-
-}
+    scopeName = ""
+)

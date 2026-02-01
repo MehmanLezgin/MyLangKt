@@ -1,14 +1,15 @@
 package lang.semantics.types
 
-import lang.semantics.symbols.Symbol
+import lang.semantics.symbols.TypeSymbol
 
 class UserType(
     val name: String,
     val templateArgs: List<TemplateArg>,
-    val declaration: Symbol,
+    override val declaration: TypeSymbol?,
     override var flags: TypeFlags = TypeFlags()
 ) : Type(
     flags = flags,
+    declaration = declaration
 ) {
     override fun copyWithFlags(flags: TypeFlags) =
         UserType(
@@ -25,7 +26,7 @@ class UserType(
 
         other as UserType
 
-        if (name != other.name) return false
+//        if (name != other.name) return false
         if (templateArgs != other.templateArgs) return false
         if (declaration != other.declaration) return false
 

@@ -1,19 +1,24 @@
 package lang.semantics.types
 
+import lang.semantics.symbols.TypeSymbol
+
 open class PrimitiveType(
     val name: String,
     val size: PrimitiveSize,
     val prec: Int,
-    override var flags: TypeFlags = TypeFlags()
+    override var flags: TypeFlags = TypeFlags(),
+    override var declaration: TypeSymbol?
 ) : Type(
     flags = flags,
+    declaration = declaration
 ) {
     override fun copyWithFlags(flags: TypeFlags) =
         PrimitiveType(
             name = name,
             size = size,
             prec = prec,
-            flags = flags
+            flags = flags,
+            declaration = declaration
         )
 
     override fun equals(other: Any?): Boolean {

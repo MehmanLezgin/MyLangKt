@@ -12,15 +12,19 @@ import lang.tokens.OperatorType
 import lang.tokens.Pos
 
 open class Scope(
-    open val parent: Scope?, open val errorHandler: ErrorHandler
+    open val parent: Scope?,
+    open val errorHandler: ErrorHandler,
+    open val scopeName: String? = null
 ) {
-//    private var symTable = SymTable()
+    val absoluteScopePath: String? by lazy {
+        when {
+            parent?.parent == null -> scopeName
+            scopeName == null -> parent?.absoluteScopePath
+            parent != null -> "${parent?.absoluteScopePath}::$scopeName"
+            else -> scopeName
+        }
+    }
 
-
-    /*
-        fun resolve(name: String) = symTable.resolve(name = name)
-
-        fun define(sym: Symbol) : Symbol? = symTable.define(sym = sym)*/
     internal val symbols = mutableMapOf<String, Symbol>()
 
     fun define(sym: Symbol, pos: Pos?): Symbol {
@@ -28,7 +32,7 @@ open class Scope(
         val definedSym = symbols[name]
 
         if (definedSym != null) {
-            semanticError(Messages.SYMBOL_ALREADY_DEFINED.format(name), pos)
+            semanticError(Messages.F_SYMBOL_ALREADY_DEFINED.format(name), pos)
         } else
             symbols[name] = sym
 
@@ -58,9 +62,13 @@ open class Scope(
         }
     }
 
-    fun resolve(name: String, asMember: Boolean = false): Symbol? =
-        if (asMember) symbols[name]
+    fun resolve(name: String, asMember: Boolean = false): Symbol? {
+        var sym = if (asMember) symbols[name]
         else symbols[name] ?: parent?.resolve(name)
+        if (sym is ConstVarSymbol)
+            sym = sym.toConstValueSymbol()
+        return sym
+    }
 
     /*fun resolveFirstOverload(
         sym: OverloadedFuncSymbol,
@@ -81,36 +89,34 @@ open class Scope(
         }
     }*/
 
-    fun resolveBestOverload(
+    fun resolveBestOverloads(
         overloads: List<FuncSymbol>,
         types: List<Type>,
         returnType: Type? = null
-    ): FuncSymbol? {
-        return overloads
-            .mapNotNull { func ->
-                if (func.params.list.size != types.size)
-                    return null
+    ): List<FuncSymbol> {
+        // compute (func, cost) for all valid overloads
+        val costs = overloads.mapNotNull { func ->
+            if (func.params.list.size != types.size) return@mapNotNull null
 
-                val params = func.params.list
-                var totalCost = 0
+            val params = func.params.list
+            var totalCost = 0
 
-                for (i in types.indices) {
-                    val cost = types[i].castCost(params[i].type)
-                        ?: return@mapNotNull null
-
-                    totalCost += cost
-                }
-
-                if (returnType != null) {
-                    val retCost = func.returnType.castCost(returnType)
-                        ?: return@mapNotNull null
-                    totalCost += retCost
-                }
-
-                func to totalCost
+            for (i in types.indices) {
+                val cost = types[i].castCost(params[i].type) ?: return@mapNotNull null
+                totalCost += cost
             }
-            .minByOrNull { it.second }
-            ?.first
+
+            if (returnType != null) {
+                val retCost = func.returnType.castCost(returnType) ?: return@mapNotNull null
+                totalCost += retCost
+            }
+
+            func to totalCost
+        }
+
+        val minCost = costs.minOfOrNull { it.second } ?: return emptyList()
+
+        return costs.filter { it.second == minCost }.map { it.first }
     }
 
     fun resolveExactOverload(
@@ -139,41 +145,54 @@ open class Scope(
     fun resolveFunc(
         name: String,
         argTypes: List<Type>
-    ): FuncSymbol? {
+    ): List<FuncSymbol>? {
         val sym = resolve(name) ?: return null
         return when (sym) {
-            is FuncSymbol -> sym
-            is OverloadedFuncSymbol -> resolveBestOverload(sym.overloads, argTypes)
+            is FuncSymbol -> listOf(sym)
+            is OverloadedFuncSymbol -> resolveBestOverloads(sym.overloads, argTypes)
             else -> null
         }
     }
 
-    fun resolveOperatorFunc(operator: OperatorType, argTypes: List<Type>): FuncSymbol? =
+    fun resolveOperatorFunc(operator: OperatorType, argTypes: List<Type>): List<FuncSymbol>? =
         resolveFunc(operator.fullName, argTypes)
 
-    fun defineConstVar(node: VarDeclStmtNode, type: Type, constValue: ConstValue<*>?): ConstVarSymbol {
+    fun defineConstVar(
+        node: VarDeclStmtNode,
+        type: Type,
+        constValue: ConstValue<*>?,
+        modifiers: Modifiers
+    ): ConstVarSymbol {
         val name = node.name
 
         val sym = ConstVarSymbol(
             name = name.value,
             type = type,
-            value = constValue
+            value = constValue,
+            modifiers = modifiers
         )
 
-        define(sym, name.pos).attachSymbol(node)
+        /*if (constValue != null && node.initializer != null) {
+            ConstValueSymbol
+                .from(constValue)
+                .attachSymbol(node.initializer)
+        }*/
+
+        define(sym, name.pos)
         return sym
     }
 
-    fun defineVar(node: VarDeclStmtNode, type: Type): VarSymbol {
+    fun defineVar(node: VarDeclStmtNode, type: Type, modifiers: Modifiers): VarSymbol {
         val name = node.name
 
         val sym = VarSymbol(
             name = name.value,
             type = type,
-            isMutable = node.isMutable
+            isMutable = node.isMutable,
+            modifiers = modifiers
         )
 
-        define(sym, name.pos).attachSymbol(node)
+        define(sym, name.pos)
         return sym
     }
 
@@ -181,20 +200,23 @@ open class Scope(
         node: FuncDeclStmtNode,
         params: FuncParamListSymbol,
         returnType: Type,
+        modifiers: Modifiers
     ): FuncSymbol {
         val name = node.name
         val sym = if (name is OperNode) OperatorFuncSymbol(
             operator = name.operatorType,
 //            typeNames = node.typeNames,
             params = params,
-            returnType = returnType
+            returnType = returnType,
+            modifiers = modifiers
         )
         else {
             when (node) {
                 is ConstructorDeclStmtNode -> ConstructorSymbol(
                     name = name.value,
                     params = params,
-                    returnType = returnType
+                    returnType = returnType,
+                    modifiers = modifiers
                 )
 
                 is DestructorDeclStmtNode -> DestructorSymbol(
@@ -206,12 +228,13 @@ open class Scope(
                     name = name.value,
 //                    typeNames = node.typeNames,
                     params = params,
-                    returnType = returnType
+                    returnType = returnType,
+                    modifiers = modifiers
                 )
             }
         }
 
-        return defineFunc(sym, node.name.pos).attachSymbol(node)
+        return defineFunc(sym, node.name.pos)
     }
 
     private fun checkOperatorFunc(funcSym: FuncSymbol, pos: Pos) {
@@ -235,9 +258,9 @@ open class Scope(
                 Messages.NON_STATIC else Messages.STATIC
 
             val msg = when (paramsRequired) {
-                0 -> Messages.OPERATOR_REQUIRES_NO_PARAMS
-                1 -> Messages.OPERATOR_REQUIRES_1_PARAM
-                else -> Messages.OPERATOR_REQUIRES_X_PARAMS
+                0 -> Messages.F_OPERATOR_REQUIRES_NO_PARAMS
+                1 -> Messages.F_OPERATOR_REQUIRES_1_PARAM
+                else -> Messages.F_OPERATOR_REQUIRES_X_PARAMS
             }.format(prefix, operStr, paramsRequired)
 
             semanticError(msg, pos)
@@ -275,60 +298,82 @@ open class Scope(
                 definedSym.overloads.add(funcSym)
             }
 
-            else -> semanticError(Messages.SYMBOL_ALREADY_DEFINED.format(name), pos)
+            else -> semanticError(Messages.F_SYMBOL_ALREADY_DEFINED.format(name), pos)
         }
 
         return funcSym
     }
 
-    fun defineInterface(node: InterfaceDeclStmtNode): InterfaceSymbol {
+    fun defineInterface(
+        node: InterfaceDeclStmtNode,
+        modifiers: Modifiers,
+        superType: Type?
+    ): InterfaceSymbol {
         val sym = InterfaceSymbol(
             name = node.name.value,
-            scope = InterfaceScope(parent = this, errorHandler = errorHandler)
+            scope = InterfaceScope(
+                parent = this,
+                errorHandler = errorHandler,
+                scopeName = node.name.value,
+                superTypeScope = superType?.declaration?.staticScope
+            ),
+            modifiers = modifiers
         )
-        define(sym, node.name.pos).attachSymbol(node)
+        define(sym, node.name.pos)
         return sym
     }
 
-    fun defineClass(node: ClassDeclStmtNode): ClassSymbol {
+    fun defineClass(
+        node: ClassDeclStmtNode,
+        modifiers: Modifiers,
+        superType: Type?
+    ): ClassSymbol {
         val sym = ClassSymbol(
             name = node.name.value,
-            scope = ClassScope(parent = this, errorHandler = errorHandler)
+            scope = ClassScope(
+                parent = this,
+                errorHandler = errorHandler,
+                scopeName = node.name.value,
+                superTypeScope = superType?.declaration?.staticScope
+            ),
+            modifiers = modifiers
         )
-        define(sym, node.name.pos).attachSymbol(node)
+        define(sym, node.name.pos)
         return sym
     }
 
-    fun defineEnum(node: EnumDeclStmtNode): EnumSymbol {
+    fun defineEnum(node: EnumDeclStmtNode, modifiers: Modifiers): EnumSymbol {
         val sym = EnumSymbol(
             name = node.name.value,
-            scope = EnumScope(parent = this, errorHandler = errorHandler)
+            scope = EnumScope(parent = this, errorHandler = errorHandler, scopeName = node.name.value),
+            modifiers = modifiers
         )
 
-        define(sym, node.name.pos).attachSymbol(node)
+        define(sym, node.name.pos)
         return sym
     }
 
     fun getSymbolScope(name: String): Scope? {
         val sym = resolve(name)
 
-        if (sym !is UserTypeSymbol)
+        if (sym !is TypeSymbol)
             return null
 
-        return sym.baseScope
+        return sym.staticScope
     }
 
-    fun semanticError(msg: String, pos: Pos?) {
+    fun semanticError(msg: String, pos: Pos?) =
         errorHandler.semanticError(msg, pos)
-    }
 
     fun defineTypedef(node: TypedefStmtNode, type: Type): TypedefSymbol {
+        val name = node.name
+
         val sym = TypedefSymbol(
-            name = node.identifier.value,
+            name = name.value,
             type = type
         )
 
-        define(sym, node.identifier.pos).attachSymbol(node)
+        define(sym, name.pos)
         return sym
     }
 }

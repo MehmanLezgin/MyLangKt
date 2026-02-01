@@ -1,11 +1,14 @@
 package lang.semantics.types
 
+import lang.semantics.symbols.TypeSymbol
+
 class PointerType(
     val base: Type,
     val level: Int = 1,
     override var flags: TypeFlags = TypeFlags()
 ) : Type(
     flags = flags,
+    declaration = null
 ) {
     override fun copyWithFlags(flags: TypeFlags) =
         PointerType(

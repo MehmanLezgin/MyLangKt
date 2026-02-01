@@ -30,7 +30,7 @@ enum class OperatorType(val symbol: String) {
     MINUS("-"),
 
     DOT("."),
-    DOT_NULL_SAFE("?."),
+    SCOPE("::"),
 
     LESS("<"),
     LESS_EQUAL("<="),

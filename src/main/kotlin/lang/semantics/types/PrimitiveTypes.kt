@@ -1,16 +1,18 @@
 package lang.semantics.types
 
 import lang.messages.ErrorHandler
+import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.Scope
 import lang.semantics.symbols.BuiltInOperatorFuncSymbol
+import lang.semantics.symbols.ConstVarSymbol
 import lang.semantics.symbols.FuncParamListSymbol
 import lang.semantics.symbols.FuncParamSymbol
+import lang.semantics.symbols.FuncSymbol
 import lang.semantics.symbols.PrimitiveTypeSymbol
-import lang.semantics.symbols.TypedefSymbol
 import lang.tokens.OperatorType
 import lang.tokens.Pos
 
-object BuiltInTypes {
+object PrimitiveTypes {
 
     private val allPrimitiveTypes = mutableListOf<PrimitiveType>()
     private val allFuncOperators = mutableListOf<BuiltInOperatorFuncSymbol>()
@@ -30,7 +32,8 @@ object BuiltInTypes {
             flags = TypeFlags(
                 isConst = isConst,
                 isExprType = false
-            )
+            ),
+            declaration = null
         )
 
         allPrimitiveTypes.add(type)
@@ -109,7 +112,11 @@ object BuiltInTypes {
     val void = createPrimitiveType("void", PrimitiveSize.NO_SIZE, prec = Int.MAX_VALUE, isConst = false)
 
     val voidPtr = PointerType(base = void, level = 1)
-    val charPtr = PointerType(base = void, level = 1)
+    val constCharPtr = PointerType(
+        base = char,
+        level = 1,
+        flags = TypeFlags(isConst = true)
+    )
 
     private val ARITHMETIC_OPS = arrayOf(
         OperatorType.PLUS,
@@ -221,7 +228,6 @@ object BuiltInTypes {
         // ---- OTHERS ----
         createBinOper(OperatorType.ELVIS, voidPtr)
 
-
         // ---- POINTERS ----
         createOperFunc(OperatorType.PLUS, returnType = voidPtr, voidPtr, int32)
         createOperFunc(OperatorType.MINUS, returnType = voidPtr, voidPtr, int32)
@@ -247,7 +253,7 @@ object BuiltInTypes {
         is Float -> float32Const
         is Double -> float64Const
         is Char -> charConst
-        is String -> charPtr
+        is String -> constCharPtr
         else -> null
     }
 
@@ -290,11 +296,34 @@ object BuiltInTypes {
 
             val sym = PrimitiveTypeSymbol(
                 type = type,
-                scope = Scope(
+                scope = BaseTypeScope(
                     parent = scope,
-                    errorHandler = errorHandler
+                    errorHandler = errorHandler,
+                    scopeName = type.name,
+                    superTypeScope = null
                 )
             )
+
+            sym.scope.instanceScope.define(
+                ConstVarSymbol(
+                    name = "MAX_VALUE",
+                    type = type,
+                    value = ConstValue(0)
+                ), null
+            )
+
+            sym.scope.instanceScope.define(
+                FuncSymbol(
+                    name = "toString",
+                    params = FuncParamListSymbol(),
+                    returnType = constCharPtr
+                ), null
+            )
+
+
+
+            type.declaration = sym
+
             scope.define(
                 sym = sym,
                 pos = pos
@@ -309,4 +338,8 @@ object BuiltInTypes {
         }
     }
 
+    fun Type.isVoidPtr() = this is PointerType &&
+            this.level == 1 &&
+            this.base is PrimitiveType &&
+            this.base.name == void.name
 }

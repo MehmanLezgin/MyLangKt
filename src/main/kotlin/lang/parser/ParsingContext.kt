@@ -6,6 +6,8 @@ sealed class ParsingContext {
     object FuncHeader : ParsingContext()
     object Condition : ParsingContext()
     object TypeArg : ParsingContext()
+    object Datatype : ParsingContext()
+    object ScopeChain : ParsingContext()
 
     fun canParseTrailingLambdas(): Boolean =
         this != Header && this != Condition

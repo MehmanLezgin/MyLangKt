@@ -8,9 +8,7 @@ import lang.tokens.Pos
 typealias NodeTransformFunc = (ExprNode) -> ExprNode
 
 abstract class ExprNode(
-    open val pos: Pos,
-    var symbol: Symbol? = null,
-    var type: Type? = null
+    open val pos: Pos
 ) {
     abstract fun mapRecursive(mapper: NodeTransformFunc): ExprNode
 }
@@ -42,21 +40,6 @@ data class OperNode(
         mapper(this)
 }
 
-data class LiteralNode<T: Any>(
-    val value: T,
-    override val pos: Pos
-) : ExprNode(pos) {
-    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
-        mapper(this)
-}
-
-data class NullLiteralNode(
-    override val pos: Pos
-) : ExprNode(pos) {
-    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
-        mapper(this)
-}
-
 open class BinOpNode(
     open val left: ExprNode,
     open val right: ExprNode,
@@ -76,22 +59,37 @@ open class BinOpNode(
     }
 }
 
-data class MemberAccessNode(
+data class DotAccessNode(
     val base: ExprNode,
     val member: IdentifierNode,
-    val isNullSafe: Boolean,
     override val pos: Pos
 ) : ExprNode(pos) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
-        val newNode = MemberAccessNode(
+        val newNode = DotAccessNode(
             base = base.mapRecursive(mapper),
             member = member.mapRecursive(mapper) as? IdentifierNode ?: member,
-            isNullSafe = isNullSafe,
             pos = pos
         )
         return mapper(newNode)
     }
 }
+
+/*data class ScopeAccessNode(
+    val base: QualifiedDatatypeNode,
+    val member: IdentifierNode,
+    override val pos: Pos
+) : ExprNode(pos) {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = ScopeAccessNode(
+            base = base.mapRecursive(mapper) as? QualifiedDatatypeNode ?: base,
+            member = member.mapRecursive(mapper) as? IdentifierNode ?: member,
+            pos = pos
+        )
+
+        return mapper(newNode)
+    }
+}*/
+
 
 
 open class UnaryOpNode(

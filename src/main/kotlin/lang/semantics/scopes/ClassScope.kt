@@ -8,10 +8,14 @@ import lang.semantics.symbols.Symbol
 
 data class ClassScope(
     override val parent: Scope?,
-    override val errorHandler: ErrorHandler
-) : Scope(
+    override val errorHandler: ErrorHandler,
+    override val scopeName: String,
+    override val superTypeScope: BaseTypeScope?,
+) : BaseTypeScope(
     parent = parent,
-    errorHandler = errorHandler
+    errorHandler = errorHandler,
+    scopeName = scopeName,
+    superTypeScope = superTypeScope,
 ) {
     fun defineConstructor(node: ConstructorDeclStmtNode) : Symbol? {
         /*val type = scopeType

@@ -310,9 +310,9 @@ class NormalLexer(
         val value = unescapeString(rawValue, pos)
 
         return when {
-            quote == Symbols.QUOTE_CHAR && value.length == 1 -> Token.QuotesChar(value[0], rawValue, pos)
+            quote == Symbols.QUOTE_CHAR && value.length == 1 -> Token.Character(value[0], rawValue, pos)
 
-            else -> Token.QuotesStr(value, rawValue, pos)
+            else -> Token.Str(value, rawValue, pos)
         }
     }
 

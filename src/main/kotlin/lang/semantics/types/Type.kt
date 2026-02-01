@@ -1,10 +1,12 @@
 package lang.semantics.types
 
 import lang.messages.Messages
-import lang.nodes.ExprNode
+import lang.semantics.symbols.TypeSymbol
+import lang.semantics.types.PrimitiveTypes.isVoidPtr
 
 abstract class Type(
-    open var flags: TypeFlags = TypeFlags()
+    open var flags: TypeFlags = TypeFlags(),
+    open val declaration: TypeSymbol?
 ) {
     val isConst: Boolean get() = flags.isConst
     val isLvalue: Boolean get() = flags.isLvalue
@@ -35,7 +37,7 @@ abstract class Type(
 
         other as Type
 
-        if (isConst && !other.isConst) return false
+        if (isConst != other.isConst) return false
         if (isLvalue != other.isLvalue) return false
         if (isExprType != other.isExprType) return false
         return true
@@ -60,7 +62,7 @@ abstract class Type(
                 to.prec - from.prec
 
             from is PointerType && to is PointerType ->
-                if (to == BuiltInTypes.voidPtr) 10 else 0
+                if (to.isVoidPtr()) 10 else 0
 
             else -> 100
         }
@@ -69,19 +71,18 @@ abstract class Type(
     fun canCastTo(to: Type): Boolean {
         val from = this
         if (from == to) return true
-        if (!from.isLvalue && to.isLvalue) return false
         if (!from.isConst && to.isConst) return false
 
-        when (from) {
-            BuiltInTypes.voidPtr -> {
-                if (to is PointerType) return true
-                if (to is FuncType) return true
-                return false
-            }
+        if (from.isVoidPtr()) {
+            if (to is PointerType) return true
+            if (to is FuncType) return true
+            return false
+        }
 
+        when (from) {
             is PrimitiveType -> {
                 if (to !is PrimitiveType) return false
-                if (to == BuiltInTypes.void) return false
+                if (to == PrimitiveTypes.void) return false
 //                if (to == BuiltInTypes.) return false
                 if (from.isConst && from.isExprType)
                     return true
@@ -90,14 +91,15 @@ abstract class Type(
             }
 
             is PointerType -> {
-                return when (to) {
-                    is PointerType -> to == BuiltInTypes.voidPtr || from.level == to.level
+                return when {
+                    to.isVoidPtr() -> true
+                    to is PointerType -> to.isVoidPtr() || from.level == to.level
                     else -> false
                 }
             }
 
             is FuncType -> {
-                if (to == BuiltInTypes.voidPtr) return true
+                if (to.isVoidPtr()) return true
                 if (to !is FuncType) return false
                 if (from.returnType != to.returnType) return false
                 if (from.paramTypes != to.paramTypes) return false
@@ -164,7 +166,9 @@ abstract class Type(
 
 }
 
-fun <T: Type> T.attachType(node: ExprNode): T {
-    node.type = this
+/*fun <T: Type> T.attachType(vararg nodes: ExprNode): T {
+    nodes.forEach { node -> node.type = this }
     return this
-}
+}*/
+
+

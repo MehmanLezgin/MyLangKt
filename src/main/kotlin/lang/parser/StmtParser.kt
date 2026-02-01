@@ -106,8 +106,8 @@ class StmtParser(
             KeywordType.ELSE -> ::parseElseEntryStmt
             KeywordType.ELIF -> errorStmt(Messages.EXPECTED_IF)
 
-            KeywordType.CONST, KeywordType.STATIC, KeywordType.OPEN, KeywordType.OVERRIDE,
-            KeywordType.PRIVATE, KeywordType.PUBLIC, KeywordType.PROTECTED ->
+            KeywordType.CONST, KeywordType.STATIC, KeywordType.OPEN, KeywordType.ABSTRACT,
+            KeywordType.OVERRIDE, KeywordType.PRIVATE, KeywordType.PUBLIC, KeywordType.PROTECTED ->
                 ::parseDeclarationWithModifiers
 
             KeywordType.CONTINUE -> ::parseContinueStmt
@@ -150,12 +150,12 @@ class StmtParser(
 
         ts.next()
         val datatypeNode = analiseAsDatatype(
-            expr = parser.parseExpr(),
+            expr = parser.parseExpr(ctx = ParsingContext.TypeArg),
             allowAsExpression = false
         ) as? BaseDatatypeNode? ?: return null
 
         return TypedefStmtNode(
-            identifier = identifier,
+            name = identifier,
             dataType = datatypeNode,
             pos = pos
         )
@@ -226,7 +226,7 @@ class StmtParser(
         val pos = ts.next().pos
         val path = parser.parseExpr()
 
-        if (path !is LiteralNode<*> || path.value !is String) {
+        if (path !is LiteralNode.StringLiteral) {
             syntaxError(Messages.EXPECTED_FILE_PATH, path.pos)
             return null
         }
@@ -395,7 +395,9 @@ class StmtParser(
             handleTypeNames = { },
             handleParams = { },
             handleSuperType = { dataType = it },
-            handleInitializer = { initializer = it }
+            handleInitializer = {
+                initializer = if (it is VoidNode) null else it
+            }
         )
 
         return VarDeclStmtNode(
@@ -428,12 +430,15 @@ class StmtParser(
                     syntaxError(Messages.TYPE_NAMES_MUST_BE_PLACES_BEFORE_FUNC_NAME, it.pos)
             },
             handleParams = { params = it },
-            handleSuperType = { returnType = it },
+            handleSuperType = {
+                returnType =
+                    if (it is AutoDatatypeNode) VoidDatatypeNode(it.pos)
+                    else it
+            },
             handleInitializer = { initializerBody = it }
         )
 
-        val finalReturnType = returnType ?:
-            if (body == null) AutoDatatypeNode(pos) else VoidDatatypeNode(pos)
+        val finalReturnType = returnType ?: if (body == null) AutoDatatypeNode(pos) else VoidDatatypeNode(pos)
 
         return FuncDeclStmtNode(
             modifiers = null,
@@ -794,11 +799,13 @@ class StmtParser(
             val modifier = modifierMapper.toSecond(t)
             if (modifier == null) {
                 syntaxError(Messages.INVALID_MODIFIER, t.pos)
+                ts.next()
                 continue
             }
 
-            if (modifiers.any { it == modifier }) {
-                syntaxError(Messages.REPEATED_MODIFIER, t.pos)
+            if (modifiers.any { it::class == modifier::class }) {
+                syntaxError(Messages.F_REPEATED_MODIFIER.format(modifier.keyword.value), t.pos)
+                ts.next()
                 continue
             }
 
@@ -806,7 +813,7 @@ class StmtParser(
             ts.next()
         }
 
-        return ModifierSetNode(nodes = modifiers.toList(), pos = pos)
+        return ModifierSetNode(nodes = modifiers, pos = pos)
     }
 
     private fun voidExprFunc() = VoidNode

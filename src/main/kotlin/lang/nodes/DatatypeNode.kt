@@ -7,18 +7,30 @@ abstract class BaseDatatypeNode(
 ) : ExprNode(pos) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
         mapper(this)
-
-
 }
+
+abstract class QualifiedDatatypeNode(
+    override val pos: Pos
+) : BaseDatatypeNode(pos) {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
+        mapper(this)
+}
+
+data class ScopedDatatypeNode(
+    val base: QualifiedDatatypeNode,
+    val member: DatatypeNode,
+    override val pos: Pos
+) : QualifiedDatatypeNode(pos)
+
 
 data class DatatypeNode(
     val identifier: IdentifierNode,
     val typeNames: List<ExprNode>? = null,
     val isConst: Boolean = false,
     var isReference: Boolean = false,
-    val ptrLvl: Int = 0,
+    var ptrLvl: Int = 0,
     override val pos: Pos
-) : BaseDatatypeNode(pos) {
+) : QualifiedDatatypeNode(pos) {
 
     val isPointer: Boolean
         get() = ptrLvl > 0
@@ -64,6 +76,7 @@ data class DatatypeNode(
     }
 }
 
+
 data class FuncDatatypeNode(
     val paramDatatypes: List<BaseDatatypeNode>,
     val returnDatatype: BaseDatatypeNode,
@@ -107,6 +120,7 @@ data class FuncDatatypeNode(
         return mapper(newNode)
     }
 }
+
 
 data class ErrorDatatypeNode(
     override val pos: Pos,

@@ -12,7 +12,8 @@ data class FuncParamsScope(
     override val errorHandler: ErrorHandler
 ) : Scope(
     parent = parent,
-    errorHandler = errorHandler
+    errorHandler = errorHandler,
+    scopeName = ""
 ) {
 
     private val params = mutableListOf<FuncParamSymbol>()

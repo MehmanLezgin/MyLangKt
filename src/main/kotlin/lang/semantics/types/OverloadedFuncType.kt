@@ -1,13 +1,15 @@
 package lang.semantics.types
 
 import lang.semantics.symbols.FuncSymbol
+import lang.semantics.symbols.TypeSymbol
 
 class OverloadedFuncType(
     val name: String,
     val overloads: List<FuncSymbol>,
-    override var flags: TypeFlags = TypeFlags()
+    override var flags: TypeFlags = TypeFlags(),
 ) : Type(
     flags = flags,
+    declaration = null
 ) {
     override fun copyWithFlags(flags: TypeFlags) =
         OverloadedFuncType(

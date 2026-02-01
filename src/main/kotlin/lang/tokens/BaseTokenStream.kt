@@ -92,10 +92,9 @@ open class BaseTokenStream(
             is Token.RBrace,
             is Token.RParen,
             is Token.RBracket,
-            is Token.Dot,
             is Token.Operator,
-            is Token.QuotesChar,
-            is Token.QuotesStr,
+            is Token.Character,
+            is Token.Str,
             is Token.UnclosedQuote,
             is Token.Unknown -> next()
             else -> {}

@@ -25,30 +25,39 @@ import lang.nodes.InterfaceDeclStmtNode
 import lang.nodes.LambdaNode
 import lang.nodes.LiteralNode
 import lang.nodes.MatchStmtNode
-import lang.nodes.MemberAccessNode
+import lang.nodes.DotAccessNode
+import lang.nodes.ModifierSetNode
 import lang.nodes.NamespaceStmtNode
 import lang.nodes.NullLiteralNode
 import lang.nodes.OperNode
 import lang.nodes.ReturnStmtNode
+import lang.nodes.ScopedDatatypeNode
 import lang.nodes.TryCatchStmtNode
 import lang.nodes.TypedefStmtNode
 import lang.nodes.UnaryOpNode
 import lang.nodes.UnknownNode
 import lang.nodes.VarDeclStmtNode
 import lang.nodes.WhileStmtNode
+import lang.semantics.SemanticContext
 
 object Serializer {
     fun formatNode(
         node: ExprNode,
         indent: String = "",
-        isLast: Boolean = true
+        isLast: Boolean = true,
+        semanticContext: SemanticContext
     ): String {
         val branch = if (isLast) "└── " else "├── "
         val nextIndent = indent + if (isLast) "    " else "│   "
 
-        val header = "${getName(node)} pos=${node.pos}\n" +
-                "${nextIndent}├── symbol: ${node.symbol}\n" +
-                "${nextIndent}├── type: ${node.type}"
+        val symbol = semanticContext.symbols[node]
+        val type = semanticContext.types[node]
+
+        val header = buildString {
+            append("${getName(node)} pos=${node.pos}\n")
+            symbol?.let { append("${nextIndent}├── symbol: $symbol\n") }
+            type?.let { append("${nextIndent}├── type: $type") }
+        }
         val children = getChildren(node)
 
         if (children.isEmpty()) {
@@ -69,7 +78,11 @@ object Serializer {
 
             if (expr is ExprNode) {
                 builder.append(":\n")
-                builder.append(formatNode(expr, nextIndent + if (last) "    " else "│   ", true))
+                builder.append(formatNode(
+                    node = expr,
+                    indent = nextIndent + if (last) "    " else "│   ",
+                    semanticContext = semanticContext
+                ))
                 continue
             } else {
                 builder.append(": ")
@@ -94,9 +107,9 @@ object Serializer {
                             if (value is ExprNode)
                                 builder.append(
                                     formatNode(
-                                        value,
-                                        prefix + if (isLastElem) "    " else "│   ",
-                                        true
+                                        node = value,
+                                        indent = prefix + if (isLastElem) "    " else "│   ",
+                                        semanticContext = semanticContext
                                     )
                                 )
                             else {
@@ -109,7 +122,10 @@ object Serializer {
                         is ExprNode -> {
                             builder.append(prefix)
                             builder.append(if (isLastElem) "└── " else "├── ")
-                            builder.append(formatNode(elem, prefix, true))
+                            builder.append(formatNode(
+                                node = elem, indent = prefix,
+                                semanticContext = semanticContext
+                            ))
                             builder.append("\n")
                         }
 
@@ -273,6 +289,11 @@ object Serializer {
                 "typeNames" to node.typeNames
             )
 
+            is ScopedDatatypeNode -> listOf(
+                "base" to node.base,
+                "member" to node.member
+            )
+
             is EnumDeclStmtNode -> listOf(
                 "name" to node.name,
                 "items" to node.body
@@ -312,14 +333,17 @@ object Serializer {
             )
 
             is TypedefStmtNode -> listOf(
-                "identifier" to node.identifier,
+                "identifier" to node.name,
                 "dataType" to node.dataType
             )
 
-            is MemberAccessNode -> listOf(
+            is DotAccessNode -> listOf(
                 "base" to node.base,
-                "member" to node.member,
-                "isNullSafe" to node.isNullSafe
+                "member" to node.member
+            )
+
+            is ModifierSetNode -> listOf(
+                "nodes" to node.nodes.toList()
             )
 
             else -> emptyList()

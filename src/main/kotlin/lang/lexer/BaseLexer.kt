@@ -166,14 +166,14 @@ open class BaseLexer(
             TokenType.RBRACE -> Token.RBrace(value, pos)
 
             TokenType.SEMICOLON -> Token.Semicolon(value, pos)
-            TokenType.DOT -> Token.Dot(value, pos)
+//            TokenType.DOT -> Token.Dot(value, pos)
 
             TokenType.UNCLOSED_QUOTE -> Token.UnclosedQuote(value, pos)
             TokenType.COMMENT -> Token.Comment(value, pos)
             TokenType.UNCLOSED_COMMENT -> Token.UnclosedComment(value, pos)
 
-            TokenType.QUOTES_STR -> Token.QuotesStr(value, value, pos)
-            TokenType.QUOTES_CHAR -> Token.QuotesChar(value[0], value, pos)
+            TokenType.QUOTES_STR -> Token.Str(value, value, pos)
+            TokenType.QUOTES_CHAR -> Token.Character(value[0], value, pos)
 
             TokenType.IDENTIFIER -> Token.Identifier(value, value, pos)
 

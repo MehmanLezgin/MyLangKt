@@ -10,7 +10,7 @@ data class FuncParamSymbol(
     override val name: String,
     val type: Type,
     val defaultValue: ExprNode?
-) : Symbol(name) {
+) : Symbol(name = name) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is FuncParamSymbol) return false
@@ -24,7 +24,7 @@ data class FuncParamSymbol(
 }
 
 data class FuncParamListSymbol(
-    val list: List<FuncParamSymbol>
+    val list: List<FuncParamSymbol> = listOf()
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -49,7 +49,8 @@ data class FuncParamListSymbol(
 data class OverloadedFuncSymbol(
     override val name: String,
     val overloads: MutableList<FuncSymbol> = mutableListOf(),
-) : Symbol(name) {
+    override val modifiers: Modifiers = Modifiers()
+) : Symbol(name = name, modifiers = modifiers) {
     fun hasOverload(funcSym: FuncSymbol?) : Boolean {
         if (funcSym == null) return false
         return overloads.find { it == funcSym } != null
@@ -60,8 +61,9 @@ open class FuncSymbol(
     override val name: String,
 //    open val typeNames: TypeNameListNode?,
     open val params: FuncParamListSymbol,
-    open val returnType: Type
-) : Symbol(name) {
+    open val returnType: Type,
+    override val modifiers: Modifiers = Modifiers()
+) : Symbol(name = name, modifiers = modifiers) {
     val paramTypes: List<Type>
         get() = params.list.map { it.type }
 
@@ -110,7 +112,8 @@ data class OperatorFuncSymbol(
     val operator: OperatorType,
 //    override val typeNames: TypeNameListNode?,
     override val params: FuncParamListSymbol,
-    override val returnType: Type
+    override val returnType: Type,
+    override val modifiers: Modifiers = Modifiers()
 ) : FuncSymbol(
     name = operator.fullName,
 //    typeNames = typeNames,
@@ -121,7 +124,8 @@ data class OperatorFuncSymbol(
 data class BuiltInOperatorFuncSymbol(
     val operator: OperatorType,
     override val params: FuncParamListSymbol,
-    override val returnType: Type
+    override val returnType: Type,
+    override val modifiers: Modifiers = Modifiers()
 ) : FuncSymbol(
     name = operator.fullName,
 //    typeNames = null,
@@ -133,7 +137,8 @@ data class BuiltInOperatorFuncSymbol(
 data class ConstructorSymbol(
     override val name: String,
     override val params: FuncParamListSymbol,
-    override val returnType: Type
+    override val returnType: Type,
+    override val modifiers: Modifiers = Modifiers()
 ) : FuncSymbol(
     name = name,
 //    typeNames = null,

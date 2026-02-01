@@ -8,7 +8,7 @@ import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.GlobalScope
 import lang.semantics.scopes.Scope
-import lang.semantics.types.BuiltInTypes
+import lang.semantics.types.PrimitiveTypes
 import lang.tokens.Pos
 
 class SemanticAnalyzer(
@@ -16,12 +16,16 @@ class SemanticAnalyzer(
 ) : ISemanticAnalyzer {
     override var scope: Scope = GlobalScope(errorHandler = errorHandler)
 
-    override val declResolver: DeclarationResolver = DeclarationResolver(ctx = this)
-    override val constResolver: ConstResolver = ConstResolver(ctx = this)
-    override val typeResolver: TypeResolver = TypeResolver(ctx = this)
+    override val declResolver: DeclarationResolver = DeclarationResolver(analyzer = this)
+    override val constResolver: ConstResolver = ConstResolver(analyzer = this)
+    override val typeResolver: TypeResolver = TypeResolver(analyzer = this)
+
+    override val semanticContext = SemanticContext()
+
+
 
     init {
-        BuiltInTypes.initBuiltInTypes(
+        PrimitiveTypes.initBuiltInTypes(
             scope = scope,
             errorHandler = errorHandler
         )
@@ -31,14 +35,8 @@ class SemanticAnalyzer(
         when (node) {
             is DeclStmtNode -> declResolver.resolve(node)
             is BlockNode -> resolve(node = node)
-            is TypedefStmtNode -> resolve(node = node)
             else -> typeResolver.resolve(target = node)
         }
-    }
-
-    private fun resolve(node: TypedefStmtNode) {
-        val type = typeResolver.resolve(node)
-        scope.defineTypedef(node, type)
     }
 
     override fun exitScope() {
@@ -50,14 +48,14 @@ class SemanticAnalyzer(
         scope = newScope
     }
 
-    override fun withScope(
+    override fun <T> withScope(
         targetScope: Scope,
-        block: () -> Unit
-    ) {
+        block: () -> T
+    ) : T {
         val prev = scope
         scope = targetScope
         try {
-            block()
+            return block()
         } finally {
             scope = prev
         }
@@ -99,7 +97,7 @@ class SemanticAnalyzer(
     }
 
     private fun symNotDefinedError(name: String, pos: Pos) {
-        semanticError(Messages.SYMBOL_NOT_DEFINED.format(name), pos)
+        semanticError(Messages.F_SYMBOL_NOT_DEFINED_CUR.format(name), pos)
     }
 
     private fun IdentifierNode.error(func: (String, Pos) -> Unit) = func(value, pos)
