@@ -5,7 +5,7 @@ import lang.semantics.symbols.TypeSymbol
 class UserType(
     val name: String,
     val templateArgs: List<TemplateArg>,
-    override val declaration: TypeSymbol?,
+    override var declaration: TypeSymbol?,
     override var flags: TypeFlags = TypeFlags()
 ) : Type(
     flags = flags,

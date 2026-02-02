@@ -11,7 +11,6 @@ open class Symbol(
 
 data class VarSymbol(
     override val name: String,
-//    val identifier: IdentifierNode,
     val type: Type,
     val isMutable: Boolean,
     val isParameter: Boolean = false,

@@ -743,7 +743,7 @@ class StmtParser(
             }
 
             is FuncCallNode -> {
-                analiseNameNode(expr.name, msg, handleName)
+                analiseNameNode(expr.receiver, msg, handleName)
                 handleTypeNames(analiseTemplateList(expr.typeNames))
                 analiseParams(expr.args, handleParams)
             }

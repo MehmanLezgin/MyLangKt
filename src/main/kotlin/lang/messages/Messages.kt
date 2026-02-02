@@ -1,6 +1,9 @@
 package lang.messages
 
 object Messages {
+    const val VOID_CANNOT_BE_PARAM_TYPE = "'void' cannot be a parameter type"
+    const val VOID_CANNOT_BE_VARIABLE_TYPE = "'void' cannot be a variable type"
+    const val NOT_A_FUNCTION = "Not a function"
     const val CONST_VAR_MUST_BE_STATIC = "Const variable must also be static"
     const val STATIC_FUNC_CANNOT_BE_ABSTRACT = "Static function cannot be abstract"
     const val STATIC_FUNC_CANNOT_BE_OPEN = "Static function cannot be open"

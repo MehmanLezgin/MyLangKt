@@ -1,10 +1,11 @@
 package lang.semantics.types
 
-import lang.semantics.symbols.TypeSymbol
+import lang.semantics.symbols.FuncSymbol
 
 class FuncType(
     val paramTypes: List<Type>,
     val returnType: Type,
+    val funcDeclaration: FuncSymbol? = null,
     override var flags: TypeFlags = TypeFlags()
 ) : Type(
     flags = flags,

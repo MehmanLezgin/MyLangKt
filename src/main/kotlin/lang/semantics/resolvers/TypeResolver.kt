@@ -3,6 +3,8 @@ package lang.semantics.resolvers
 import lang.messages.Messages
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
+import lang.semantics.builtin.PrimitivesScope
+import lang.semantics.builtin.isBuiltInFuncReturnsPtr
 import lang.semantics.symbols.*
 import lang.semantics.types.*
 import lang.tokens.OperatorType
@@ -14,7 +16,7 @@ class TypeResolver(
     override fun resolve(target: ExprNode): Type {
         return when (target) {
             is LiteralNode<*> -> resolve(target)
-            is NullLiteralNode -> PrimitiveTypes.voidPtr
+            is NullLiteralNode -> PrimitivesScope.voidPtr
             is BaseDatatypeNode -> resolve(target)
             is IdentifierNode -> resolve(target)
             is BinOpNode -> resolve(target)
@@ -66,7 +68,9 @@ class TypeResolver(
 //            val memberType = resolve(member, asMember = true)
 
             val sym = targetScope.resolve(name = member.value, asMember = true)
-                ?: return@withScope semanticError(Messages.F_SYMBOL_NOT_DEFINED_CUR, target.pos)
+                ?: return@withScope semanticError(
+                    Messages.F_SYMBOL_NOT_DEFINED_CUR.format(member.value), target.pos
+                )
 
             target bind sym
             target.member bind sym
@@ -84,14 +88,14 @@ class TypeResolver(
         return target.map { resolve(it) }
     }
 
-    private fun resolveSingleFuncSym(
-        funcNameExpr: ExprNode,
+    private fun pickSingleFuncSym(
+        funcReceiverExpr: ExprNode,
         overloads: List<FuncSymbol>?
     ): FuncSymbol? {
         if (overloads.isNullOrEmpty())
-            funcNameExpr.error(Messages.F_FUNC_NOT_DEFINED)
+            funcReceiverExpr.error(Messages.F_FUNC_NOT_DEFINED)
         else if (overloads.size > 1)
-            funcNameExpr.error(Messages.AMBIGUOUS_OVERLOADED_FUNCTION)
+            funcReceiverExpr.error(Messages.AMBIGUOUS_OVERLOADED_FUNCTION)
         else
             return overloads[0]
 
@@ -99,41 +103,88 @@ class TypeResolver(
     }
 
     private fun resolve(target: FuncCallNode): Type {
-        val name = target.name
-        if (name !is IdentifierNode)
-            return name.error(Messages.EXPECTED_FUNC_NAME)
+        val receiver = target.receiver
 
         val argNodes = target.args
         val argTypes = resolve(argNodes)
 
-        val costOverloads = scope.resolveFunc(name.value, argTypes)
+        val receiverType = resolve(receiver)
 
-        val sym = resolveSingleFuncSym(funcNameExpr = name, overloads = costOverloads)
-            ?: return ErrorType
+//        if (!receiverType.isExprType && receiverType !is FuncType) {
+//            receiver.error(Messages.EXPECTED_A_VALUE)
+//            return ErrorType
+//        }
 
-        val paramList = sym.params.list
+        var params: FuncParamListSymbol? = null
+        var paramTypes: List<Type> = listOf()
+        var returnType: Type = ErrorType
 
-        for (i in paramList.indices) {
-            val param = paramList[i]
+        val sym = when (receiverType) {
+            is FuncType -> {
+                val decl = receiverType.funcDeclaration
+                paramTypes = receiverType.paramTypes
+                params = decl?.params
+                returnType = receiverType.returnType
+                decl
+            }
+
+            is OverloadedFuncType -> {
+                val costOverloads = scope.resolveBestOverloads(receiverType.overloads, argTypes)
+                val sym = pickSingleFuncSym(funcReceiverExpr = receiver, overloads = costOverloads)
+                if (sym != null) {
+                    paramTypes = sym.paramTypes
+                    params = sym.params
+                    returnType = sym.returnType
+                }
+
+                sym
+            }
+
+            is PointerType -> {
+                if (receiverType.level == 1 && receiverType.base is FuncType) {
+                    val decl = receiverType.base.funcDeclaration
+                    paramTypes = receiverType.base.paramTypes
+                    params = decl?.params
+                    returnType = receiverType.base.returnType
+                    decl
+                } else {
+                    receiver.error(Messages.NOT_A_FUNCTION)
+                    null
+                }
+            }
+
+            else -> {
+                receiver.error(Messages.NOT_A_FUNCTION)
+                null
+            }
+        }
+
+
+        for (i in paramTypes.indices) {
+            val param = params?.list?.getOrNull(i)
+            val paramType = paramTypes[i]
+            val paramName = param?.name ?: "#$i"
+
             val argType = argTypes.getOrNull(i)
+
 
             if (argType == null) {
                 val msg = Messages.F_NO_VALUE_PASSED_FOR_PARAMETER
-                    .format(param.name, param.type)
-                name.error(msg)
+                    .format(paramName, paramType)
+                receiver.error(msg)
                 continue
             }
 
-            if (!argType.canCastTo(param.type)) {
+            if (!argType.canCastTo(paramType)) {
                 val msg = Messages.F_ARGUMENT_TYPE_MISMATCH
-                    .format(param.type, argType)
+                    .format(paramType, argType)
                 argNodes.getOrNull(i)?.error(msg)
                 continue
             }
         }
 
         target bind sym
-        return sym.returnType.also { target attach it }
+        return returnType.also { target attach it }
     }
 
     private fun resolve(target: BaseDatatypeNode): Type {
@@ -142,7 +193,7 @@ class TypeResolver(
             is ScopedDatatypeNode -> resolve(target)
 
             is AutoDatatypeNode,
-            is VoidDatatypeNode -> PrimitiveTypes.void
+            is VoidDatatypeNode -> PrimitivesScope.void
 
             is FuncDatatypeNode -> resolve(target)
             is ErrorDatatypeNode -> ErrorType
@@ -152,7 +203,8 @@ class TypeResolver(
 
     private fun resolve(target: FuncDatatypeNode): Type {
         return FuncType(
-            paramTypes = target.paramDatatypes.map { resolve(it) },
+            paramTypes = target.paramDatatypes
+                .map { resolve(it) },
             returnType = resolve(target.returnDatatype)
         ).applyTypeModifiers(
             pointerLevel = target.ptrLvl,
@@ -162,6 +214,7 @@ class TypeResolver(
     }
 
     private fun resolveIdentifierWithSym(target: IdentifierNode, sym: Symbol): Type {
+
         target bind sym
 
         return when (sym) {
@@ -189,7 +242,10 @@ class TypeResolver(
             is OverloadedFuncSymbol -> {
                 OverloadedFuncType(
                     name = sym.name,
-                    overloads = sym.overloads
+                    overloads = sym.overloads,
+                    flags = TypeFlags(
+                        isExprType = true
+                    )
                 )
             }
 
@@ -254,7 +310,7 @@ class TypeResolver(
         }
 
         val operator = target.tokenOperatorType
-        val argTypes = listOf(leftType, rightType)
+        val argTypes = listOf(/*leftType, */rightType)
 
         return resolveOperFunc(target, leftType, rightType, operator, argTypes)
     }
@@ -266,8 +322,17 @@ class TypeResolver(
         operator: OperatorType,
         argTypes: List<Type>
     ): Type {
-        val symbols = scope.resolveOperatorFunc(operator = operator, argTypes = argTypes)
-//            ?.attachSymbol(target)
+        val operScope = when (leftType) {
+            is PrimitiveType,
+            is UserType ->
+                leftType.declaration?.staticScope?.instanceScope
+
+            else -> scope
+        }
+
+        val symbols = operScope
+            ?.resolveOperatorFunc(operator = operator, argTypes = argTypes)
+
 
         if (symbols.isNullOrEmpty())
             return target.error(
@@ -280,9 +345,16 @@ class TypeResolver(
 
         val operFunc = symbols[0]
 
+        val returnType = when {
+            operFunc.isBuiltInFuncReturnsPtr() -> leftType
+            else -> operFunc.returnType
+        }
+
+        target bind operFunc
+
         val isConst = operFunc.returnType.isConst
 
-        return operFunc.returnType.setFlags(
+        return returnType.setFlags(
             isConst = isConst,
             isExprType = true,
             isLvalue = false,
@@ -301,7 +373,7 @@ class TypeResolver(
         if (rightType.isExprType)
             target.right.error(Messages.EXPECTED_TYPE_NAME)
 
-        return PrimitiveTypes.bool.setFlags(
+        return PrimitivesScope.bool.setFlags(
             isConst = false,
             isExprType = true
         ).also { target attach it }
@@ -459,15 +531,15 @@ class TypeResolver(
 
     private fun resolve(target: LiteralNode<*>): Type {
         val type = when (target) {
-            is LiteralNode.BooleanLiteral -> PrimitiveTypes.boolConst
-            is LiteralNode.CharLiteral -> PrimitiveTypes.charConst
-            is LiteralNode.DoubleLiteral -> PrimitiveTypes.float64Const
-            is LiteralNode.FloatLiteral -> PrimitiveTypes.float32Const
-            is LiteralNode.IntLiteral -> PrimitiveTypes.int32Const
-            is LiteralNode.LongLiteral -> PrimitiveTypes.int64Const
-            is LiteralNode.StringLiteral -> PrimitiveTypes.constCharPtr
-            is LiteralNode.UIntLiteral -> PrimitiveTypes.uint32Const
-            is LiteralNode.ULongLiteral -> PrimitiveTypes.uint64Const
+            is LiteralNode.BooleanLiteral -> PrimitivesScope.boolConst
+            is LiteralNode.CharLiteral -> PrimitivesScope.charConst
+            is LiteralNode.DoubleLiteral -> PrimitivesScope.float64Const
+            is LiteralNode.FloatLiteral -> PrimitivesScope.float32Const
+            is LiteralNode.IntLiteral -> PrimitivesScope.int32Const
+            is LiteralNode.LongLiteral -> PrimitivesScope.int64Const
+            is LiteralNode.StringLiteral -> PrimitivesScope.constCharPtr
+            is LiteralNode.UIntLiteral -> PrimitivesScope.uint32Const
+            is LiteralNode.ULongLiteral -> PrimitivesScope.uint64Const
         }.setFlags(isExprType = true, isConst = true)
 
         target.constFoldAndBind()

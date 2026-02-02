@@ -3,6 +3,7 @@ package lang.semantics.resolvers
 import lang.messages.Messages
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
+import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.ClassScope
 import lang.semantics.scopes.FuncParamsScope
@@ -87,19 +88,8 @@ class DeclarationResolver(
         if (type.isConst) {
             val sym = node.initializer?.getResolvedSymbol()
 
-            if (sym is ConstVarSymbol) {
-                val constValueSymbol = sym.toConstValueSymbol()
-
-                var value = constValueSymbol?.value
-
-                if (value != null && value.type != type)
-                    value = analyzer.constResolver.resolveCast(value, type)
-
-                constValue = value
-            }else if (sym is ConstValueSymbol) {
-                val constValueSymbol = sym
-
-                var value = constValueSymbol.value
+            if (sym is ConstValueSymbol) {
+                var value = sym.value
 
                 if (value != null && value.type != type)
                     value = analyzer.constResolver.resolveCast(value, type)
@@ -161,9 +151,10 @@ class DeclarationResolver(
         paramsScope.defineParam(node, type)
             .also { node bind it }
 
-
         if (node.dataType is AutoDatatypeNode)
             semanticError(Messages.EXPECTED_TYPE_NAME, node.name.pos)
+        else if (type == PrimitivesScope.void)
+            semanticError(Messages.VOID_CANNOT_BE_PARAM_TYPE, node.name.pos)
 
         analyzer.resolve(node.dataType)
     }
@@ -175,9 +166,10 @@ class DeclarationResolver(
         )
 
         analyzer.enterScope(paramsScope)
-        node.params.forEach { decl ->
-            resolveFuncParam(node = decl)
-        }
+        node.params
+            .forEach { decl ->
+                resolveFuncParam(node = decl)
+            }
 
         val params = paramsScope.getParams()
         analyzer.exitScope()
@@ -325,8 +317,8 @@ class DeclarationResolver(
         }
 
         val isStatic = node.get(ModifierNode.Static::class) != null
-        val isOpen = node.get(ModifierNode.Static::class) != null
-        val isAbstract = node.get(ModifierNode.Open::class) != null
+        val isOpen = node.get(ModifierNode.Open::class) != null
+        val isAbstract = node.get(ModifierNode.Abstract::class) != null
         val isOverride = node.get(ModifierNode.Override::class) != null
 //        val isConst = node.get(ModifierNode.Const::class) != null
         val visibility = resolveVisibility(modifiers = node)

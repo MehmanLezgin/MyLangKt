@@ -1,18 +1,12 @@
 package lang.semantics.scopes
 
 import lang.messages.ErrorHandler
-import lang.nodes.ClassDeclStmtNode
-import lang.nodes.EnumDeclStmtNode
-import lang.nodes.InterfaceDeclStmtNode
-import lang.semantics.symbols.ClassSymbol
-import lang.semantics.symbols.EnumSymbol
-import lang.semantics.symbols.InterfaceSymbol
-import lang.semantics.symbols.Symbol
+import lang.semantics.builtin.PrimitivesScope
 
 class GlobalScope(
     override val errorHandler: ErrorHandler
 ) : Scope(
-    parent = null,
+    parent = PrimitivesScope,
     errorHandler = errorHandler,
     scopeName = ""
 )

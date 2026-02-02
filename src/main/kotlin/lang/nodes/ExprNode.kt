@@ -1,7 +1,5 @@
 package lang.nodes
 
-import lang.semantics.symbols.Symbol
-import lang.semantics.types.Type
 import lang.tokens.OperatorType
 import lang.tokens.Pos
 
@@ -110,14 +108,14 @@ open class UnaryOpNode(
 }
 
 data class FuncCallNode(
-    val name: ExprNode,
+    val receiver: ExprNode,
     val args: List<ExprNode>,
     val typeNames: List<ExprNode>?,
     override val pos: Pos
 ) : ExprNode(pos) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(
-            name = name.mapRecursive(mapper),
+            receiver = receiver.mapRecursive(mapper),
             args = args.map { it.mapRecursive(mapper) },
             typeNames = typeNames?.map { it.mapRecursive(mapper) }
         )

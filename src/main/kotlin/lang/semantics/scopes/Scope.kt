@@ -154,6 +154,8 @@ open class Scope(
         }
     }
 
+
+
     fun resolveOperatorFunc(operator: OperatorType, argTypes: List<Type>): List<FuncSymbol>? =
         resolveFunc(operator.fullName, argTypes)
 
@@ -237,7 +239,7 @@ open class Scope(
         return defineFunc(sym, node.name.pos)
     }
 
-    private fun checkOperatorFunc(funcSym: FuncSymbol, pos: Pos) {
+    private fun checkOperatorFunc(funcSym: FuncSymbol, pos: Pos?) {
         if (funcSym !is OperatorFuncSymbol) return
         val operator = funcSym.operator
 
@@ -267,7 +269,7 @@ open class Scope(
         }
     }
 
-    fun defineFunc(funcSym: FuncSymbol, pos: Pos): FuncSymbol {
+    fun defineFunc(funcSym: FuncSymbol, pos: Pos?): FuncSymbol {
         val name = funcSym.name
 
         checkOperatorFunc(funcSym, pos)

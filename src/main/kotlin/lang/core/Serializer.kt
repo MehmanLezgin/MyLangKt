@@ -189,7 +189,7 @@ object Serializer {
             )
 
             is FuncCallNode -> listOf(
-                "name" to node.name,
+                "name" to node.receiver,
                 "typeNames" to node.typeNames,
                 "args" to node.args
             )

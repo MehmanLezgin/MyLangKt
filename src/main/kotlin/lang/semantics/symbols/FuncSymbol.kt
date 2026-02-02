@@ -40,12 +40,6 @@ data class FuncParamListSymbol(
     }
 }
 
-/*data class FuncDefinition(
-    val typeNames: TypeNameListNode?,
-    val params: FuncParamListSymbol,
-    val returnType: Type
-)*/
-
 data class OverloadedFuncSymbol(
     override val name: String,
     val overloads: MutableList<FuncSymbol> = mutableListOf(),
@@ -98,6 +92,7 @@ open class FuncSymbol(
         FuncType(
             paramTypes = paramTypes,
             returnType = returnType,
+            funcDeclaration = this,
             flags = TypeFlags(
                 isExprType = true
             )

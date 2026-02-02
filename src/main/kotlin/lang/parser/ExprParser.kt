@@ -223,7 +223,7 @@ class ExprParser(
                     return expr
 
                 FuncCallNode(
-                    name = expr,
+                    receiver = expr,
                     typeNames = null,
                     args = listOf(parseLambda()),
                     pos = t.pos
@@ -243,7 +243,7 @@ class ExprParser(
                     val args = parseArgsList(ctx = ctx)
 
                     FuncCallNode(
-                        name = expr2,
+                        receiver = expr2,
                         typeNames = null,
                         args = args,
                         pos = t.pos
@@ -329,11 +329,15 @@ class ExprParser(
 
             OperatorType.SCOPE -> {
                 when (expr) {
-                    is IdentifierNode ->
-                        parseDatatype(startIdentifier = expr, ctx = ParsingContext.ScopeChain)
+                    is IdentifierNode -> {
+                        val expr2 = parseDatatype(startIdentifier = expr, ctx = ParsingContext.ScopeChain)
+                        parsePostfixExpr(ctx, expr2)
+                    }
 
-                    is QualifiedDatatypeNode ->
-                        parseDatatype(startDatatype = expr, ctx = ParsingContext.ScopeChain)
+                    is QualifiedDatatypeNode -> {
+                        val expr2 = parseDatatype(startDatatype = expr, ctx = ParsingContext.ScopeChain)
+                        parsePostfixExpr(ctx, expr2)
+                    }
 
                     else -> {
                         syntaxError(Messages.EXPECTED_TYPE_NAME, t.pos)
@@ -358,7 +362,7 @@ class ExprParser(
                     }
 
                     return FuncCallNode(
-                        name = datatypeNode.identifier,
+                        receiver = datatypeNode.identifier,
                         typeNames = datatypeNode.typeNames,
                         args = args,
                         pos = expr.pos
@@ -517,6 +521,9 @@ class ExprParser(
     private fun parseFuncDatatype(isConst: Boolean = false): BaseDatatypeNode {
         val pos = ts.next().pos
 
+        if (ts.matchOperator(OperatorType.MUL))
+            ts.next() // skip first '*'. (level 1 ptr is also func type)
+
         val ptrLvl = calcPtrLvl()
         val isReference = checkReference()
 
@@ -589,8 +596,8 @@ class ExprParser(
 
 
     private fun parseSimpleDatatype(startIdentifier: IdentifierNode? = null): BaseDatatypeNode {
-//        if (ts.peek() isKeyword KeywordType.FUNC)
-//            return parseFuncDatatype()
+        if (ts.peek() isKeyword KeywordType.FUNC)
+            return parseFuncDatatype()
 
         var isConst = false
 
@@ -735,7 +742,6 @@ class ExprParser(
         ctx: ParsingContext = ParsingContext.Default
     ): ExprNode {
         var left = parseUnaryExpr(ctx)
-        left = parseDotChain(startChain = left)
 
         while (true) {
             val op = ts.peek() as? Token.Operator ?: break

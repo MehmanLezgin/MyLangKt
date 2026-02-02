@@ -8,7 +8,6 @@ import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.GlobalScope
 import lang.semantics.scopes.Scope
-import lang.semantics.types.PrimitiveTypes
 import lang.tokens.Pos
 
 class SemanticAnalyzer(
@@ -25,10 +24,10 @@ class SemanticAnalyzer(
 
 
     init {
-        PrimitiveTypes.initBuiltInTypes(
-            scope = scope,
-            errorHandler = errorHandler
-        )
+//        PrimitiveTypes.initBuiltInTypes(
+//            scope = scope,
+//            errorHandler = errorHandler
+//        )
     }
 
     override fun resolve(node: ExprNode) {

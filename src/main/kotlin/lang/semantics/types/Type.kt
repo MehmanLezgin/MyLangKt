@@ -2,16 +2,24 @@ package lang.semantics.types
 
 import lang.messages.Messages
 import lang.semantics.symbols.TypeSymbol
-import lang.semantics.types.PrimitiveTypes.isVoidPtr
+import lang.semantics.builtin.PrimitivesScope.void
+import lang.semantics.builtin.PrimitivesScope.voidPtr
+import lang.semantics.builtin.types.VoidPrimitive
 
 abstract class Type(
     open var flags: TypeFlags = TypeFlags(),
-    open val declaration: TypeSymbol?
+    open var declaration: TypeSymbol?
 ) {
     val isConst: Boolean get() = flags.isConst
     val isLvalue: Boolean get() = flags.isLvalue
     val isExprType: Boolean get() = flags.isExprType
     val isMutable: Boolean get() = flags.isMutable
+
+    fun isVoidPtr() = this == voidPtr ||
+            this is PointerType &&
+            this.level == 1 &&
+            this.base is PrimitiveType &&
+            this.base.name == void.name
 
     fun setFlags(
         isConst: Boolean = flags.isConst,
@@ -59,7 +67,11 @@ abstract class Type(
 
         return when {
             from is PrimitiveType && to is PrimitiveType ->
-                to.prec - from.prec
+                when {
+                    from.prec == to.prec -> 0
+                    from.prec < to.prec -> 1
+                    else -> 2
+                }
 
             from is PointerType && to is PointerType ->
                 if (to.isVoidPtr()) 10 else 0
@@ -82,10 +94,10 @@ abstract class Type(
         when (from) {
             is PrimitiveType -> {
                 if (to !is PrimitiveType) return false
-                if (to == PrimitiveTypes.void) return false
+                if (to is VoidPrimitive) return false
 //                if (to == BuiltInTypes.) return false
-                if (from.isConst && from.isExprType)
-                    return true
+//                if (from.isConst && from.isExprType)
+//                    return true
 
                 return from.prec <= to.prec
             }
