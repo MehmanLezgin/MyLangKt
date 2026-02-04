@@ -52,8 +52,16 @@ class TypeResolver(
         }
     }
 
-    private fun resolve(target: ScopedDatatypeNode): Type {
-        val type = resolve(target.base)
+    private fun resolveNamespace(target: ExprNode): Type {
+        return when (target) {
+            is ScopedDatatypeNode -> resolve(target, isNamespace = true)
+            is QualifiedDatatypeNode -> resolve(target, isNamespace = true)
+            else -> resolve(target)
+        }
+    }
+
+    private fun resolve(target: ScopedDatatypeNode, isNamespace: Boolean = false): Type {
+        val type = resolveNamespace(target.base)
 
         val targetScope = type.declaration?.staticScope
 
@@ -75,7 +83,7 @@ class TypeResolver(
             target bind sym
             target.member bind sym
 
-            resolveIdentifierWithSym(member, sym)
+            resolveIdentifierWithSym(member, sym, isNamespace)
 //            memberType
 
         }.also {
@@ -153,6 +161,8 @@ class TypeResolver(
                 }
             }
 
+            is ErrorType -> null
+
             else -> {
                 receiver.error(Messages.NOT_A_FUNCTION)
                 null
@@ -187,9 +197,9 @@ class TypeResolver(
         return returnType.also { target attach it }
     }
 
-    private fun resolve(target: BaseDatatypeNode): Type {
+    fun resolve(target: BaseDatatypeNode, isNamespace: Boolean = false): Type {
         return when (target) {
-            is DatatypeNode -> resolve(target)
+            is DatatypeNode -> resolve(target, isNamespace)
             is ScopedDatatypeNode -> resolve(target)
 
             is AutoDatatypeNode,
@@ -213,7 +223,7 @@ class TypeResolver(
         ).also { target attach it }
     }
 
-    private fun resolveIdentifierWithSym(target: IdentifierNode, sym: Symbol): Type {
+    private fun resolveIdentifierWithSym(target: IdentifierNode, sym: Symbol, isNamespace: Boolean = false): Type {
 
         target bind sym
 
@@ -235,7 +245,18 @@ class TypeResolver(
                 isExprType = false
             )
 
+            is NamespaceSymbol -> {
+                if (isNamespace)
+                    NamespaceType(
+                        name = sym.name,
+                        declaration = sym
+                    )
+                else
+                    target.error(Messages.F_SYM_NOT_ALLOWED_HERE.format(sym.name))
+            }
+
             is TypeSymbol -> createUserType(sym = sym)
+                .setFlags(isExprType = isNamespace)
 
             is FuncSymbol -> sym.toFuncType()
 
@@ -248,6 +269,7 @@ class TypeResolver(
                     )
                 )
             }
+
 
             else -> target.error(::symNotDefinedError)
         }.also { target attach it }
@@ -447,7 +469,7 @@ class TypeResolver(
         ).also { target attach it }
     }
 
-    private fun resolve(target: DatatypeNode): Type {
+    private fun resolve(target: DatatypeNode, isNamespace: Boolean = false): Type {
         val name = target.identifier
         val sym = scope.resolve(name.value)
         target bind sym
@@ -456,6 +478,16 @@ class TypeResolver(
 
         val type = when (sym) {
             is PrimitiveTypeSymbol -> sym.type
+
+            is NamespaceSymbol -> {
+                if (isNamespace)
+                    NamespaceType(
+                        name = sym.name,
+                        declaration = sym
+                    )
+                else
+                    target.error(Messages.EXPECTED_A_VALUE.format(sym.name))
+            }
 
             is TypeSymbol -> {
                 createUserType(

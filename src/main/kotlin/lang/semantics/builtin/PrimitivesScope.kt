@@ -80,6 +80,7 @@ object PrimitivesScope : Scope(
     internal val allPrimitives: List<PrimitiveType> =
         ints + floats + void + char + uchar + bool
 
+
     val ptrOperPlus = buildPtrOperPlus()
     val ptrOperMinus = buildPtrOperMinus()
     val ptrOperEq = buildPtrOperEq()
@@ -90,13 +91,12 @@ object PrimitivesScope : Scope(
     val ptrOperLessEqThan = buildPtrOperLessEqThan()
 
 
-
     init {
         primitives(allPrimitives)
 
         mathModule()
 
         if (errorHandler.hasErrors)
-            println(errorHandler.formatErrors(null))
+            println(errorHandler.formatErrors())
     }
 }

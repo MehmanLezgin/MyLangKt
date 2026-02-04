@@ -10,6 +10,7 @@ import lang.semantics.types.ErrorType.castCost
 import lang.semantics.types.Type
 import lang.tokens.OperatorType
 import lang.tokens.Pos
+import kotlin.random.Random
 
 open class Scope(
     open val parent: Scope?,
@@ -27,15 +28,26 @@ open class Scope(
 
     internal val symbols = mutableMapOf<String, Symbol>()
 
+    open fun alreadyDefinedMsg(name: String) =
+        Messages.F_SYMBOL_ALREADY_DEFINED.format(name)
+
     fun define(sym: Symbol, pos: Pos?): Symbol {
         val name = sym.name
         val definedSym = symbols[name]
 
-        if (definedSym != null) {
-            semanticError(Messages.F_SYMBOL_ALREADY_DEFINED.format(name), pos)
-        } else
+        if (definedSym != null)
+            semanticError(alreadyDefinedMsg(name), pos)
+        else
             symbols[name] = sym
 
+        return sym
+    }
+
+    fun resolve(name: String, asMember: Boolean = false): Symbol? {
+        var sym = if (asMember) symbols[name]
+        else symbols[name] ?: parent?.resolve(name)
+        if (sym is ConstVarSymbol)
+            sym = sym.toConstValueSymbol()
         return sym
     }
 
@@ -61,33 +73,6 @@ open class Scope(
             return@find true
         }
     }
-
-    fun resolve(name: String, asMember: Boolean = false): Symbol? {
-        var sym = if (asMember) symbols[name]
-        else symbols[name] ?: parent?.resolve(name)
-        if (sym is ConstVarSymbol)
-            sym = sym.toConstValueSymbol()
-        return sym
-    }
-
-    /*fun resolveFirstOverload(
-        sym: OverloadedFuncSymbol,
-        argTypes: List<Type>
-    ): FuncSymbol? {
-        checkArgumentTypes(
-            sym = sym,
-            argTypes = argTypes,
-        ) { argType, paramType ->
-            argType == paramType
-        }?.let { return it }
-
-        return checkArgumentTypes(
-            sym = sym,
-            argTypes = argTypes,
-        ) { argType, paramType ->
-            argType.canCastTo(paramType)
-        }
-    }*/
 
     fun resolveBestOverloads(
         overloads: List<FuncSymbol>,
@@ -154,8 +139,6 @@ open class Scope(
         }
     }
 
-
-
     fun resolveOperatorFunc(operator: OperatorType, argTypes: List<Type>): List<FuncSymbol>? =
         resolveFunc(operator.fullName, argTypes)
 
@@ -203,7 +186,7 @@ open class Scope(
         params: FuncParamListSymbol,
         returnType: Type,
         modifiers: Modifiers
-    ): FuncSymbol {
+    ): Pair<FuncSymbol, FuncSymbol> {
         val name = node.name
         val sym = if (name is OperNode) OperatorFuncSymbol(
             operator = name.operatorType,
@@ -236,7 +219,7 @@ open class Scope(
             }
         }
 
-        return defineFunc(sym, node.name.pos)
+        return defineFunc(sym, node.name.pos) to sym
     }
 
     private fun checkOperatorFunc(funcSym: FuncSymbol, pos: Pos?) {
@@ -275,7 +258,7 @@ open class Scope(
         checkOperatorFunc(funcSym, pos)
 
         when (val definedSym = resolve(name)) {
-            null -> symbols[name] = funcSym
+            null -> define(funcSym, pos)
 
             is FuncSymbol -> {
                 if (definedSym.params == funcSym.params)
@@ -376,6 +359,31 @@ open class Scope(
         )
 
         define(sym, name.pos)
+        return sym
+    }
+
+    fun randNamespaceName(): String {
+        var name: String
+        do {
+            name = "\$namespace${Random.nextInt()}"
+        } while (symbols[name] != null)
+        return name
+    }
+
+    fun defineNamespace(node: NamespaceStmtNode, isExport: Boolean): NamespaceSymbol {
+        val name = node.name?.value ?: randNamespaceName()
+
+        val sym = NamespaceSymbol(
+            name = name,
+            scope = NamespaceScope(
+                parent = this,
+                errorHandler = errorHandler,
+                scopeName = name,
+                isExport = isExport
+            )
+        )
+
+        define(sym, node.pos)
         return sym
     }
 }

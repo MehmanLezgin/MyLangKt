@@ -4,12 +4,12 @@ import lang.messages.Messages
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.scopes.BaseTypeScope
-import lang.semantics.scopes.ClassScope
-import lang.semantics.scopes.FuncParamsScope
-import lang.semantics.scopes.FuncScope
+import lang.semantics.scopes.*
 import lang.semantics.symbols.*
-import lang.semantics.types.*
+import lang.semantics.types.ConstValue
+import lang.semantics.types.ErrorType
+import lang.semantics.types.OverloadedFuncType
+import lang.semantics.types.Type
 import lang.tokens.KeywordType
 import lang.tokens.Pos
 import kotlin.reflect.KClass
@@ -27,18 +27,47 @@ class DeclarationResolver(
             is ClassDeclStmtNode -> resolve(target)
             is EnumDeclStmtNode -> resolve(target)
             is TypedefStmtNode -> resolve(target)
+            is NamespaceStmtNode -> resolve(target)
         }
     }
 
-    private fun resolve(target: TypedefStmtNode) {
-        val type = analyzer.typeResolver.resolve(target.dataType)
-        target attach type
-        if (type is ErrorType) return
-        scope.defineTypedef(target, type)
-            .also { target bind it }
+    private fun <T : Symbol> T.bindAndExport(node: ExprNode, isExport: Boolean): T {
+        bind(node)
+        exportIfNeeded(isExport)
+        return this
     }
 
-    private fun resolveAutoVarType(node: VarDeclStmtNode, isConst: Boolean): Type {
+    private fun <T : Symbol> T.bind(node: ExprNode): T {
+        node bind this
+        return this
+    }
+
+    private fun <T : Symbol> T.exportIfNeeded(isExport: Boolean): T {
+        if (isExport)
+            analyzer.exportSymbol(this)
+        return this
+    }
+
+    private fun resolve(node: NamespaceStmtNode) {
+        val modifiers = resolveNamespaceModifiers(node.modifiers)
+
+        val sym = scope.defineNamespace(node, isExport = modifiers.isExport)
+            .bindAndExport(node, modifiers.isExport)
+
+        analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
+    }
+
+    private fun resolve(node: TypedefStmtNode) {
+        val modifiers = resolveTypedefModifiers(node.modifiers)
+
+        val type = analyzer.typeResolver.resolve(node.dataType)
+        node attach type
+        if (type is ErrorType) return
+        scope.defineTypedef(node, type)
+            .bindAndExport(node, modifiers.isExport)
+    }
+
+    private fun resolveAutoVarType(node: VarDeclStmtNode): Type {
         if (node.initializer == null) {
             semanticError(Messages.EXPECTED_TYPE_NAME, node.name.pos)
             return ErrorType
@@ -50,7 +79,7 @@ class DeclarationResolver(
 
         when {
             sym is ConstValueSymbol ->
-                return initType.setFlags(isConst = isConst)
+                return initType.setFlags(isConst = false)
 
             initType is OverloadedFuncType ->
                 node.initializer.error(Messages.AMBIGUOUS_OVERLOADED_FUNCTION)
@@ -61,9 +90,9 @@ class DeclarationResolver(
         return ErrorType
     }
 
-    private fun resolveVarType(node: VarDeclStmtNode, modifiers: Modifiers): Type {
+    private fun resolveVarType(node: VarDeclStmtNode): Type {
         if (node.dataType is AutoDatatypeNode) {
-            val type = resolveAutoVarType(node, false)
+            val type = resolveAutoVarType(node)
             return type
         }
 
@@ -101,28 +130,26 @@ class DeclarationResolver(
 //        if (constValue == null) return
         withEffectiveScope(modifiers.isStatic) {
             scope.defineConstVar(node, type, constValue, modifiers)
-                .also { node bind it }
-
+                .bindAndExport(node, modifiers.isExport)
         }
     }
 
     private fun resolve(node: VarDeclStmtNode) {
         val modifiers = resolveVarModifiers(node.modifiers)
 
-        val type = resolveVarType(node, modifiers)
+        val type = resolveVarType(node)
         node attach type
 
         val isConst = type.isConst// || modifiers.isConst
 
-        if (isConst && /*!modifiers.isConst && */!modifiers.isStatic && scope is BaseTypeScope) {
+        if (isConst && (!modifiers.isStatic && (scope is BaseTypeScope && scope !is NamespaceScope))) {
             node.error(Messages.CONST_VAR_MUST_BE_STATIC)
         }
 
         if (!isConst) {
             withEffectiveScope(modifiers.isStatic) {
                 scope.defineVar(node, type, modifiers)
-                    .also { node bind it }
-
+                    .bindAndExport(node, modifiers.isExport)
             }
 
             return
@@ -132,7 +159,7 @@ class DeclarationResolver(
     }
 
     private fun <T> withEffectiveScope(isStatic: Boolean, block: () -> T): T {
-        return if (!isStatic && scope is BaseTypeScope)
+        return if (!isStatic && scope is BaseTypeScope && scope !is NamespaceScope)
             analyzer.withScope((scope as BaseTypeScope).instanceScope, block)
         else
             block()
@@ -156,7 +183,7 @@ class DeclarationResolver(
         else if (type == PrimitivesScope.void)
             semanticError(Messages.VOID_CANNOT_BE_PARAM_TYPE, node.name.pos)
 
-        analyzer.resolve(node.dataType)
+        analyzer.typeResolver.resolve(node.dataType)
     }
 
     private fun resolve(node: FuncDeclStmtNode) {
@@ -178,11 +205,11 @@ class DeclarationResolver(
 
         val modifiers = resolveFuncModifiers(node.modifiers)
         val funcSymbol = withEffectiveScope(modifiers.isStatic) {
-            scope.defineFunc(node, params, returnType, modifiers)
-                .also { node bind it }
-        }
+            val pair = scope.defineFunc(node, params, returnType, modifiers)
 
-        analyzer.resolve(node.returnType)
+                pair.second.exportIfNeeded(modifiers.isExport)
+            pair.first.bind(node)
+        }
 
         val funcScope = FuncScope(
             parent = scope,
@@ -221,7 +248,7 @@ class DeclarationResolver(
         }
 
         val sym = scope.defineInterface(node, modifiers, superType)
-            .also { node bind it }
+            .bindAndExport(node, modifiers.isExport)
 
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
     }
@@ -238,7 +265,7 @@ class DeclarationResolver(
             semanticError(Messages.CLASS_CAN_EXTEND_INTERFACE_OR_CLASS, node.superClass?.pos)
 
         val sym = scope.defineClass(node, modifiers, superType)
-            .also { node bind it }
+            .bindAndExport(node, modifiers.isExport)
 
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
     }
@@ -258,7 +285,7 @@ class DeclarationResolver(
     private fun resolve(node: EnumDeclStmtNode) {
         val modifiers = resolveEnumModifiers(node.modifiers)
         val sym = scope.defineEnum(node, modifiers)
-            .also { node bind it }
+            .bindAndExport(node, modifiers.isExport)
 
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
     }
@@ -308,48 +335,82 @@ class DeclarationResolver(
     ): Modifiers {
         if (node == null) return Modifiers()
 
-        illegalModifiers.forEach { f ->
-            val modifier = node.get(f) ?: return@forEach
-            modifier.error(
+        val illegalSet = illegalModifiers.toSet()
+
+        // 1. Репортим ошибки для запрещённых модификаторов
+        illegalSet.forEach { cls ->
+            node.get(cls)?.error(
                 Messages.F_MODIFIER_IS_NOT_ALLOWED_ON
-                    .format(modifier.keyword.value, declKindName)
+                    .format(node.get(cls)!!.keyword.value, declKindName)
             )
         }
 
-        val isStatic = node.get(ModifierNode.Static::class) != null
-        val isOpen = node.get(ModifierNode.Open::class) != null
-        val isAbstract = node.get(ModifierNode.Abstract::class) != null
-        val isOverride = node.get(ModifierNode.Override::class) != null
-//        val isConst = node.get(ModifierNode.Const::class) != null
+        // 2. Хелпер: модификатор есть И он разрешён
+        fun <T : ModifierNode> hasAllowed(cls: KClass<T>): Boolean {
+            return cls !in illegalSet && node.get(cls) != null
+        }
+
+        // 3. Собираем флаги
+        var isStatic = scope is NamespaceScope || hasAllowed(ModifierNode.Static::class)
+        var isExport = hasAllowed(ModifierNode.Export::class)
+        val isAbstract = hasAllowed(ModifierNode.Abstract::class)
+        val isOpen = hasAllowed(ModifierNode.Open::class)
+        val isOverride = hasAllowed(ModifierNode.Override::class)
         val visibility = resolveVisibility(modifiers = node)
+
+        // 4. Контекстные проверки (scope-dependent)
+
+        checkModifier(
+            isExport && (scope !is NamespaceScope || !(scope as NamespaceScope).isExport),
+            node.get(ModifierNode.Export::class)?.pos,
+            Messages.EXPORT_IS_NOT_ALLOWED_IN_THIS_SCOPE
+        ) {
+            isExport = false
+        }
+
+        checkModifier(
+            isStatic && (scope !is NamespaceScope || scope !is BaseTypeScope),
+            node.get(ModifierNode.Static::class)?.pos,
+            Messages.STATIC_IS_NOT_ALLOWED_IN_THIS_SCOPE
+        ) {
+            isStatic = false
+        }
+
+        // 5. Нормализация зависимых модификаторов
+        val finalIsOpen = isOpen || isAbstract
 
         return Modifiers(
             isStatic = isStatic,
             isAbstract = isAbstract,
-            isOpen = isOpen || isAbstract,
+            isOpen = finalIsOpen,
             isOverride = isOverride,
-//            isConst = isConst,
+            isExport = isExport,
             visibility = visibility
         )
     }
 
+    private val namespaceIllegalModifiers = arrayOf(
+        ModifierNode.Override::class,
+        ModifierNode.Open::class,
+        ModifierNode.Abstract::class
+    )
+
+    private val resolveTypedefModifiers = namespaceIllegalModifiers
+
     private val classIllegalModifiers = arrayOf(
         ModifierNode.Static::class,
-        ModifierNode.Const::class,
         ModifierNode.Override::class
     )
 
     private val interfaceIllegalModifiers = arrayOf(
         ModifierNode.Open::class,
         ModifierNode.Static::class,
-        ModifierNode.Const::class,
         ModifierNode.Override::class
     )
 
     private val enumIllegalModifiers = arrayOf(
         ModifierNode.Static::class,
         ModifierNode.Open::class,
-        ModifierNode.Const::class,
         ModifierNode.Abstract::class,
         ModifierNode.Override::class
     )
@@ -361,8 +422,24 @@ class DeclarationResolver(
     )
 
     private val funcIllegalModifiers: Array<KClass<out ModifierNode>> = arrayOf(
-        ModifierNode.Const::class,
+
     )
+
+    private fun resolveNamespaceModifiers(node: ModifierSetNode?): Modifiers {
+        return resolveModifiers(
+            node = node,
+            illegalModifiers = namespaceIllegalModifiers,
+            declKindName = Messages.NAMESPACE
+        )
+    }
+
+    private fun resolveTypedefModifiers(node: ModifierSetNode?): Modifiers {
+        return resolveModifiers(
+            node = node,
+            illegalModifiers = resolveTypedefModifiers,
+            declKindName = Messages.CLASS
+        )
+    }
 
     private fun resolveClassModifiers(node: ModifierSetNode?): Modifiers {
         return resolveModifiers(
@@ -400,20 +477,6 @@ class DeclarationResolver(
         )
 
         return modifiers
-
-        /*
-        if (node == null) return modifiers
-        val constPos = node.get(ModifierNode.Const::class)?.pos
-
-        if (modifiers.isConst) {
-            checkModifier(
-                scope is BaseTypeScope && !modifiers.isStatic,
-                constPos,
-                Messages.CONST_VAR_MUST_BE_STATIC
-            ) { modifiers.isConst = false }
-        }
-        return modifiers
-        */
     }
 
     private inline fun checkModifier(

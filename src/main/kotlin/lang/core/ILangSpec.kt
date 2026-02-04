@@ -9,6 +9,7 @@ interface ILangSpec {
     val keywords: List<KeywordInfo>
     val operators: Set<OperatorInfo>
     val tokenRules: List<TokenRule>
+    val moduleNameSeparator: OperatorType
 
     fun getKeywordInfo(value: String): KeywordInfo?
     fun getOperatorInfo(value: String): OperatorInfo?

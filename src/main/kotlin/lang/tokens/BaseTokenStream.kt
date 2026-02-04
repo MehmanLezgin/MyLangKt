@@ -1,5 +1,6 @@
 package lang.tokens
 
+import lang.core.SourceCode
 import lang.messages.ErrorHandler
 import lang.lexer.ILexer
 import kotlin.reflect.KClass
@@ -11,13 +12,14 @@ open class BaseTokenStream(
     private val curToken: Token
         get() = peek()
 
+    override val pos: Pos
+        get() = peek().pos
+
     override fun reset() {
         lexer.reset()
     }
 
-    companion object {
-        val eof = Token.EOF(Pos())
-    }
+    internal open val eof = Token.EOF(pos = Pos())
 
     override fun prev(): Token = eof
 

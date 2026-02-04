@@ -5,12 +5,12 @@ import lang.messages.Messages
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
 import lang.semantics.ISemanticAnalyzer
+import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.Scope
 import lang.semantics.symbols.Symbol
 import lang.semantics.types.ErrorType
 import lang.semantics.types.Type
 import lang.tokens.Pos
-import kotlin.collections.set
 
 abstract class BaseResolver<T, TResult>(
     open val analyzer: ISemanticAnalyzer
@@ -26,8 +26,18 @@ abstract class BaseResolver<T, TResult>(
     internal fun symNotDefinedError(name: String, pos: Pos) =
         semanticError(Messages.F_SYMBOL_NOT_DEFINED_CUR.format(name), pos)
 
-    internal fun symNotDefinedInError(name: String, scopeName: String, pos: Pos) =
-        semanticError(Messages.F_SYMBOL_NOT_DEFINED_IN.format(name, scopeName), pos)
+    internal fun symNotDefinedInError(name: String, scopeName: String, pos: Pos): ErrorType {
+        return when {
+            scopeName.isEmpty() ->
+                symNotDefinedError(name, pos)
+
+            scope is ModuleScope ->
+                semanticError(Messages.F_MODULE_DOES_NOT_EXPORT_SYM.format(name, scopeName), pos)
+
+            else ->
+                semanticError(Messages.F_SYMBOL_NOT_DEFINED_IN.format(name, scopeName), pos)
+        }
+    }
 
     internal fun IdentifierNode.error(func: (String, Pos) -> ErrorType) = func(value, pos)
     internal fun IdentifierNode.error(func: (String, String, Pos) -> ErrorType) =

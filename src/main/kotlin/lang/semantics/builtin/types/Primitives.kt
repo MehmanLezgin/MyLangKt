@@ -52,25 +52,32 @@ class CharPrimitive(
         super.initWith(scope)
         val charType = this
 
-        this.staticConstVar(SymNames.MIN_VALUE, this, ConstValue(Char.MIN_VALUE))
-            .staticConstVar(SymNames.MAX_VALUE, this, ConstValue(Char.MAX_VALUE))
-            .operFunc(OperatorType.PLUS) {
+        this.apply {
+            staticConstVar(SymNames.MIN_VALUE, this, ConstValue(Char.MIN_VALUE))
+            staticConstVar(SymNames.MAX_VALUE, this, ConstValue(Char.MAX_VALUE))
+
+            operFunc(OperatorType.PLUS) {
                 params { SymNames.OTHER ofType charType }
                 returns(charType)
             }
-            .operFunc(OperatorType.MINUS) {
+
+            operFunc(OperatorType.MINUS) {
                 params { SymNames.OTHER ofType charType }
                 returns(charType)
             }
-            .operFunc(OperatorType.MINUS) {
+
+            operFunc(OperatorType.MINUS) {
                 returns(charType)
             }
-            .operFunc(OperatorType.INCREMENT) {
+
+            operFunc(OperatorType.INCREMENT) {
                 returns(charType)
             }
-            .operFunc(OperatorType.DECREMENT) {
+
+            operFunc(OperatorType.DECREMENT) {
                 returns(charType)
             }
+        }
     }
 }
 

@@ -26,7 +26,9 @@ import lang.nodes.LambdaNode
 import lang.nodes.LiteralNode
 import lang.nodes.MatchStmtNode
 import lang.nodes.DotAccessNode
+import lang.nodes.ImportKind
 import lang.nodes.ModifierSetNode
+import lang.nodes.ModuleNode
 import lang.nodes.NamespaceStmtNode
 import lang.nodes.NullLiteralNode
 import lang.nodes.OperNode
@@ -45,13 +47,13 @@ object Serializer {
         node: ExprNode,
         indent: String = "",
         isLast: Boolean = true,
-        semanticContext: SemanticContext
+        semanticContext: SemanticContext?
     ): String {
         val branch = if (isLast) "└── " else "├── "
         val nextIndent = indent + if (isLast) "    " else "│   "
 
-        val symbol = semanticContext.symbols[node]
-        val type = semanticContext.types[node]
+        val symbol = semanticContext?.symbols?.get(node)
+        val type = semanticContext?.types?.get(node)
 
         val header = buildString {
             append("${getName(node)} pos=${node.pos}\n")
@@ -78,11 +80,13 @@ object Serializer {
 
             if (expr is ExprNode) {
                 builder.append(":\n")
-                builder.append(formatNode(
-                    node = expr,
-                    indent = nextIndent + if (last) "    " else "│   ",
-                    semanticContext = semanticContext
-                ))
+                builder.append(
+                    formatNode(
+                        node = expr,
+                        indent = nextIndent + if (last) "    " else "│   ",
+                        semanticContext = semanticContext
+                    )
+                )
                 continue
             } else {
                 builder.append(": ")
@@ -122,10 +126,12 @@ object Serializer {
                         is ExprNode -> {
                             builder.append(prefix)
                             builder.append(if (isLastElem) "└── " else "├── ")
-                            builder.append(formatNode(
-                                node = elem, indent = prefix,
-                                semanticContext = semanticContext
-                            ))
+                            builder.append(
+                                formatNode(
+                                    node = elem, indent = prefix,
+                                    semanticContext = semanticContext
+                                )
+                            )
                             builder.append("\n")
                         }
 
@@ -164,6 +170,8 @@ object Serializer {
             )
 
             is NullLiteralNode -> emptyList()
+
+            is ModuleNode -> listOf("name" to node.name) + node.nodes.mapIndexed { i, expr -> "[$i]" to expr }
 
             is BlockNode -> node.nodes.mapIndexed { i, expr -> "[$i]" to expr }
 
@@ -319,9 +327,17 @@ object Serializer {
                 "catchBody" to node.catchBody,
                 "finallyBody" to node.finallyBody,
             )
+
             is ImportStmtNode -> listOf(
-                "path" to node.path
+                "moduleName" to node.moduleName,
+                "kind" to when (node.kind) {
+                    ImportKind.Module -> "Module"
+                    ImportKind.Wildcard -> "Wildcard"
+                    is ImportKind.Named ->
+                        "Named ${node.kind.symbols.map { it.value }}"
+                }
             )
+
             is NamespaceStmtNode -> listOf(
                 "name" to node.name,
                 "body" to node.body

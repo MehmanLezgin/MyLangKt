@@ -23,7 +23,7 @@ class ConstResolver(
     }
 
     private fun resolve(expr: ScopedDatatypeNode): ConstValue<*>? {
-        val type = analyzer.typeResolver.resolve(expr.base)
+        val type = analyzer.typeResolver.resolve(expr.base, isNamespace = true)
         val scope = type.declaration?.staticScope
         val name = expr.member.identifier.value
         val sym = scope?.resolve(name = name, asMember = true)

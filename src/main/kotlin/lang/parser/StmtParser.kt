@@ -28,9 +28,9 @@ import lang.nodes.FuncCallNode
 import lang.nodes.FuncDeclStmtNode
 import lang.nodes.IdentifierNode
 import lang.nodes.IfElseStmtNode
+import lang.nodes.ImportKind
 import lang.nodes.ImportStmtNode
 import lang.nodes.InterfaceDeclStmtNode
-import lang.nodes.LiteralNode
 import lang.nodes.MatchStmtNode
 import lang.nodes.ModifierNode
 import lang.nodes.ModifierSetNode
@@ -45,7 +45,6 @@ import lang.nodes.VoidDatatypeNode
 import lang.nodes.VoidNode
 import lang.nodes.WhileStmtNode
 import lang.parser.ParserUtils.isKeyword
-import lang.parser.ParserUtils.isModifier
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.toDatatype
 import lang.parser.ParserUtils.toIdentifierNode
@@ -107,7 +106,8 @@ class StmtParser(
             KeywordType.ELIF -> errorStmt(Messages.EXPECTED_IF)
 
             KeywordType.CONST, KeywordType.STATIC, KeywordType.OPEN, KeywordType.ABSTRACT,
-            KeywordType.OVERRIDE, KeywordType.PRIVATE, KeywordType.PUBLIC, KeywordType.PROTECTED ->
+            KeywordType.OVERRIDE,
+            KeywordType.PRIVATE, KeywordType.PUBLIC, KeywordType.PROTECTED, KeywordType.EXPORT ->
                 ::parseDeclarationWithModifiers
 
             KeywordType.CONTINUE -> ::parseContinueStmt
@@ -125,11 +125,13 @@ class StmtParser(
 
             KeywordType.FOR -> ::parseForLoopStmt
             KeywordType.TRY -> ::parseTryCatchStmt
-            KeywordType.IMPORT -> ::parseImportStmt
-            KeywordType.NAMESPACE -> errorStmt(Messages.NAMESPACE_NOT_IMPL)//::parseNamespaceStmt
-            KeywordType.USING -> errorStmt(Messages.USING_NOT_IMPL)
+            KeywordType.NAMESPACE -> ::parseNamespaceStmt
             KeywordType.TYPE -> ::parseTypedefStmt
+            KeywordType.USING -> errorStmt(Messages.USING_NOT_IMPL)
             KeywordType.OPERATOR -> errorStmt(Messages.EXPECTED_FUNC_DECL)
+            KeywordType.MODULE -> errorStmt(Messages.MODULE_IS_NOT_AT_START)
+            KeywordType.IMPORT -> ::parseImportStmt
+            KeywordType.FROM -> ::parseFromImportStmt
         }
 
         return parserFunc() ?: VoidNode
@@ -144,7 +146,7 @@ class StmtParser(
         val identifier = (ts.next() as Token.Identifier).toIdentifierNode()
 
         if (ts.peek() isNotOperator OperatorType.ASSIGN) {
-            syntaxError(Messages.EXPECTED_ASSIGN, ts.peek().pos)
+            syntaxError(Messages.EXPECTED_ASSIGN, ts.pos)
             return null
         }
 
@@ -170,7 +172,7 @@ class StmtParser(
         val list = mutableListOf<ExprNode>()
 
         return if (isMultilineBody) {
-            val pos = ts.peek().pos
+            val pos = ts.pos
             ts.next()
 
             while (!ts.match(Token.RBrace::class, Token.EOF::class)) {
@@ -210,7 +212,7 @@ class StmtParser(
         }
 
         if (catchBody == null && finallyBody == null) {
-            syntaxError(Messages.EXPECTED_CATCH, ts.peek().pos)
+            syntaxError(Messages.EXPECTED_CATCH, ts.pos)
         }
 
         return TryCatchStmtNode(
@@ -224,15 +226,43 @@ class StmtParser(
 
     private fun parseImportStmt(): ImportStmtNode? {
         val pos = ts.next().pos
-        val path = parser.parseExpr()
 
-        if (path !is LiteralNode.StringLiteral) {
-            syntaxError(Messages.EXPECTED_FILE_PATH, path.pos)
-            return null
-        }
+        val moduleName = parser.parseModuleName(withModuleKeyword = false)
+            ?: return null
 
         return ImportStmtNode(
-            path = path.value,
+            moduleName = moduleName,
+            kind = ImportKind.Module,
+            pos = pos
+        )
+    }
+
+    private fun parseFromImportStmt(): ImportStmtNode? {
+        val pos = ts.next().pos
+
+        val moduleName = parser.parseModuleName(withModuleKeyword = false)
+            ?: return null
+
+        if (!ts.expectKeyword(KeywordType.IMPORT, Messages.EXPECTED_IMPORT))
+            return null
+
+        ts.next()
+
+        if (ts.matchOperator(OperatorType.MUL)) {
+            ts.next()
+            return ImportStmtNode(
+                moduleName = moduleName,
+                kind = ImportKind.Wildcard,
+                pos = pos
+            )
+        }
+
+        val identifiers = parser.parseIdsWithSeparatorOper(separator = OperatorType.COMMA)
+            ?: return null
+
+        return ImportStmtNode(
+            moduleName = moduleName,
+            kind = ImportKind.Named(symbols = identifiers),
             pos = pos
         )
     }
@@ -661,7 +691,7 @@ class StmtParser(
         }
 
         if (!ts.match(Token.LBrace::class)) {
-            syntaxError(Messages.UNEXPECTED_TOKEN, ts.peek().pos)
+            syntaxError(Messages.UNEXPECTED_TOKEN, ts.pos)
             ts.skipUntil(Token.LBrace::class, Token.RBrace::class, Token.Keyword::class, Token.Identifier::class)
             return EnumDeclStmtNode(
                 modifiers = null,
@@ -765,7 +795,7 @@ class StmtParser(
 
     private fun parseDeclarationWithModifiers(): DeclStmtNode? {
         val modifiers = parseModifiers()
-        val pos = ts.peek().pos
+        val pos = ts.pos
 
         val stmt = parse()
 
@@ -785,23 +815,20 @@ class StmtParser(
     }
 
     private fun parseModifiers(): ModifierSetNode {
-        val pos = ts.peek().pos
+        val pos = ts.pos
 
         val modifiers = mutableSetOf<ModifierNode>()
 
         while (true) {
             val t = ts.peek()
 
-            if (t !is Token.Keyword || !t.isModifier())
+            if (t !is Token.Keyword)
                 break
 
-
-            val modifier = modifierMapper.toSecond(t)
-            if (modifier == null) {
-                syntaxError(Messages.INVALID_MODIFIER, t.pos)
-                ts.next()
-                continue
-            }
+            val modifier = modifierMapper.toSecond(t) ?: break
+//                syntaxError(Messages.INVALID_MODIFIER, t.pos)
+//                ts.next()
+//                continue
 
             if (modifiers.any { it::class == modifier::class }) {
                 syntaxError(Messages.F_REPEATED_MODIFIER.format(modifier.keyword.value), t.pos)
@@ -836,7 +863,7 @@ class StmtParser(
     }
 
     override fun parseIfElseStmt(): IfElseStmtNode {
-        val pos = ts.peek().pos
+        val pos = ts.pos
         ts.next()
 
         val (condition, body) = parseConditionAndBody()
@@ -931,7 +958,7 @@ class StmtParser(
     }
 
     private fun parseMatchStmt(): MatchStmtNode {
-        val pos = ts.peek().pos
+        val pos = ts.pos
         ts.next()
 
         var target: ExprNode?
@@ -954,7 +981,7 @@ class StmtParser(
     }
 
     private fun parseReturnStmt(): ReturnStmtNode {
-        val pos = ts.peek().pos
+        val pos = ts.pos
         ts.next()
 
         val stmt = if (ts.matchSemicolonOrLinebreak())

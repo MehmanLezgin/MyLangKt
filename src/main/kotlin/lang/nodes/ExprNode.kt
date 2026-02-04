@@ -203,3 +203,20 @@ data class InitialiserList(
         return mapper(newNode)
     }
 }
+
+data class ModuleNode(
+    val name: String,
+//    val path: String?,
+    override val nodes: List<ExprNode>,
+    override val pos: Pos
+) : BlockNode(
+    nodes = nodes,
+    pos = pos
+) {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = this.copy(
+            nodes = nodes.map { it.mapRecursive(mapper) }
+        )
+        return mapper(newNode)
+    }
+}

@@ -12,12 +12,12 @@ import kotlin.text.iterator
 
 
 open class BaseLexer(
-    sourceFile: SourceCode,
+    val src: SourceCode,
     val langSpec: ILangSpec,
     val errorHandler: ErrorHandler,
 ) : ILexer {
 
-    internal val source = sourceFile.source
+    internal val source = src.content
 
     internal var state = LexerState()
     private var savedStates: ArrayDeque<LexerState> = ArrayDeque()
@@ -59,18 +59,25 @@ open class BaseLexer(
 
     override fun tokenizeAll(): List<Token> {
         val tokens = mutableListOf<Token>()
+        var token: Token? = null
 
-        while (state.index < source.length) {
-            val token = nextToken()
-            if (token != null && token !is Token.EOF)
+        while (token !is Token.EOF) {
+            token = nextToken()
+
+            if (token != null) {
                 tokens.add(token)
+            }
         }
 
         return tokens
     }
 
 
-    internal fun getPos() = Pos(state.line, state.col)
+    internal fun getPos() = Pos(
+        line = state.line,
+        col = state.col,
+        src = src
+    )
 
     override fun nextToken(): Token? {
         skipWhitespaces()
@@ -78,15 +85,7 @@ open class BaseLexer(
         if (state.index >= source.length)
             return Token.EOF(getPos())
 
-        val pos = getPos()
-        val token = matchToken()
-
-        if (token == null) {
-//            errorHandler.lexicalError(Messages.UNEXPECTED_TOKEN, pos)
-//            state.index++
-//            state.col++
-            return null
-        }
+        val token = matchToken() ?: return null
 
         if (token is Token.Comment)
             return null
@@ -213,7 +212,7 @@ open class BaseLexer(
         val UNICODE_ESCAPE_LENGTH = 6        // \uXXXX
         val SURROGATE_PAIR_LENGTH = 12       // \uXXXX\uXXXX
 
-        fun errorAt(msg: String) = lexicalError(msg, Pos(line, col))
+        fun errorAt(msg: String) = lexicalError(msg, Pos(line, col, src))
         fun errorAndSkip(msg: String) {
             errorAt(msg)
             i++
@@ -311,135 +310,6 @@ open class BaseLexer(
 
         return sb.toString()
     }
-
-
-    /*@OptIn(ExperimentalStdlibApi::class)
-    internal fun unescapeString(raw: String, pos: SymbolPos): String {
-        val s = raw.drop(1).dropLast(1)
-        val sb = StringBuilder()
-
-        var i = 0
-        var line = pos.line
-        var col = pos.col + 1
-
-        fun errorAt(msg: String) {
-            lexicalError(msg, SymbolPos(line, col))
-        }
-
-        fun errorAndSkip(msg: String) {
-            errorAt(msg)
-            i++
-            col++
-        }
-
-
-        fun advance(c: Char) {
-            if (c == '\n') {
-                line++
-                col = 1
-            } else {
-                col++
-            }
-            i++
-        }
-
-        fun readUnicodeEscape(offset: Int): Int? {
-            if (offset + 4 > s.length) return null
-            val hex = s.substring(offset, offset + 4)
-            if (!hex.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) return null
-            return hex.toInt(16)
-        }
-
-        fun handleEscape() {
-            // мы стоим на '\'
-            if (i + 1 >= s.length)
-                errorAt("Illegal escape sequence")
-
-            val next = s[i + 1]
-
-            when (next) {
-                'n' -> sb.append('\n')
-                'r' -> sb.append('\r')
-                't' -> sb.append('\t')
-                'b' -> sb.append('\b')
-                'f' -> sb.append('\u000C')
-                '\'', '"', '\\' -> sb.append(next)
-
-                '\n' -> {
-                    // line continuation
-                    line++
-                    col = 1
-                    i += 2
-                    return
-                }
-
-                '\r' -> {
-                    // \ + \r\n
-                    if (i + 2 < s.length && s[i + 2] == '\n') {
-                        i++
-                    }
-                    line++
-                    col = 1
-                    i += 2
-                    return
-                }
-
-                'u' -> {
-                    val hi = readUnicodeEscape(i + 2)
-                    if (hi == null) { errorAndSkip("Invalid unicode escape"); return }
-
-                    // суррогатная пара для emoji или других символов > U+FFFF
-                    if (hi in 0xD800..0xDBFF) {
-                        // ожидаем low surrogate
-                        if (i + 10 >= s.length || s[i + 6] != '\\' || s[i + 7] != 'u') {
-                            errorAndSkip("Expected low surrogate after high surrogate")
-                            return
-                        }
-
-                        val lo = readUnicodeEscape(i + 8)
-                        if (lo == null || lo !in 0xDC00..0xDFFF) {
-                            errorAndSkip("Invalid low surrogate")
-                            return
-                        }
-                        val codePoint = 0x10000 + ((hi - 0xD800) shl 10) + (lo - 0xDC00)
-                        sb.append(Character.toChars(codePoint))
-                        i += 12
-                        col += 12
-                        return
-                    }
-
-                    if (hi in 0xDC00..0xDFFF) {
-                        errorAndSkip("Unexpected low surrogate")
-                        return
-                    }
-
-                    sb.append(hi.toChar())
-                    i += 6
-                    col += 6
-                    return
-                }
-
-
-                else -> errorAt("Illegal escape sequence \\$next")
-            }
-
-            // обычный escape: \x = 2 символа
-            col += 2
-            i += 2
-        }
-        while (i < s.length) {
-            val c = s[i]
-
-            if (c != '\\') {
-                sb.append(c)
-                advance(c)
-            } else {
-                handleEscape()
-            }
-        }
-
-        return sb.toString()
-    }*/
 
     @OptIn(ExperimentalUnsignedTypes::class)
     internal fun parseIntegerToken(value: String, pos: Pos): Token {

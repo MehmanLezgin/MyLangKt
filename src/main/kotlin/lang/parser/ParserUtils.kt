@@ -12,6 +12,7 @@ import lang.nodes.BlockNode
 import lang.nodes.DatatypeNode
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
+import lang.nodes.ModifierNode
 import lang.nodes.UnaryOpNode
 import lang.nodes.UnaryOpType
 import lang.nodes.VoidDatatypeNode
@@ -25,6 +26,7 @@ object ParserUtils {
     }
 
     infix fun Token.isKeyword(type: KeywordType) = this is Token.Keyword && this.type == type
+    infix fun Token.isNotKeyword(type: KeywordType) = this !is Token.Keyword || this.type != type
 
     fun Token.isKeyword(vararg types: KeywordType) = this is Token.Keyword && types.any { it == this.type }
 
@@ -39,18 +41,6 @@ object ParserUtils {
 
     fun Token.isOperator(vararg types: KClass<out OperatorType>) =
         this is Token.Operator && types.any { it.isInstance(this.type) }
-
-    fun Token.Keyword.isModifier() = this.isKeyword(
-        KeywordType.CONST,
-        KeywordType.PRIVATE,
-        KeywordType.PUBLIC,
-        KeywordType.PROTECTED,
-        KeywordType.STATIC,
-        KeywordType.OPEN,
-        KeywordType.OVERRIDE,
-        KeywordType.ABSTRACT
-
-    )
 
     fun Token.Identifier.toIdentifierNode() = IdentifierNode(
         value = value, pos = pos

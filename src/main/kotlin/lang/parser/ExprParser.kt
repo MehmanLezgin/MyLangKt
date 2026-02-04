@@ -393,7 +393,7 @@ class ExprParser(
     override fun parseTypenameList(): List<ExprNode>? {
         // require '<'
         if (ts.peek() isNotOperator OperatorType.LESS) {
-            syntaxError(Messages.EXPECTED_LESS_OP, ts.peek().pos)
+            syntaxError(Messages.EXPECTED_LESS_OP, ts.pos)
             return null
         }
 
@@ -421,7 +421,7 @@ class ExprParser(
         if (ts.peek() isOperator OperatorType.GREATER)
             ts.next()
         else
-            syntaxError(Messages.EXPECTED_GREATER_OP, ts.peek().pos)
+            syntaxError(Messages.EXPECTED_GREATER_OP, ts.pos)
 
         return list
     }
@@ -429,7 +429,7 @@ class ExprParser(
     private fun parseOperator(): OperNode {
         ts.next()
 
-        val pos = ts.peek().pos
+        val pos = ts.pos
 
         val operator = if (ts.expect(Token.Operator::class, Messages.EXPECTED_OPERATOR)) {
             ts.next() as Token.Operator
@@ -535,7 +535,7 @@ class ExprParser(
         val returnDatatype = if (ts.matchOperator(OperatorType.COLON)) {
             ts.next()
             parseDatatype(startIdentifier = null)
-        } else VoidDatatypeNode(ts.peek().pos)
+        } else VoidDatatypeNode(ts.pos)
 
         return FuncDatatypeNode(
             paramDatatypes = paramDatatypes,
@@ -665,14 +665,14 @@ class ExprParser(
     fun checkReference(): Boolean {
         var isReference = false
         var hasRedundantAmp = false
-        var refPos = ts.peek().pos
+        var refPos = ts.pos
 
         ts.splitOperators(mapTag = OperatorType.AMPERSAND)
 
         while (ts.matchOperator(OperatorType.AMPERSAND)) {
             if (isReference && !hasRedundantAmp) {
                 hasRedundantAmp = true
-                refPos = ts.peek().pos
+                refPos = ts.pos
             } else isReference = true
             ts.next()
         }
@@ -682,7 +682,7 @@ class ExprParser(
 
         // check if pointer to reference (example: int&**)
         if (isReference && calcPtrLvl() != 0) {
-            val lastPos = ts.peek().pos
+            val lastPos = ts.pos
             syntaxError(Messages.POINTER_TO_REFERENCE_IS_NOT_ALLOWED, lastPos)
         }
 

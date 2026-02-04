@@ -1,6 +1,5 @@
 package lang.messages
 
-import lang.core.SourceCode
 import lang.tokens.Pos
 import java.lang.StringBuilder
 
@@ -16,7 +15,17 @@ class ErrorHandler {
 
     fun clear() = _errors.clear()
 
-    fun addError(error: ErrorMsg) = _errors.add(error)
+    fun addError(error: ErrorMsg) =
+        _errors.add(error)
+
+    fun sourceReadingError(path: String?, message: String) {
+        addError(
+            ErrorMsg(
+                stage = CompileStage.SOURCE_READING,
+                message = "'$path': $message"
+            )
+        )
+    }
 
     fun lexicalError(message: String, pos: Pos?) {
         addError(
@@ -48,14 +57,19 @@ class ErrorHandler {
         )
     }
 
-    fun formatErrors(src: SourceCode?): String {
-
-        val builder = StringBuilder(_errors.size * 120) // preallocate rough size
+    fun formatErrors(): String {
+        val builder = StringBuilder(_errors.size * 120)
 
         for (err in _errors)
-            builder.append(err.format(src = src))
+            builder.append(err.format())
 
         return builder.toString()
+    }
+
+    fun printAll(): Boolean {
+        if (hasErrors)
+            println(formatErrors())
+        return hasErrors
     }
 
 }

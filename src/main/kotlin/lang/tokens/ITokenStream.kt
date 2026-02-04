@@ -4,6 +4,7 @@ import lang.messages.Messages
 import kotlin.reflect.KClass
 
 interface ITokenStream {
+    val pos: Pos
     fun reset()
     fun save()
     fun restore()

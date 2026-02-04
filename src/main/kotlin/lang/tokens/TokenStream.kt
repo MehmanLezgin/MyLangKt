@@ -2,11 +2,13 @@ package lang.tokens
 
 import lang.messages.ErrorHandler
 import lang.core.ILangSpec
+import lang.core.SourceCode
 import lang.lexer.ILexer
 
 
 class TokenStream(
     private val lexer: ILexer,
+    private val src: SourceCode,
     private val langSpec: ILangSpec,
     errorHandler: ErrorHandler
 ) : BaseTokenStream(
@@ -16,6 +18,13 @@ class TokenStream(
     private var tokens: MutableList<Token> = mutableListOf()
     private var index: Int = 0
     private val savedIndices: ArrayDeque<Int> = ArrayDeque()
+
+    override val eof by lazy {
+        tokens.findLast { it is Token.EOF } as? Token.EOF
+            ?: Token.EOF(
+                pos = tokens.lastOrNull()?.pos ?: Pos(src = src)
+            )
+    }
 
     init {
         reset()
@@ -32,7 +41,7 @@ class TokenStream(
 
     override fun prev() =
         if (index > 0) tokens[index - 1]
-        else Token.EOF(Pos())
+        else eof
 
     override fun peek() = atIndex(index)
 

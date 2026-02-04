@@ -9,18 +9,11 @@ import lang.tokens.Token
 import lang.tokens.TokenType
 
 
-class NormalLexer(
-    sourceFile: SourceCode,
+class Lexer(
+    src: SourceCode,
     langSpec: ILangSpec,
     errorHandler: ErrorHandler,
-) : BaseLexer(sourceFile, langSpec, errorHandler) {
-
-    //    private fun charAt(index: Int): Char =
-//        if (index in 0 until source.length)
-//            source[index]
-//        else
-
-
+) : BaseLexer(src, langSpec, errorHandler) {
     private val operatorsByLength = operators.sortedBy { -it.symbol.length }
 
     private companion object {
@@ -365,8 +358,8 @@ class NormalLexer(
     private fun Char.isIdentifierChar() = this.lowercaseChar() in identifierChars
 
     override fun matchToken(): Token? {
-        if (index >= source.length) return Token.EOF(getPos())
-
+        if (index >= source.length)
+            return Token.EOF(getPos())
 
         skipComments()
         val c = cur
@@ -378,12 +371,10 @@ class NormalLexer(
             c.isQuote() -> matchStringLiteral()                                         // str and char literals
             else -> {
                 val t = lexOperator() ?: lexOther()
-                if (t == null) errorHandler.lexicalError(Messages.UNEXPECTED_TOKEN, getPos())
+                if (t == null) lexicalError(Messages.UNEXPECTED_TOKEN, getPos())
                 t
             }
         }
-        // oper or other
-
 
         trackNewlines(token?.raw)
 

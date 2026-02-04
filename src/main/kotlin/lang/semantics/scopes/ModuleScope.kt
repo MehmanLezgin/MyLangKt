@@ -2,11 +2,13 @@ package lang.semantics.scopes
 
 import lang.messages.ErrorHandler
 import lang.semantics.builtin.PrimitivesScope
+import lang.semantics.symbols.Symbol
 
-class GlobalScope(
+class ModuleScope(
     override val errorHandler: ErrorHandler
-) : Scope(
+) : NamespaceScope(
     parent = PrimitivesScope,
     errorHandler = errorHandler,
-    scopeName = ""
+    scopeName = "",
+    isExport = true
 )

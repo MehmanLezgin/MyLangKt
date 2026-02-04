@@ -1,8 +1,6 @@
 package lang.messages
 
-import lang.core.SourceCode
 import lang.tokens.Pos
-
 
 class ErrorMsg(
     val stage: CompileStage,
@@ -22,7 +20,8 @@ class ErrorMsg(
         }
     }
 
-    fun format(src: SourceCode?): String {
+    fun format(): String {
+        val src = pos?.src
         return buildString {
             if (pos != null) {
                 val lineIndex = pos.line - 1
@@ -43,7 +42,7 @@ class ErrorMsg(
                         .append(" ".repeat(pos.col - 1 + pointerOffset))
 
                     append(AnsiColors.color("^^^", AnsiColors.ERROR)).append('\n')
-                        .append(src.file?.absoluteFile ?: "src")
+                        .append(src?.file?.absoluteFile ?: "src")
                         .append(" (")
                         .append(pos)
                         .append("): ")

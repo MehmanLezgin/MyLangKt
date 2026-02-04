@@ -179,7 +179,7 @@ data class ConstructorDeclStmtNode(
 
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
-            modifiers = (modifiers?.mapRecursive(mapper) as? ModifierSetNode? ?: modifiers) ,
+            modifiers = (modifiers?.mapRecursive(mapper) as? ModifierSetNode? ?: modifiers),
             params = params.map { it.mapRecursive(mapper) as? VarDeclStmtNode ?: it },
             body = body?.mapRecursive(mapper) as? BlockNode ?: body,
         )
@@ -228,8 +228,6 @@ data class DestructorDeclStmtNode(
         return mapper(newNode)
     }
 }*/
-
-
 
 
 /*data class DestructorDeclStmtNode(
@@ -341,18 +339,15 @@ data class TryCatchStmtNode(
     }
 }
 
-data class ImportStmtNode(
-    val path: String,
-    override val pos: Pos
-) : StmtNode(pos) {
-    override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
-}
-
 data class NamespaceStmtNode(
-    val name: IdentifierNode?,
+    override val name: IdentifierNode?,
     val body: BlockNode,
     override val pos: Pos
-) : StmtNode(pos) {
+) : DeclStmtNode(
+    modifiers = null,
+    name = name,
+    pos = pos
+) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name?.mapRecursive(mapper) as? IdentifierNode ?: name,

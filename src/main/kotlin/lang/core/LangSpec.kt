@@ -8,47 +8,11 @@ import lang.tokens.TokenRule
 import lang.tokens.TokenType
 
 object LangSpec : ILangSpec {
-    override val keywords = listOf(
-        KeywordInfo(KeywordType.VAR),
-        KeywordInfo(KeywordType.LET),
-        KeywordInfo(KeywordType.FUNC),
+    override val moduleNameSeparator: OperatorType = OperatorType.SCOPE
 
-        KeywordInfo(KeywordType.CONTINUE),
-        KeywordInfo(KeywordType.FOR),
-        KeywordInfo(KeywordType.DO),
-        KeywordInfo(KeywordType.WHILE),
-        KeywordInfo(KeywordType.MATCH),
-
-        KeywordInfo(KeywordType.IF),
-        KeywordInfo(KeywordType.ELSE),
-        KeywordInfo(KeywordType.ELIF),
-
-        KeywordInfo(KeywordType.PRIVATE),
-        KeywordInfo(KeywordType.PUBLIC),
-        KeywordInfo(KeywordType.PROTECTED),
-        KeywordInfo(KeywordType.CONST),
-        KeywordInfo(KeywordType.STATIC),
-        KeywordInfo(KeywordType.OPEN),
-        KeywordInfo(KeywordType.OVERRIDE),
-        KeywordInfo(KeywordType.ABSTRACT),
-
-        KeywordInfo(KeywordType.BREAK),
-        KeywordInfo(KeywordType.TRY),
-        KeywordInfo(KeywordType.CATCH),
-        KeywordInfo(KeywordType.FINALLY),
-        KeywordInfo(KeywordType.RETURN),
-
-        KeywordInfo(KeywordType.CLASS),
-        KeywordInfo(KeywordType.INTERFACE),
-        KeywordInfo(KeywordType.IMPORT),
-        KeywordInfo(KeywordType.ENUM),
-        KeywordInfo(KeywordType.CONSTRUCTOR),
-        KeywordInfo(KeywordType.DESTRUCTOR),
-        KeywordInfo(KeywordType.NAMESPACE),
-        KeywordInfo(KeywordType.USING),
-        KeywordInfo(KeywordType.OPERATOR),
-        KeywordInfo(KeywordType.TYPE),
-    )
+    override val keywords = KeywordType.values().map { type ->
+        KeywordInfo(type = type)
+    }
 
     private val operatorsRaw = arrayOf(
         arrayOf(
@@ -84,8 +48,6 @@ object LangSpec : ILangSpec {
             OperatorInfo(OperatorType.DOT),
             OperatorInfo(OperatorType.SCOPE),
         ),
-//        arrayOf(
-//        ),
         arrayOf(
             OperatorInfo(OperatorType.AMPERSAND),
         ),
@@ -126,7 +88,6 @@ object LangSpec : ILangSpec {
             OperatorInfo(OperatorType.SHIFT_LEFT_ASSIGN),
             OperatorInfo(OperatorType.SHIFT_RIGHT_ASSIGN),
         ),
-
         arrayOf(
             OperatorInfo(OperatorType.DOUBLE_DOT)
         ),
@@ -139,8 +100,6 @@ object LangSpec : ILangSpec {
         )
     )
 
-
-
     override val operators =
         operatorsRaw
             .withIndex()
@@ -148,59 +107,6 @@ object LangSpec : ILangSpec {
                 val precedence = operatorsRaw.size - index
                 group.map { op -> op.copy(precedence = precedence) }
             }.toSet()
-
-    /*setOf(
-    OperatorInfo("++", 15, OperatorType.INCREMENT),
-    OperatorInfo("--", 15, OperatorType.DECREMENT),
-    OperatorInfo("->", 1, OperatorType.ARROW),
-    OperatorInfo(".", 2, OperatorType.DOT),
-
-    OperatorInfo("?.", 2, OperatorType.DOT_NULL_SAFE),
-    OperatorInfo("?:", 1, OperatorType.ELVIS),
-    OperatorInfo("!!", 15, OperatorType.NOT_NULL_ASSERTION),
-
-
-    OperatorInfo(",", 1, OperatorType.COMMA),
-    OperatorInfo("*", 13, OperatorType.MUL),
-    OperatorInfo("/", 13, OperatorType.DIV),
-    OperatorInfo("%", 13, OperatorType.REMAINDER),
-    OperatorInfo("+", 12, OperatorType.PLUS),
-    OperatorInfo("-", 12, OperatorType.MINUS),
-    OperatorInfo("<<", 11, OperatorType.SHIFT_LEFT),
-    OperatorInfo(">>", 11, OperatorType.SHIFT_RIGHT),
-    OperatorInfo("<", 10, OperatorType.LESS),
-    OperatorInfo("<=", 10, OperatorType.LESS_EQUAL),
-    OperatorInfo(">", 10, OperatorType.GREATER),
-    OperatorInfo(">=", 10, OperatorType.GREATER_EQUAL),
-    OperatorInfo("==", 9, OperatorType.EQUAL),
-    OperatorInfo("!=", 9, OperatorType.NOT_EQUAL),
-    OperatorInfo("&", 8, OperatorType.AMPERSAND),
-    OperatorInfo("^", 7, OperatorType.XOR),
-    OperatorInfo("|", 6, OperatorType.BIN_OR),
-    OperatorInfo("&&", 5, OperatorType.AND),
-    OperatorInfo("||", 4, OperatorType.OR),
-    OperatorInfo("=", 2, OperatorType.ASSIGN),
-    OperatorInfo("+=", 2, OperatorType.PLUS_ASSIGN),
-    OperatorInfo("-=", 2, OperatorType.MINUS_ASSIGN),
-    OperatorInfo("*=", 2, OperatorType.MUL_ASSIGN),
-    OperatorInfo("/=", 2, OperatorType.DIV_ASSIGN),
-    OperatorInfo("%=", 2, OperatorType.REMAINDER_ASSIGN),
-    OperatorInfo("&=", 2, OperatorType.BIN_AND_ASSIGN),
-    OperatorInfo("|=", 2, OperatorType.BIN_OR_ASSIGN),
-    OperatorInfo("^=", 2, OperatorType.BIN_XOR_ASSIGN),
-    OperatorInfo("<<=", 2, OperatorType.SHIFT_LEFT_ASSIGN),
-    OperatorInfo(">>=", 2, OperatorType.SHIFT_RIGHT_ASSIGN),
-    OperatorInfo("?", 3, OperatorType.QUESTION),
-    OperatorInfo(":", 3, OperatorType.COLON),
-    OperatorInfo("!", 14, OperatorType.NOT),
-    OperatorInfo("~", 14, OperatorType.BIN_NOT),
-    OperatorInfo("sizeof", 16, OperatorType.SIZEOF),
-    OperatorInfo("new", 16, OperatorType.NEW),
-    OperatorInfo("delete", 16, OperatorType.DELETE),
-    OperatorInfo("as", 14, OperatorType.AS),
-    OperatorInfo("is", 14, OperatorType.IS)
-)*/
-
 
     private val keywordRules: List<TokenRule> = keywords.map { kw ->
         TokenRule(Regex("""\b${kw.value}\b"""), TokenType.KEYWORD)
@@ -301,7 +207,7 @@ object LangSpec : ILangSpec {
         ),
 
 
-    )
+        )
 
     override val tokenRules: List<TokenRule> = keywordRules + identifierRules + operatorRules + numberRules + baseRules
 

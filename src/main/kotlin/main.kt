@@ -1,5 +1,25 @@
-import lang.core.Compiler
+import lang.compiler.*
 
 fun main(args: Array<String>) {
-    Compiler.compile("C:/TMP txt/lang/source.txt")
+    val basePath = "C:/TMP txt/lang/"
+
+    program(basePath) {
+        val moduleList = modules {
+            extension("i")
+
+            root("modules")
+
+            entry("./main.i")
+
+        }.toList().map { it.second }
+
+        val semanticContext = if (errorHandler.hasErrors) null else analise()
+
+        moduleList.print(
+            basePath = basePath,
+            semanticContext = semanticContext
+        )
+
+        printErrors()
+    }
 }
