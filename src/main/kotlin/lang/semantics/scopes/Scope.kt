@@ -1,7 +1,5 @@
 package lang.semantics.scopes
 
-import lang.messages.ErrorHandler
-import lang.messages.Messages
 import lang.nodes.*
 import lang.parser.ParserUtils.isBinOperator
 import lang.semantics.symbols.*
@@ -9,46 +7,62 @@ import lang.semantics.types.ConstValue
 import lang.semantics.types.ErrorType.castCost
 import lang.semantics.types.Type
 import lang.tokens.OperatorType
-import lang.tokens.Pos
 import kotlin.random.Random
 
 open class Scope(
     open val parent: Scope?,
-    open val errorHandler: ErrorHandler,
     open val scopeName: String? = null
 ) {
     val absoluteScopePath: String? by lazy {
-        when {
-            parent?.parent == null -> scopeName
-            scopeName == null -> parent?.absoluteScopePath
-            parent != null -> "${parent?.absoluteScopePath}::$scopeName"
-            else -> scopeName
-        }
+        scopeName
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { name ->
+                parent?.absoluteScopePath?.let { "$it::$name" } ?: name
+            }
+            ?: parent?.absoluteScopePath
     }
+
 
     internal val symbols = mutableMapOf<String, Symbol>()
 
-    open fun alreadyDefinedMsg(name: String) =
-        Messages.F_SYMBOL_ALREADY_DEFINED.format(name)
+    fun Symbol.ok() = ScopeResult.Success(sym = this)
+    fun ScopeError.err() = ScopeResult.Error(error = this)
 
-    fun define(sym: Symbol, pos: Pos?): Symbol {
+    fun <T : Symbol> define(sym: T): ScopeResult {
         val name = sym.name
         val definedSym = symbols[name]
 
         if (definedSym != null)
-            semanticError(alreadyDefinedMsg(name), pos)
+            return ScopeError.AlreadyDefined(
+                symName = name,
+                scopeName = absoluteScopePath
+            ).err()
         else
             symbols[name] = sym
 
-        return sym
+        return sym.ok()
     }
 
-    fun resolve(name: String, asMember: Boolean = false): Symbol? {
-        var sym = if (asMember) symbols[name]
-        else symbols[name] ?: parent?.resolve(name)
+    fun resolve(name: String, asMember: Boolean = false): ScopeResult {
+        var sym = symbols[name]
+
+        if (sym == null) {
+            if (asMember || parent == null)
+                return ScopeError.NotDefined(
+                    symName = name,
+                    scopeName = absoluteScopePath
+                ).err()
+
+            when (val parentResult = parent!!.resolve(name)) {
+                is ScopeResult.Error -> return parentResult
+                is ScopeResult.Success<*> -> sym = parentResult.sym
+            }
+        }
+
         if (sym is ConstVarSymbol)
-            sym = sym.toConstValueSymbol()
-        return sym
+            sym = sym.toConstValueSymbol() ?: return ScopeError.InvalidConstValue.err()
+
+        return sym.ok()
     }
 
     private fun checkArgumentTypes(
@@ -130,16 +144,41 @@ open class Scope(
     fun resolveFunc(
         name: String,
         argTypes: List<Type>
-    ): List<FuncSymbol>? {
-        val sym = resolve(name) ?: return null
-        return when (sym) {
-            is FuncSymbol -> listOf(sym)
-            is OverloadedFuncSymbol -> resolveBestOverloads(sym.overloads, argTypes)
-            else -> null
+    ): ScopeResult {
+        return when (val result = resolve(name)) {
+            is ScopeResult.Error -> result
+            is ScopeResult.Success<*> -> {
+                val overloads = when (val sym = result.sym) {
+                    is FuncSymbol -> listOf(sym)
+                    is OverloadedFuncSymbol -> {
+                        resolveBestOverloads(sym.overloads, argTypes).also {
+                            if (it.isEmpty())
+                                return ScopeError.NoFuncOverload(
+                                    symName = name,
+                                    isOperator = sym.isOperator,
+                                    argTypes = argTypes,
+                                    scopeName = absoluteScopePath
+                                ).err()
+                        }
+                    }
+
+                    else -> return ScopeError.NotDefined(
+                        symName = name,
+                        scopeName = absoluteScopePath
+                    ).err()
+                }
+
+                if (overloads.size > 1)
+                    return ScopeError.AmbiguousOverloadedFunc.err()
+
+                val funcSym = overloads[0]
+
+                funcSym.ok()
+            }
         }
     }
 
-    fun resolveOperatorFunc(operator: OperatorType, argTypes: List<Type>): List<FuncSymbol>? =
+    fun resolveOperFunc(operator: OperatorType, argTypes: List<Type>): ScopeResult =
         resolveFunc(operator.fullName, argTypes)
 
     fun defineConstVar(
@@ -147,7 +186,7 @@ open class Scope(
         type: Type,
         constValue: ConstValue<*>?,
         modifiers: Modifiers
-    ): ConstVarSymbol {
+    ): ScopeResult {
         val name = node.name
 
         val sym = ConstVarSymbol(
@@ -157,17 +196,10 @@ open class Scope(
             modifiers = modifiers
         )
 
-        /*if (constValue != null && node.initializer != null) {
-            ConstValueSymbol
-                .from(constValue)
-                .attachSymbol(node.initializer)
-        }*/
-
-        define(sym, name.pos)
-        return sym
+        return define(sym)
     }
 
-    fun defineVar(node: VarDeclStmtNode, type: Type, modifiers: Modifiers): VarSymbol {
+    fun defineVar(node: VarDeclStmtNode, type: Type, modifiers: Modifiers): ScopeResult {
         val name = node.name
 
         val sym = VarSymbol(
@@ -177,8 +209,7 @@ open class Scope(
             modifiers = modifiers
         )
 
-        define(sym, name.pos)
-        return sym
+        return define(sym)
     }
 
     fun defineFunc(
@@ -186,11 +217,10 @@ open class Scope(
         params: FuncParamListSymbol,
         returnType: Type,
         modifiers: Modifiers
-    ): Pair<FuncSymbol, FuncSymbol> {
+    ): Pair<ScopeResult, FuncSymbol> {
         val name = node.name
-        val sym = if (name is OperNode) OperatorFuncSymbol(
+        val funcSym = if (name is OperNode) OperatorFuncSymbol(
             operator = name.operatorType,
-//            typeNames = node.typeNames,
             params = params,
             returnType = returnType,
             modifiers = modifiers
@@ -211,7 +241,6 @@ open class Scope(
 
                 else -> FuncSymbol(
                     name = name.value,
-//                    typeNames = node.typeNames,
                     params = params,
                     returnType = returnType,
                     modifiers = modifiers
@@ -219,138 +248,124 @@ open class Scope(
             }
         }
 
-        return defineFunc(sym, node.name.pos) to sym
+        return defineFunc(funcSym) to funcSym
     }
 
-    private fun checkOperatorFunc(funcSym: FuncSymbol, pos: Pos?) {
-        if (funcSym !is OperatorFuncSymbol) return
-        val operator = funcSym.operator
+    private fun checkOperatorFunc(funcSym: FuncSymbol): ScopeError? {
+        if (funcSym !is OperatorFuncSymbol) return null
+        val oper = funcSym.operator
 
-        var paramsRequired = when {
-            operator.isBinOperator() -> 2
+        val paramsExpected = when {
+            oper.isBinOperator() -> 2
             else -> 1
         }
 
-        val isNonStatic = this is ClassScope || this is InterfaceScope
+//        val isNonStatic = this !is ClassScope && this !is InterfaceScope
 
-        if (isNonStatic)
-            paramsRequired--
+//        if (isNonStatic)
+//            paramsExpected--
 
-        if (funcSym.params.list.size != paramsRequired) {
-            val operStr = operator.name
+        if (funcSym.params.list.size != paramsExpected) {
+            return ScopeError.OperParamCountMismatch(
+                oper = oper,
+                expected = paramsExpected
+            )
+        }
 
-            val prefix = if (isNonStatic)
-                Messages.NON_STATIC else Messages.STATIC
+        return null
+    }
 
-            val msg = when (paramsRequired) {
-                0 -> Messages.F_OPERATOR_REQUIRES_NO_PARAMS
-                1 -> Messages.F_OPERATOR_REQUIRES_1_PARAM
-                else -> Messages.F_OPERATOR_REQUIRES_X_PARAMS
-            }.format(prefix, operStr, paramsRequired)
+    fun defineFunc(funcSym: FuncSymbol): ScopeResult {
+        checkOperatorFunc(funcSym)?.let {
+            return it.err()
+        }
 
-            semanticError(msg, pos)
+        return when (val definedSymResult = resolve(funcSym.name)) {
+            is ScopeResult.Success<*> ->
+                defineOrOverloadFunction(funcSym = funcSym, existingSym = definedSymResult.sym)
+
+            is ScopeResult.Error ->
+                define(sym = funcSym)
         }
     }
 
-    fun defineFunc(funcSym: FuncSymbol, pos: Pos?): FuncSymbol {
-        val name = funcSym.name
-
-        checkOperatorFunc(funcSym, pos)
-
-        when (val definedSym = resolve(name)) {
-            null -> define(funcSym, pos)
-
+    private fun defineOrOverloadFunction(funcSym: FuncSymbol, existingSym: Symbol): ScopeResult {
+        when (existingSym) {
             is FuncSymbol -> {
-                if (definedSym.params == funcSym.params)
-                    semanticError(Messages.CONFLICTING_OVERLOADS, pos)
+                if (existingSym.params == funcSym.params)
+                    return ScopeError.ConflictingOverloads.err()
 
-                val overloadedFunc = definedSym.toOverloadedFuncSymbol().apply {
+                val overloadedFunc = existingSym.toOverloadedFuncSymbol().apply {
                     overloads.add(funcSym)
                 }
 
-                symbols[name] = overloadedFunc
+                symbols[funcSym.name] = overloadedFunc
+                return overloadedFunc.ok()
             }
 
             is OverloadedFuncSymbol -> {
-                if (definedSym.hasOverload(funcSym)) {
-                    val typesStr = funcSym.params.list.map { it.type }.joinToString()
-                    val funcStr = "${funcSym.name}($typesStr) : ${funcSym.returnType}"
-                    val msg = "${Messages.REDECLARATION}: $funcStr"
-                    semanticError(msg, pos)
+                if (existingSym.hasOverload(funcSym)) {
+                    return ScopeError.Redeclaration.err()
                 }
 
                 // add anyway, for error: multiple declarations (on call)
-                definedSym.overloads.add(funcSym)
+                existingSym.overloads.add(funcSym)
+                return existingSym.ok()
             }
 
-            else -> semanticError(Messages.F_SYMBOL_ALREADY_DEFINED.format(name), pos)
+            else -> return ScopeError.AlreadyDefined(
+                symName = funcSym.name,
+                scopeName = absoluteScopePath
+            ).err()
         }
-
-        return funcSym
     }
 
     fun defineInterface(
         node: InterfaceDeclStmtNode,
         modifiers: Modifiers,
         superType: Type?
-    ): InterfaceSymbol {
+    ): ScopeResult {
         val sym = InterfaceSymbol(
             name = node.name.value,
             scope = InterfaceScope(
                 parent = this,
-                errorHandler = errorHandler,
                 scopeName = node.name.value,
                 superTypeScope = superType?.declaration?.staticScope
             ),
             modifiers = modifiers
         )
-        define(sym, node.name.pos)
-        return sym
+        return define(sym)
     }
 
     fun defineClass(
         node: ClassDeclStmtNode,
         modifiers: Modifiers,
         superType: Type?
-    ): ClassSymbol {
+    ): ScopeResult {
         val sym = ClassSymbol(
             name = node.name.value,
             scope = ClassScope(
                 parent = this,
-                errorHandler = errorHandler,
                 scopeName = node.name.value,
                 superTypeScope = superType?.declaration?.staticScope
             ),
             modifiers = modifiers
         )
-        define(sym, node.name.pos)
-        return sym
+
+        return define(sym)
     }
 
-    fun defineEnum(node: EnumDeclStmtNode, modifiers: Modifiers): EnumSymbol {
+    fun defineEnum(node: EnumDeclStmtNode, modifiers: Modifiers): ScopeResult {
         val sym = EnumSymbol(
             name = node.name.value,
-            scope = EnumScope(parent = this, errorHandler = errorHandler, scopeName = node.name.value),
+            scope = EnumScope(parent = this, scopeName = node.name.value),
             modifiers = modifiers
         )
 
-        define(sym, node.name.pos)
-        return sym
+        return define(sym)
     }
 
-    fun getSymbolScope(name: String): Scope? {
-        val sym = resolve(name)
-
-        if (sym !is TypeSymbol)
-            return null
-
-        return sym.staticScope
-    }
-
-    fun semanticError(msg: String, pos: Pos?) =
-        errorHandler.semanticError(msg, pos)
-
-    fun defineTypedef(node: TypedefStmtNode, type: Type): TypedefSymbol {
+    fun defineTypedef(node: TypedefStmtNode, type: Type): ScopeResult {
         val name = node.name
 
         val sym = TypedefSymbol(
@@ -358,8 +373,7 @@ open class Scope(
             type = type
         )
 
-        define(sym, name.pos)
-        return sym
+        return define(sym)
     }
 
     fun randNamespaceName(): String {
@@ -370,20 +384,18 @@ open class Scope(
         return name
     }
 
-    fun defineNamespace(node: NamespaceStmtNode, isExport: Boolean): NamespaceSymbol {
+    fun defineNamespace(node: NamespaceStmtNode, isExport: Boolean): ScopeResult {
         val name = node.name?.value ?: randNamespaceName()
 
         val sym = NamespaceSymbol(
             name = name,
             scope = NamespaceScope(
                 parent = this,
-                errorHandler = errorHandler,
                 scopeName = name,
                 isExport = isExport
             )
         )
 
-        define(sym, node.pos)
-        return sym
+        return define(sym)
     }
 }

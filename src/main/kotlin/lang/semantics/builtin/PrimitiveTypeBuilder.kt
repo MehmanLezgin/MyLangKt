@@ -73,13 +73,13 @@ fun PrimitivesScope.createBinOpers(type: Type, vararg operators: OperatorType) {
 
 fun Type.operFunc(name: String, block: FuncBuilder.() -> Unit): Type {
     val sym = FuncBuilder(name).apply(block).build()
-    declaration?.withInstanceScope { defineFunc(sym, null) }
+    declaration?.withInstanceScope { defineFunc(sym) }
     return this
 }
 
 fun TypeSymbol.staticFunc(name: String, block: FuncBuilder.() -> Unit): TypeSymbol {
     val sym = FuncBuilder(name).apply(block).build()
-    withStaticScope { defineFunc(sym, null) }
+    withStaticScope { defineFunc(sym) }
     return this
 }
 
@@ -89,20 +89,20 @@ fun Type.operFunc(oper: OperatorType, block: FuncBuilder.() -> Unit): Type {
     builder.params { "t" ofType this@operFunc }
 
     val sym = builder.apply(block).build()
-    declaration?.withStaticScope { defineFunc(sym, null) }
+    declaration?.withStaticScope { defineFunc(sym) }
     return this
 }
 
 fun PrimitivesScope.globalOperFunc(oper: OperatorType, block: FuncBuilder.() -> Unit): FuncSymbol {
     val builder = FuncBuilder(oper)
     val sym = builder.apply(block).build()
-    defineFunc(sym, null)
+    defineFunc(sym)
     return sym
 }
 
 fun PrimitivesScope.module(name: String, block: ModuleBuilder.() -> Unit): ClassSymbol {
     val sym = ModuleBuilder(name, this).apply(block).build()
-    define(sym, null)
+    define(sym)
     return sym
 }
 
@@ -113,7 +113,7 @@ fun Type.staticConstVar(
     block: ConstVarBuilder.() -> Unit = {}
 ): Type {
     val sym = ConstVarBuilder(name, type, value).apply(block).build()
-    declaration?.withStaticScope { define(sym, null) }
+    declaration?.withStaticScope { define(sym) }
     return this
 }
 

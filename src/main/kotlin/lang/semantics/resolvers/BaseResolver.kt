@@ -1,7 +1,7 @@
 package lang.semantics.resolvers
 
 import lang.messages.ErrorHandler
-import lang.messages.Messages
+import lang.messages.Msg
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
 import lang.semantics.ISemanticAnalyzer
@@ -24,18 +24,18 @@ abstract class BaseResolver<T, TResult>(
     abstract fun resolve(target: T): TResult
 
     internal fun symNotDefinedError(name: String, pos: Pos) =
-        semanticError(Messages.F_SYMBOL_NOT_DEFINED_CUR.format(name), pos)
+        semanticError(Msg.F_SYMBOL_NOT_DEFINED_CUR.format(name), pos)
 
-    internal fun symNotDefinedInError(name: String, scopeName: String, pos: Pos): ErrorType {
+    internal fun symNotDefinedInError(name: String, scopeName: String?, pos: Pos): ErrorType {
         return when {
-            scopeName.isEmpty() ->
+            scopeName.isNullOrEmpty() ->
                 symNotDefinedError(name, pos)
 
             scope is ModuleScope ->
-                semanticError(Messages.F_MODULE_DOES_NOT_EXPORT_SYM.format(name, scopeName), pos)
+                semanticError(Msg.F_MODULE_DOES_NOT_EXPORT_SYM.format(name, scopeName), pos)
 
             else ->
-                semanticError(Messages.F_SYMBOL_NOT_DEFINED_IN.format(name, scopeName), pos)
+                semanticError(Msg.F_SYMBOL_NOT_DEFINED_IN.format(name, scopeName), pos)
         }
     }
 
@@ -46,7 +46,7 @@ abstract class BaseResolver<T, TResult>(
     internal fun ExprNode.error(msg: String) = semanticError(msg, pos)
 
     internal fun symDefinedError(name: String, pos: Pos) =
-        semanticError(Messages.F_SYMBOL_ALREADY_DEFINED.format(name), pos)
+        semanticError(Msg.F_SYMBOL_ALREADY_DEFINED.format(name), pos)
 
     internal fun semanticError(msg: String, pos: Pos?): ErrorType {
         analyzer.errorHandler.semanticError(msg, pos)

@@ -8,7 +8,6 @@ import lang.semantics.types.*
 
 object PrimitivesScope : Scope(
     parent = null,
-    errorHandler = ErrorHandler()
 ) {
 
     // ========= TYPES =========
@@ -92,6 +91,8 @@ object PrimitivesScope : Scope(
 
 
     init {
+        val errorHandler = ErrorHandler()
+
         primitives(allPrimitives)
 
         mathModule()

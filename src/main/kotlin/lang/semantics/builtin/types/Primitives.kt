@@ -183,20 +183,30 @@ class Int32Primitive(
         super.initWith(scope)
         val int32Type = this
 
-        this.staticConstVar(SymNames.MIN_VALUE, this, ConstValue(Int.MIN_VALUE))
-            .staticConstVar(SymNames.MAX_VALUE, this, ConstValue(Int.MAX_VALUE))
-            .operFunc(OperatorType.PLUS) {
+        this.apply {
+            staticConstVar(SymNames.MIN_VALUE, this, ConstValue(Int.MIN_VALUE))
+            staticConstVar(SymNames.MAX_VALUE, this, ConstValue(Int.MAX_VALUE))
+
+            operFunc(OperatorType.PLUS) {
                 params { SymNames.OTHER ofType int32Type }
                 returns(int32Type)
             }
-            .operFunc(OperatorType.SHIFT_LEFT) {
+
+            operFunc(OperatorType.MUL) {
                 params { SymNames.OTHER ofType int32Type }
                 returns(int32Type)
             }
-            .operFunc(OperatorType.SHIFT_RIGHT) {
+
+            operFunc(OperatorType.SHIFT_LEFT) {
                 params { SymNames.OTHER ofType int32Type }
                 returns(int32Type)
             }
+
+            operFunc(OperatorType.SHIFT_RIGHT) {
+                params { SymNames.OTHER ofType int32Type }
+                returns(int32Type)
+            }
+        }
     }
 }
 

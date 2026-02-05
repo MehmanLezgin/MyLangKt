@@ -1,6 +1,6 @@
 package lang.semantics.types
 
-import lang.messages.Messages
+import lang.messages.Msg
 import lang.semantics.symbols.TypeSymbol
 import lang.semantics.builtin.PrimitivesScope.void
 import lang.semantics.builtin.PrimitivesScope.voidPtr
@@ -132,12 +132,12 @@ abstract class Type(
     fun stringify(pointerLevel: Int = 0): String {
         val type = this
 
-        if (type is ErrorType) return Messages.ERROR_TYPE
+        if (type is ErrorType) return Msg.ERROR_TYPE
         val ptrStr = "*".repeat(pointerLevel)
 
         return buildString {
             if (type.isConst) {
-                append(Messages.CONST)
+                append(Msg.CONST)
                 append(' ')
             }
 

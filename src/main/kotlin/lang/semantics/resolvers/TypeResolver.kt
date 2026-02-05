@@ -1,13 +1,15 @@
 package lang.semantics.resolvers
 
-import lang.messages.Messages
+import lang.messages.Msg
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.builtin.isBuiltInFuncReturnsPtr
+import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.*
 import lang.semantics.types.*
 import lang.tokens.OperatorType
+import lang.tokens.Pos
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class TypeResolver(
@@ -32,19 +34,20 @@ class TypeResolver(
         val targetScope = baseType.declaration?.staticScope?.instanceScope
 
         if (!baseType.isExprType || targetScope == null) {
-            target.base.error(Messages.EXPECTED_A_VALUE)
+            target.base.error(Msg.EXPECTED_VALUE_OR_REF)
             return ErrorType
         }
 
         return analyzer.withScope(targetScope) {
             val member = target.member
 
-            val sym = targetScope.resolve(name = member.value, asMember = true)
+            val result = targetScope.resolve(name = member.value, asMember = true)
 
-            target bind sym
-            target.member bind sym
-
-            resolve(member, asMember = true)
+            result.handle(member.pos) {
+                target bind sym
+                target.member bind sym
+                resolve(member, asMember = true)
+            }
 
         }.also {
             target attach it
@@ -54,19 +57,19 @@ class TypeResolver(
 
     private fun resolveNamespace(target: ExprNode): Type {
         return when (target) {
-            is ScopedDatatypeNode -> resolve(target, isNamespace = true)
-            is QualifiedDatatypeNode -> resolve(target, isNamespace = true)
+            is ScopedDatatypeNode -> resolve(target, isNamespaceCtx = true)
+            is QualifiedDatatypeNode -> resolve(target, isNamespaceCtx = true)
             else -> resolve(target)
         }
     }
 
-    private fun resolve(target: ScopedDatatypeNode, isNamespace: Boolean = false): Type {
+    private fun resolve(target: ScopedDatatypeNode, isNamespaceCtx: Boolean = false): Type {
         val type = resolveNamespace(target.base)
 
         val targetScope = type.declaration?.staticScope
 
         if (type.isExprType || targetScope == null) {
-            target.error(Messages.EXPECTED_NAMESPACE_NAME)
+            target.error(Msg.EXPECTED_NAMESPACE_NAME)
             return ErrorType
         }
 
@@ -75,17 +78,15 @@ class TypeResolver(
 
 //            val memberType = resolve(member, asMember = true)
 
-            val sym = targetScope.resolve(name = member.value, asMember = true)
+            val result = targetScope.resolve(name = member.value, asMember = true)
                 ?: return@withScope semanticError(
-                    Messages.F_SYMBOL_NOT_DEFINED_CUR.format(member.value), target.pos
+                    Msg.F_SYMBOL_NOT_DEFINED_CUR.format(member.value), target.pos
                 )
-
-            target bind sym
-            target.member bind sym
-
-            resolveIdentifierWithSym(member, sym, isNamespace)
-//            memberType
-
+            result.handle(member.pos) {
+                target bind sym
+                target.member bind sym
+                resolveIdentifierWithSym(member, sym, isNamespaceCtx)
+            }
         }.also {
             target attach it
             target.member attach it
@@ -101,9 +102,9 @@ class TypeResolver(
         overloads: List<FuncSymbol>?
     ): FuncSymbol? {
         if (overloads.isNullOrEmpty())
-            funcReceiverExpr.error(Messages.F_FUNC_NOT_DEFINED)
+            funcReceiverExpr.error(Msg.F_FUNC_NOT_DEFINED)
         else if (overloads.size > 1)
-            funcReceiverExpr.error(Messages.AMBIGUOUS_OVERLOADED_FUNCTION)
+            funcReceiverExpr.error(Msg.AMBIGUOUS_OVERLOADED_FUNCTION)
         else
             return overloads[0]
 
@@ -117,11 +118,6 @@ class TypeResolver(
         val argTypes = resolve(argNodes)
 
         val receiverType = resolve(receiver)
-
-//        if (!receiverType.isExprType && receiverType !is FuncType) {
-//            receiver.error(Messages.EXPECTED_A_VALUE)
-//            return ErrorType
-//        }
 
         var params: FuncParamListSymbol? = null
         var paramTypes: List<Type> = listOf()
@@ -156,7 +152,7 @@ class TypeResolver(
                     returnType = receiverType.base.returnType
                     decl
                 } else {
-                    receiver.error(Messages.NOT_A_FUNCTION)
+                    receiver.error(Msg.SYM_NOT_A_FUNC)
                     null
                 }
             }
@@ -164,7 +160,7 @@ class TypeResolver(
             is ErrorType -> null
 
             else -> {
-                receiver.error(Messages.NOT_A_FUNCTION)
+                receiver.error(Msg.SYM_NOT_A_FUNC)
                 null
             }
         }
@@ -179,14 +175,14 @@ class TypeResolver(
 
 
             if (argType == null) {
-                val msg = Messages.F_NO_VALUE_PASSED_FOR_PARAMETER
+                val msg = Msg.F_NO_VALUE_PASSED_FOR_PARAMETER
                     .format(paramName, paramType)
                 receiver.error(msg)
                 continue
             }
 
-            if (!argType.canCastTo(paramType)) {
-                val msg = Messages.F_ARGUMENT_TYPE_MISMATCH
+            if (argType != ErrorType && !argType.canCastTo(paramType)) {
+                val msg = Msg.F_ARGUMENT_TYPE_MISMATCH
                     .format(paramType, argType)
                 argNodes.getOrNull(i)?.error(msg)
                 continue
@@ -197,9 +193,9 @@ class TypeResolver(
         return returnType.also { target attach it }
     }
 
-    fun resolve(target: BaseDatatypeNode, isNamespace: Boolean = false): Type {
+    fun resolve(target: BaseDatatypeNode, isNamespaceCtx: Boolean = false): Type {
         return when (target) {
-            is DatatypeNode -> resolve(target, isNamespace)
+            is DatatypeNode -> resolve(target, isNamespaceCtx)
             is ScopedDatatypeNode -> resolve(target)
 
             is AutoDatatypeNode,
@@ -223,63 +219,165 @@ class TypeResolver(
         ).also { target attach it }
     }
 
-    private fun resolveIdentifierWithSym(target: IdentifierNode, sym: Symbol, isNamespace: Boolean = false): Type {
+    private fun Symbol.toTypeForNode(
+        target: ExprNode,
+        isNamespaceCtx: Boolean = false
+    ): Type {
+        return when (this) {
+            is VarSymbol -> type.setFlags(isMutable = isMutable, isExprType = true, isLvalue = true)
+            is ConstValueSymbol -> type.setFlags(isExprType = true, isLvalue = true)
+            is PrimitiveTypeSymbol -> type.setFlags(isExprType = false)
+            is NamespaceSymbol -> if (isNamespaceCtx) {
+                NamespaceType(name = name, declaration = this)
+            } else {
+                target.error(Msg.F_SYM_NOT_ALLOWED_HERE.format(name))
+            }
 
-        target bind sym
-
-        return when (sym) {
-            is VarSymbol -> sym.type.setFlags(
-                isMutable = sym.isMutable,
-                isExprType = true,
-                isLvalue = true
+            is TypeSymbol -> createUserType(sym = this).setFlags(isExprType = isNamespaceCtx)
+            is FuncSymbol -> toFuncType()
+            is OverloadedFuncSymbol -> OverloadedFuncType(
+                name = name,
+                overloads = overloads,
+                flags = TypeFlags(isExprType = true)
             )
 
-            is ConstValueSymbol -> {
-                sym.type.setFlags(
-                    isExprType = true,
-                    isLvalue = true
-                )
-            }
-
-            is PrimitiveTypeSymbol -> sym.type.setFlags(
-                isExprType = false
-            )
-
-            is NamespaceSymbol -> {
-                if (isNamespace)
-                    NamespaceType(
-                        name = sym.name,
-                        declaration = sym
-                    )
-                else
-                    target.error(Messages.F_SYM_NOT_ALLOWED_HERE.format(sym.name))
-            }
-
-            is TypeSymbol -> createUserType(sym = sym)
-                .setFlags(isExprType = isNamespace)
-
-            is FuncSymbol -> sym.toFuncType()
-
-            is OverloadedFuncSymbol -> {
-                OverloadedFuncType(
-                    name = sym.name,
-                    overloads = sym.overloads,
-                    flags = TypeFlags(
-                        isExprType = true
-                    )
-                )
-            }
-
-
-            else -> target.error(::symNotDefinedError)
+            else -> symNotDefinedInError(this.name, scope.absoluteScopePath, target.pos)
         }.also { target attach it }
     }
 
-    private fun resolve(target: IdentifierNode, asMember: Boolean = false): Type {
-        val sym = scope.resolve(name = target.value, asMember = asMember)
-            ?: return target.error(::symNotDefinedInError)
+    private fun resolveIdentifierWithSym(
+        target: IdentifierNode,
+        sym: Symbol,
+        isNamespace: Boolean = false
+    ): Type {
+        target bind sym
+        return sym.toTypeForNode(target, isNamespace)
+    }
 
-        return resolveIdentifierWithSym(target, sym)
+    private fun resolve(target: DatatypeNode, isNamespace: Boolean = false): Type {
+        val result = scope.resolve(target.identifier.value)
+
+        return result.handle(target.identifier.pos) {
+            target bind sym
+
+            val baseType = sym.toTypeForNode(target.identifier, isNamespace)
+
+            baseType.applyTypeModifiers(
+                pointerLevel = target.ptrLvl,
+                isConst = target.isConst || baseType.isConst,
+                isReference = target.isReference
+            )
+        }
+    }
+
+
+    /*
+    private fun resolve(target: DatatypeNode, isNamespace: Boolean = false): Type {
+        val name = target.identifier
+        val result = scope.resolve(name.value)
+
+        return result.handle(name.pos) {
+            target bind sym
+
+            val pointerLevel = target.ptrLvl
+
+            val type = when (sym) {
+                is PrimitiveTypeSymbol -> sym.type
+
+                is NamespaceSymbol -> {
+                    if (isNamespace)
+                        NamespaceType(
+                            name = sym.name,
+                            declaration = sym
+                        )
+                    else
+                        target.error(Msg.EXPECTED_A_VALUE.format(sym.name))
+                }
+
+                is TypeSymbol -> {
+                    createUserType(
+                        sym = sym,
+                        templateArgs = resolveTemplateArgs(target.typeNames)
+                    )
+                }
+
+                is TypedefSymbol -> {
+                    sym.type
+                }
+
+                else -> {
+                    name.error(::symNotDefinedError)
+                    return@handle ErrorType
+                }
+            }
+
+            return@handle type.applyTypeModifiers(
+                pointerLevel = pointerLevel,
+                isConst = target.isConst || type.isConst,
+                isReference = target.isReference
+            )
+        }
+    }
+
+        private fun resolveIdentifierWithSym(target: IdentifierNode, sym: Symbol, isNamespace: Boolean = false): Type {
+
+            target bind sym
+
+            return when (sym) {
+                is VarSymbol -> sym.type.setFlags(
+                    isMutable = sym.isMutable,
+                    isExprType = true,
+                    isLvalue = true
+                )
+
+                is ConstValueSymbol -> {
+                    sym.type.setFlags(
+                        isExprType = true,
+                        isLvalue = true
+                    )
+                }
+
+                is PrimitiveTypeSymbol -> sym.type.setFlags(
+                    isExprType = false
+                )
+
+                is NamespaceSymbol -> {
+                    if (isNamespace)
+                        NamespaceType(
+                            name = sym.name,
+                            declaration = sym
+                        )
+                    else
+                        target.error(Msg.F_SYM_NOT_ALLOWED_HERE.format(sym.name))
+                }
+
+                is TypeSymbol -> createUserType(sym = sym)
+                    .setFlags(isExprType = isNamespace)
+
+                is FuncSymbol -> sym.toFuncType()
+
+                is OverloadedFuncSymbol -> {
+                    OverloadedFuncType(
+                        name = sym.name,
+                        overloads = sym.overloads,
+                        flags = TypeFlags(
+                            isExprType = true
+                        )
+                    )
+                }
+
+
+                else -> target.error(::symNotDefinedError)
+            }.also { target attach it }
+        }
+    */
+
+    private fun resolve(target: IdentifierNode, asMember: Boolean = false): Type {
+        val result = scope.resolve(name = target.value, asMember = asMember)
+
+        return result.handle(target.pos) {
+            resolveIdentifierWithSym(target, sym)
+        }
     }
 
     private fun createUserType(
@@ -311,13 +409,13 @@ class TypeResolver(
         var leftType = resolve(target.left)
         var rightType = resolve(target.right)
 
-        if (!leftType.isExprType) {
-            target.left.error(Messages.EXPECTED_A_VALUE)
+        if (leftType != ErrorType && !leftType.isExprType) {
+            target.left.error(Msg.EXPECTED_VALUE_OR_REF)
             leftType = ErrorType
         }
 
-        if (!rightType.isExprType) {
-            target.right.error(Messages.EXPECTED_A_VALUE)
+        if (rightType != ErrorType && !rightType.isExprType) {
+            target.right.error(Msg.EXPECTED_VALUE_OR_REF)
             rightType = ErrorType
         }
 
@@ -332,9 +430,8 @@ class TypeResolver(
         }
 
         val operator = target.tokenOperatorType
-        val argTypes = listOf(/*leftType, */rightType)
 
-        return resolveOperFunc(target, leftType, rightType, operator, argTypes)
+        return resolveOperFunc(target, leftType, rightType, operator)
     }
 
     private fun resolveOperFunc(
@@ -342,7 +439,6 @@ class TypeResolver(
         leftType: Type,
         rightType: Type,
         operator: OperatorType,
-        argTypes: List<Type>
     ): Type {
         val operScope = when (leftType) {
             is PrimitiveType,
@@ -352,36 +448,33 @@ class TypeResolver(
             else -> scope
         }
 
-        val symbols = operScope
-            ?.resolveOperatorFunc(operator = operator, argTypes = argTypes)
-
-
-        if (symbols.isNullOrEmpty())
-            return target.error(
-                Messages.F_NO_BIN_OPER_FUNC_OVERLOAD
-                    .format(operator.symbol, leftType, rightType)
-            )
-
-        if (symbols.size > 1)
-            return target.error(Messages.AMBIGUOUS_OVERLOADED_OPERATOR)
-
-        val operFunc = symbols[0]
-
-        val returnType = when {
-            operFunc.isBuiltInFuncReturnsPtr() -> leftType
-            else -> operFunc.returnType
+        if (operScope == null) {
+            return target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(leftType))
         }
 
-        target bind operFunc
+        val argTypes = listOf(leftType, rightType)
+        val result = operScope.resolveOperFunc(operator = operator, argTypes = argTypes)
 
-        val isConst = operFunc.returnType.isConst
+        return result.handle(target.pos) {
+            val operFunc = sym as? FuncSymbol
+                ?: return@handle target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM)
 
-        return returnType.setFlags(
-            isConst = isConst,
-            isExprType = true,
-            isLvalue = false,
-            isMutable = false
-        ).also { target attach it }
+            val returnType = when {
+                operFunc.isBuiltInFuncReturnsPtr() -> leftType
+                else -> operFunc.returnType
+            }
+
+            target bind operFunc
+
+            val isConst = operFunc.returnType.isConst
+
+            returnType.setFlags(
+                isConst = isConst,
+                isExprType = true,
+                isLvalue = false,
+                isMutable = false
+            ).also { target attach it }
+        }
     }
 
     private fun resolveIs(
@@ -390,10 +483,10 @@ class TypeResolver(
         rightType: Type
     ): Type {
         if (!leftType.isExprType)
-            target.left.error(Messages.EXPECTED_AN_EXPRESSION)
+            target.left.error(Msg.EXPECTED_AN_EXPRESSION)
 
         if (rightType.isExprType)
-            target.right.error(Messages.EXPECTED_TYPE_NAME)
+            target.right.error(Msg.EXPECTED_TYPE_NAME)
 
         return PrimitivesScope.bool.setFlags(
             isConst = false,
@@ -408,7 +501,7 @@ class TypeResolver(
     ): Type {
         val type = when {
             rightType.isExprType -> {
-                target.right.error(Messages.EXPECTED_TYPE_NAME)
+                target.right.error(Msg.EXPECTED_TYPE_NAME)
                 ErrorType
             }
 
@@ -420,7 +513,7 @@ class TypeResolver(
 
             else -> {
                 if (!leftType.canCastTo(rightType)) {
-                    val msg = Messages.F_CANNOT_CAST_TYPE
+                    val msg = Msg.F_CANNOT_CAST_TYPE
                         .format(leftType, rightType)
 
                     target.error(msg)
@@ -444,18 +537,18 @@ class TypeResolver(
     ): Type {
         when {
             !leftType.isLvalue ->
-                target.left.error(Messages.EXPECTED_VARIABLE)
+                target.left.error(Msg.EXPECTED_VARIABLE_ACTUAL_VALUE)
 
             leftType.isConst ->
-                target.error(Messages.ASSIGNMENT_TO_CONSTANT_VARIABLE)
+                target.error(Msg.ASSIGNMENT_TO_CONSTANT_VARIABLE)
 
             !leftType.isMutable ->
-                target.error(Messages.ASSIGNMENT_TO_IMMUTABLE_VARIABLE)
+                target.error(Msg.ASSIGNMENT_TO_IMMUTABLE_VARIABLE)
         }
 
         if (!rightType.canCastTo(leftType)) {
             target.error(
-                Messages.F_TYPE_MISMATCH.format(leftType, rightType)
+                Msg.F_TYPE_MISMATCH.format(leftType, rightType)
             )
         }
 
@@ -469,49 +562,6 @@ class TypeResolver(
         ).also { target attach it }
     }
 
-    private fun resolve(target: DatatypeNode, isNamespace: Boolean = false): Type {
-        val name = target.identifier
-        val sym = scope.resolve(name.value)
-        target bind sym
-
-        val pointerLevel = target.ptrLvl
-
-        val type = when (sym) {
-            is PrimitiveTypeSymbol -> sym.type
-
-            is NamespaceSymbol -> {
-                if (isNamespace)
-                    NamespaceType(
-                        name = sym.name,
-                        declaration = sym
-                    )
-                else
-                    target.error(Messages.EXPECTED_A_VALUE.format(sym.name))
-            }
-
-            is TypeSymbol -> {
-                createUserType(
-                    sym = sym,
-                    templateArgs = resolveTemplateArgs(target.typeNames)
-                )
-            }
-
-            is TypedefSymbol -> {
-                sym.type
-            }
-
-            else -> {
-                name.error(::symNotDefinedError)
-                return ErrorType
-            }
-        }
-
-        return type.applyTypeModifiers(
-            pointerLevel = pointerLevel,
-            isConst = target.isConst || type.isConst,
-            isReference = target.isReference
-        )
-    }
 
     private fun Type.applyTypeModifiers(
         pointerLevel: Int,
@@ -541,7 +591,7 @@ class TypeResolver(
                 return@map if (constValue != null)
                     TemplateArg.ArgConstValue(value = constValue)
                 else {
-                    it.error(Messages.EXPECTED_CONST_VALUE)
+                    it.error(Msg.EXPECTED_CONST_VALUE)
                     TemplateArg.ArgType(ErrorType)
                 }
             }
@@ -587,7 +637,7 @@ class TypeResolver(
         )
 
         if (bestFunc == null) {
-            val msg = Messages.F_NONE_OF_N_CANDIDATES_APPLICABLE_FOR_TYPE
+            val msg = Msg.F_NONE_OF_N_CANDIDATES_APPLICABLE_FOR_TYPE
                 .format(overloads.size, type)
 
             target.error(msg)
@@ -602,7 +652,7 @@ class TypeResolver(
 
         if (initializerType is OverloadedFuncType) {
             if (type !is FuncType) {
-                return target.error(Messages.AMBIGUOUS_OVERLOADED_FUNCTION)
+                return target.error(Msg.AMBIGUOUS_OVERLOADED_FUNCTION)
             }
 
             val bestFuncSym = resolveBestOverloadForType(target, type, initializerType.overloads)
@@ -614,9 +664,27 @@ class TypeResolver(
 
         if (initializerType != ErrorType && !initializerType.canCastTo(type))
             target.error(
-                Messages.F_TYPE_MISMATCH.format(type, initializerType)
+                Msg.F_TYPE_MISMATCH.format(type, initializerType)
             )
 
         return type
     }
+
+    fun ScopeResult.handle(pos: Pos?, onSuccess: ScopeResult.Success<*>.() -> Type): Type {
+        return when (this) {
+            is ScopeResult.Error -> {
+                if (pos != null)
+                    analyzer.scopeError(error, pos)
+
+                ErrorType
+            }
+
+            is ScopeResult.Success<*> -> {
+                onSuccess()
+            }
+        }
+    }
+
+    fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Type) =
+        this.handle(null, onSuccess)
 }

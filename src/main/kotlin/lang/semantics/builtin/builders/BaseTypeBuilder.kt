@@ -36,13 +36,13 @@ abstract class BaseTypeBuilder<T: TypeSymbol>(open val name: String, open val pa
 
     fun staticFunc(name: String, block: FuncBuilder.() -> Unit): FuncSymbol {
         val sym = FuncBuilder(name).apply(block).build()
-        withStaticScope { defineFunc(sym, null) }
+        withStaticScope { defineFunc(sym) }
         return sym
     }
 
     fun instanceFunc(name: String, block: FuncBuilder.() -> Unit): FuncSymbol {
         val sym = FuncBuilder(name).apply(block).build()
-        withInstanceScope { defineFunc(sym, null) }
+        withInstanceScope { defineFunc(sym) }
         return sym
     }
 
@@ -50,7 +50,7 @@ abstract class BaseTypeBuilder<T: TypeSymbol>(open val name: String, open val pa
         val builder = FuncBuilder(oper)
 
         val sym = builder.apply(block).build()
-        withStaticScope { defineFunc(sym, null) }
+        withStaticScope { defineFunc(sym) }
         return sym
     }
 
@@ -61,7 +61,7 @@ abstract class BaseTypeBuilder<T: TypeSymbol>(open val name: String, open val pa
         block: ConstVarBuilder.() -> Unit = {}
     ): ConstVarSymbol {
         val sym = ConstVarBuilder(name, type, value).apply(block).build()
-        withStaticScope { define(sym, null) }
+        withStaticScope { define(sym) }
         return sym
     }
 }

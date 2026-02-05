@@ -1,65 +1,66 @@
 package lang.semantics.scopes
 
-import lang.messages.ErrorHandler
 import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.symbols.FuncSymbol
 import lang.semantics.symbols.NamespaceSymbol
 import lang.semantics.symbols.Symbol
-import lang.tokens.Pos
 
 class ModuleExportScope(
-    errorHandler: ErrorHandler = ErrorHandler()
 ) : NamespaceScope(
     parent = PrimitivesScope,
-    errorHandler = errorHandler,
     scopeName = "",
     isExport = true
 ) {
     val exportedSymbols: List<Symbol>
         get() = symbols.map { it.value }
 
-    fun export(namePath: List<String>, sym: Symbol, pos: Pos?): Symbol {
+    fun export(namePath: List<String>, sym: Symbol): ScopeResult {
         val targetScope = getNamespaceScope(namePath)
+            ?: return ScopeError.CannotExport.err()
 
         return if (sym is FuncSymbol)
-            targetScope.defineFunc(sym, pos)
+            targetScope.defineFunc(sym)
         else
-            targetScope.define(sym, pos)
+            targetScope.define(sym)
     }
 
-    private fun getNamespaceScope(namePath: List<String>): Scope {
+    private fun getNamespaceScope(namePath: List<String>): Scope? {
         if (namePath.isEmpty()) return this
 
         var currentScope: Scope = this
 
         namePath.forEach { name ->
-            val sym = getNamespace(name, currentScope)
-            currentScope = sym.scope
+            when (val result = getNamespace(name, currentScope)) {
+                is ScopeResult.Error -> return null
+                is ScopeResult.Success<*> -> {
+                    if (result.sym !is NamespaceSymbol) return null
+                    currentScope = result.sym.scope
+                }
+            }
         }
 
         return currentScope
     }
 
-    private fun getNamespace(name: String, scope: Scope): NamespaceSymbol {
-        val sym = scope.resolve(name)
-//            ?: createNamespaceSym(name, scope)
+    private fun getNamespace(name: String, scope: Scope): ScopeResult {
+        val result = scope.resolve(name)
 
-        if (sym is NamespaceSymbol) return sym
+        if (result is ScopeResult.Success<*> && result.sym is NamespaceSymbol)
+            return result
 
         return createNamespaceSym(name, scope)
     }
 
-    private fun createNamespaceSym(name: String, parent: Scope): NamespaceSymbol {
+    private fun createNamespaceSym(name: String, parent: Scope): ScopeResult {
         val sym = NamespaceSymbol(
             name = name,
             scope = NamespaceScope(
                 parent = parent,
-                errorHandler = errorHandler,
                 scopeName = name,
                 isExport = true
             )
-        ).also { parent.define(it, null) }
+        )
 
-        return sym
+        return parent.define(sym)
     }
 }

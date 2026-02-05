@@ -7,7 +7,9 @@ import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.Scope
+import lang.semantics.scopes.ScopeError
 import lang.semantics.symbols.Symbol
+import lang.tokens.Pos
 
 interface ISemanticAnalyzer {
     val scope: Scope
@@ -25,7 +27,9 @@ interface ISemanticAnalyzer {
 
     fun exitScope()
     fun enterScope(newScope: Scope)
-    fun <T> withScope(targetScope: Scope = Scope(parent = this.scope, errorHandler), block: () -> T) : T
+    fun <T> withScope(targetScope: Scope = Scope(parent = this.scope), block: () -> T) : T
 
     fun withScopeResolveBody(targetScope: Scope, body: BlockNode?)
+
+    fun scopeError(error: ScopeError, pos: Pos?)
 }

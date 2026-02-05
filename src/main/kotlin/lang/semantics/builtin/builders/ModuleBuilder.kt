@@ -11,7 +11,6 @@ class ModuleBuilder(
 ) : BaseTypeBuilder<ClassSymbol>(name, parent) {
     override var typeScope: BaseTypeScope = ClassScope(
         parent = parent,
-        errorHandler = parent.errorHandler,
         scopeName = name,
         superTypeScope = null
     )

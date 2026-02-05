@@ -1,6 +1,6 @@
 package lang.tokens
 
-import lang.messages.Messages
+import lang.messages.Msg
 import kotlin.reflect.KClass
 
 interface ITokenStream {
@@ -18,7 +18,7 @@ interface ITokenStream {
     fun expect(vararg classes: KClass<out Token>, msg: String): Boolean
     fun expectKeyword(type: KeywordType, msg: String): Boolean
     fun matchSemicolonOrLinebreak(): Boolean
-    fun expectSemicolonOrLinebreak(msg: String = Messages.EXPECTED_SEMICOLON): Boolean
+    fun expectSemicolonOrLinebreak(msg: String = Msg.EXPECTED_SEMICOLON): Boolean
     fun skipTokens(vararg classes: KClass<out Token>)
     fun skipUntil(vararg classes: KClass<out Token>)
     fun skipEnclosed(openToken: KClass<out Token>, closeToken: KClass<out Token>)

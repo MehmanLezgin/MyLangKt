@@ -42,6 +42,7 @@ data class FuncParamListSymbol(
 
 data class OverloadedFuncSymbol(
     override val name: String,
+    val isOperator: Boolean,
     val overloads: MutableList<FuncSymbol> = mutableListOf(),
     override val modifiers: Modifiers = Modifiers()
 ) : Symbol(name = name, modifiers = modifiers) {
@@ -63,6 +64,7 @@ open class FuncSymbol(
 
     fun toOverloadedFuncSymbol() = OverloadedFuncSymbol(
         name = name,
+        isOperator = this is OperatorFuncSymbol,
         overloads = mutableListOf(this)
     )
 
@@ -103,9 +105,9 @@ open class FuncSymbol(
     }
 }
 
-data class OperatorFuncSymbol(
-    val operator: OperatorType,
+open class OperatorFuncSymbol(
 //    override val typeNames: TypeNameListNode?,
+    open val operator: OperatorType,
     override val params: FuncParamListSymbol,
     override val returnType: Type,
     override val modifiers: Modifiers = Modifiers()
@@ -117,15 +119,16 @@ data class OperatorFuncSymbol(
 )
 
 data class BuiltInOperatorFuncSymbol(
-    val operator: OperatorType,
+    override val operator: OperatorType,
     override val params: FuncParamListSymbol,
     override val returnType: Type,
     override val modifiers: Modifiers = Modifiers()
-) : FuncSymbol(
-    name = operator.fullName,
+) : OperatorFuncSymbol(
 //    typeNames = null,
+    operator = operator,
     params = params,
     returnType = returnType,
+    modifiers = modifiers
 )
 
 

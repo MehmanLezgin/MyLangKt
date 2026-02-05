@@ -34,14 +34,13 @@ open class PrimitiveType(
             type = this,
             scope = BaseTypeScope(
                 parent = scope,
-                errorHandler = scope.errorHandler,
                 scopeName = this.name,
                 superTypeScope = null
             )
         )
 
         this.declaration = sym
-        scope.define(sym, null)
+        scope.define(sym)
 
         this.staticConstVar("SIZE_BYTES", this, ConstValue(size.size))
             .staticConstVar("SIZE_BITS", this, ConstValue(size.size * 8))

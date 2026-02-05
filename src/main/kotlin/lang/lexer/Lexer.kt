@@ -3,7 +3,7 @@ package lang.lexer
 import lang.messages.ErrorHandler
 import lang.core.ILangSpec
 import lang.core.LangSpec.operators
-import lang.messages.Messages
+import lang.messages.Msg
 import lang.core.SourceCode
 import lang.tokens.Token
 import lang.tokens.TokenType
@@ -186,7 +186,7 @@ class Lexer(
         val nextChar = at(index)
 
         if (nextChar != Char.MIN_VALUE && nextChar.isIdentifierChar()) lexicalError(
-            Messages.LITERALS_MUST_BE_SURROUNDED_BY_WHITESPACES,
+            Msg.LITERALS_MUST_BE_SURROUNDED_BY_WHITESPACES,
             pos
         )
 
@@ -277,7 +277,7 @@ class Lexer(
             when (cur) {
                 Symbols.NEW_LINE -> {
                     if (at(index - 1) != Symbols.BACK_SLASH) {
-                        lexicalError(Messages.EXPECTED_QUOTE, getPos())
+                        lexicalError(Msg.EXPECTED_QUOTE, getPos())
                         return null
                     }
                 }
@@ -294,7 +294,7 @@ class Lexer(
         advance()
 
         if (endChar != quote) {
-            lexicalError(Messages.EXPECTED_QUOTE, getPos())
+            lexicalError(Msg.EXPECTED_QUOTE, getPos())
             return null
         }
 
@@ -332,7 +332,7 @@ class Lexer(
                 if (endFound) {
                     advance(Symbols.MULTILINE_COMMENT_CLOSE.length)
                 } else {
-                    lexicalError(Messages.EXPECTED_COMMENT_END, pos)
+                    lexicalError(Msg.EXPECTED_COMMENT_END, pos)
                 }
             }
         }
@@ -371,7 +371,7 @@ class Lexer(
             c.isQuote() -> matchStringLiteral()                                         // str and char literals
             else -> {
                 val t = lexOperator() ?: lexOther()
-                if (t == null) lexicalError(Messages.UNEXPECTED_TOKEN, getPos())
+                if (t == null) lexicalError(Msg.UNEXPECTED_TOKEN, getPos())
                 t
             }
         }

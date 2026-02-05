@@ -2,7 +2,7 @@ package lang.parser
 
 import lang.core.LangSpec.moduleNameSeparator
 import lang.messages.ErrorHandler
-import lang.messages.Messages
+import lang.messages.Msg
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
 import lang.nodes.ModuleNode
@@ -58,7 +58,7 @@ class Parser(
         val list = parseIdsWithSeparatorOper(separator = moduleNameSeparator)
 
         if (withModuleKeyword)
-            ts.expectSemicolonOrLinebreak(Messages.EXPECTED_SEMICOLON)
+            ts.expectSemicolonOrLinebreak(Msg.EXPECTED_SEMICOLON)
 
         val name = list?.joinToString(
             separator = moduleNameSeparator.symbol
@@ -83,7 +83,7 @@ class Parser(
                 val identifier = ts.peek()
 
                 if (identifier !is Token.Identifier) {
-                    syntaxError(Messages.EXPECTED_IDENTIFIER, identifier.pos)
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, identifier.pos)
                     return null
                 }
 

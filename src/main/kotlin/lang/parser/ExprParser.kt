@@ -2,7 +2,7 @@ package lang.parser
 
 import lang.mappers.BinOpTypeMapper
 import lang.mappers.UnaryOpTypeMapper
-import lang.messages.Messages
+import lang.messages.Msg
 import lang.nodes.*
 import lang.parser.ParserUtils.flattenCommaNode
 import lang.parser.ParserUtils.isKeyword
@@ -33,7 +33,7 @@ class ExprParser(
             list.addAll(expr)
         }
 
-        ts.expect(Token.RParen::class, Messages.EXPECTED_RPAREN)
+        ts.expect(Token.RParen::class, Msg.EXPECTED_RPAREN)
         ts.next()
 
         if (ctx == ParsingContext.Default && ts.match(Token.LBrace::class)) {
@@ -102,7 +102,7 @@ class ExprParser(
                 is Token.Identifier -> t.toIdentifierNode()
 
                 else -> {
-                    syntaxError(Messages.EXPECTED_IDENTIFIER, t.pos)
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, t.pos)
                     break
                 }
             }
@@ -118,7 +118,7 @@ class ExprParser(
                     )
 
                 else -> {
-                    syntaxError(Messages.UNEXPECTED_TOKEN, op.pos) // unreachable
+                    syntaxError(Msg.UNEXPECTED_TOKEN, op.pos) // unreachable
                     break
                 }
             }
@@ -188,7 +188,7 @@ class ExprParser(
             is Token.LParen -> {
                 ts.next()
                 val expr = parse()
-                if (ts.expect(Token.RParen::class, Messages.EXPECTED_RPAREN))
+                if (ts.expect(Token.RParen::class, Msg.EXPECTED_RPAREN))
                     ts.next()
 
 
@@ -201,7 +201,7 @@ class ExprParser(
             is Token.LBrace -> parseLambda()
 
             else -> {
-                syntaxError(Messages.EXPECTED_AN_EXPRESSION, ts.prev().pos)
+                syntaxError(Msg.EXPECTED_AN_EXPRESSION, ts.prev().pos)
                 UnknownNode(t.pos)
             }
         }
@@ -253,7 +253,7 @@ class ExprParser(
                 is Token.LBracket -> {
                     ts.next()
                     val indexExpr = parse()
-                    ts.expect(Token.RBracket::class, Messages.EXPECTED_RBRACKET)
+                    ts.expect(Token.RBracket::class, Msg.EXPECTED_RBRACKET)
                     ts.next()
 
                     IndexAccessNode(
@@ -340,7 +340,7 @@ class ExprParser(
                     }
 
                     else -> {
-                        syntaxError(Messages.EXPECTED_TYPE_NAME, t.pos)
+                        syntaxError(Msg.EXPECTED_TYPE_NAME, t.pos)
                         ErrorDatatypeNode(t.pos)
                     }
                 }
@@ -357,7 +357,7 @@ class ExprParser(
                     val args = parseArgsList(ctx = ctx)
 
                     if (datatypeNode !is DatatypeNode) {
-                        syntaxError(Messages.EXPECTED_IDENTIFIER, expr.pos)
+                        syntaxError(Msg.EXPECTED_IDENTIFIER, expr.pos)
                         return datatypeNode
                     }
 
@@ -393,7 +393,7 @@ class ExprParser(
     override fun parseTypenameList(): List<ExprNode>? {
         // require '<'
         if (ts.peek() isNotOperator OperatorType.LESS) {
-            syntaxError(Messages.EXPECTED_LESS_OP, ts.pos)
+            syntaxError(Msg.EXPECTED_LESS_OP, ts.pos)
             return null
         }
 
@@ -421,7 +421,7 @@ class ExprParser(
         if (ts.peek() isOperator OperatorType.GREATER)
             ts.next()
         else
-            syntaxError(Messages.EXPECTED_GREATER_OP, ts.pos)
+            syntaxError(Msg.EXPECTED_GREATER_OP, ts.pos)
 
         return list
     }
@@ -431,7 +431,7 @@ class ExprParser(
 
         val pos = ts.pos
 
-        val operator = if (ts.expect(Token.Operator::class, Messages.EXPECTED_OPERATOR)) {
+        val operator = if (ts.expect(Token.Operator::class, Msg.EXPECTED_OPERATOR)) {
             ts.next() as Token.Operator
         } else null
 
@@ -444,7 +444,7 @@ class ExprParser(
     private fun parseUnaryExpr(ctx: ParsingContext): ExprNode {
         return when (val t = ts.peek()) {
             is Token.Semicolon -> {
-                syntaxError(Messages.EXPECTED_AN_EXPRESSION, t.pos)
+                syntaxError(Msg.EXPECTED_AN_EXPRESSION, t.pos)
                 UnknownNode(t.pos)
             }
 
@@ -454,7 +454,7 @@ class ExprParser(
                     KeywordType.FUNC -> parseFuncDatatype()
                     KeywordType.OPERATOR -> parsePostfixExpr(ctx)
                     else -> {
-                        syntaxError(Messages.UNEXPECTED_TOKEN, t.pos)
+                        syntaxError(Msg.UNEXPECTED_TOKEN, t.pos)
                         UnknownNode(t.pos)
                     }
                 }
@@ -467,7 +467,7 @@ class ExprParser(
                         val operator = unaryOpTypeMapper.toSecond(t.type)
 
                         if (operator == null) {
-                            syntaxError(Messages.EXPECTED_AN_EXPRESSION, t.pos)
+                            syntaxError(Msg.EXPECTED_AN_EXPRESSION, t.pos)
                             return parsePostfixExpr(ctx)
                         }
 
@@ -512,7 +512,7 @@ class ExprParser(
 
         val exprList = parse().flattenCommaNode()
 
-        if (ts.expect(Token.RBracket::class, Messages.EXPECTED_RBRACKET))
+        if (ts.expect(Token.RBracket::class, Msg.EXPECTED_RBRACKET))
             ts.next()
 
         return InitialiserList(nodes = exprList, pos = pos)
@@ -573,7 +573,7 @@ class ExprParser(
             val member = parseSimpleDatatype()
 
             if (member !is DatatypeNode) {
-                syntaxError(Messages.EXPECTED_TYPE_NAME, member.pos)
+                syntaxError(Msg.EXPECTED_TYPE_NAME, member.pos)
                 break
             }
 
@@ -612,7 +612,7 @@ class ExprParser(
                 t is Token.Identifier -> t.toIdentifierNode()
                 t isKeyword KeywordType.FUNC -> return parseFuncDatatype(isConst)
                 else -> {
-                    syntaxError(Messages.EXPECTED_TYPE_NAME, t.pos)
+                    syntaxError(Msg.EXPECTED_TYPE_NAME, t.pos)
                     ts.next()
                     return ErrorDatatypeNode(t.pos)
                 }
@@ -637,7 +637,7 @@ class ExprParser(
             typeNames = parseTypenameList()
 
             if (typeNames == null) {
-                syntaxError(Messages.EXPECTED_TYPE_NAME, pos)
+                syntaxError(Msg.EXPECTED_TYPE_NAME, pos)
                 return ErrorDatatypeNode(pos)
             }
         }
@@ -678,12 +678,12 @@ class ExprParser(
         }
 
         if (hasRedundantAmp)
-            syntaxError(Messages.REF_TO_REF_IS_NOT_ALLOWED, refPos)
+            syntaxError(Msg.REF_TO_REF_IS_NOT_ALLOWED, refPos)
 
         // check if pointer to reference (example: int&**)
         if (isReference && calcPtrLvl() != 0) {
             val lastPos = ts.pos
-            syntaxError(Messages.POINTER_TO_REFERENCE_IS_NOT_ALLOWED, lastPos)
+            syntaxError(Msg.POINTER_TO_REFERENCE_IS_NOT_ALLOWED, lastPos)
         }
 
         return isReference
@@ -779,7 +779,7 @@ class ExprParser(
             val operator = binOpTypeMapper.toSecond(opType)
 
             if (operator == null) {
-                syntaxError(Messages.EXPECTED_AN_EXPRESSION, left.pos)
+                syntaxError(Msg.EXPECTED_AN_EXPRESSION, left.pos)
                 break
             }
 

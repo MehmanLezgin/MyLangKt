@@ -2,6 +2,7 @@ package lang.semantics.resolvers
 
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
+import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.ConstValueSymbol
 import lang.semantics.types.ConstValue
 import lang.semantics.types.Type
@@ -22,19 +23,23 @@ class ConstResolver(
         }
     }
 
+    private fun ScopeResult.getConstValueOrNull(): ConstValue<*>? {
+        if (this !is ScopeResult.Success<*>) return null
+        if (this.sym !is ConstValueSymbol) return null
+        return this.sym.value
+    }
+
     private fun resolve(expr: ScopedDatatypeNode): ConstValue<*>? {
-        val type = analyzer.typeResolver.resolve(expr.base, isNamespace = true)
+        val type = analyzer.typeResolver.resolve(expr.base, isNamespaceCtx = true)
         val scope = type.declaration?.staticScope
         val name = expr.member.identifier.value
-        val sym = scope?.resolve(name = name, asMember = true)
-        if (sym !is ConstValueSymbol) return null
-        return sym.value
+        val result = scope?.resolve(name = name, asMember = true)
+        return result?.getConstValueOrNull()
     }
 
     private fun resolve(expr: IdentifierNode): ConstValue<*>? {
-        val sym = analyzer.scope.resolve(expr.value)
-        if (sym !is ConstValueSymbol) return null
-        return sym.value
+        val result = analyzer.scope.resolve(expr.value)
+        return result.getConstValueOrNull()
     }
 
     private fun resolve(expr: UnaryOpNode): ConstValue<*>? {

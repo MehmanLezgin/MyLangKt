@@ -2,8 +2,9 @@ package lang.semantics
 
 import lang.compiler.Module
 import lang.compiler.ModuleManager
+import lang.mappers.ScopeErrorMapper
 import lang.messages.ErrorHandler
-import lang.messages.Messages
+import lang.messages.Msg
 import lang.nodes.*
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
@@ -11,6 +12,8 @@ import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.NamespaceScope
 import lang.semantics.scopes.Scope
+import lang.semantics.scopes.ScopeError
+import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.ModuleSymbol
 import lang.semantics.symbols.NamespaceSymbol
 import lang.semantics.symbols.Symbol
@@ -20,7 +23,7 @@ class SemanticAnalyzer(
     override val errorHandler: ErrorHandler,
     val moduleMgr: ModuleManager
 ) : ISemanticAnalyzer {
-    override var scope: Scope = Scope(errorHandler = errorHandler, parent = null)
+    override var scope: Scope = Scope(parent = null)
     private var currentModule: Module? = null
 
     override val declResolver: DeclarationResolver = DeclarationResolver(analyzer = this)
@@ -29,9 +32,14 @@ class SemanticAnalyzer(
 
     override val semanticContext = SemanticContext()
 
+    override fun scopeError(error: ScopeError, pos: Pos?) {
+        semanticError(msg = ScopeErrorMapper.toSecond(error), pos = pos)
+    }
 
     fun importSymbol(sym: Symbol, pos: Pos) {
-        scope.define(sym, pos)
+        val result = scope.define(sym)
+        if (result !is ScopeResult.Error) return
+        scopeError(error = result.error, pos = pos)
     }
 
     override fun exportSymbol(sym: Symbol) {
@@ -59,7 +67,7 @@ class SemanticAnalyzer(
         withModule(module) {
             isAnalysing = true
 
-            val moduleScope = ModuleScope(errorHandler = errorHandler)
+            val moduleScope = ModuleScope()
             module.scope = moduleScope
 
             withScope(moduleScope) {
@@ -71,22 +79,25 @@ class SemanticAnalyzer(
         }
     }
 
+    private fun checkModuleErrors(module: Module?) : String? {
+        return when {
+            module == null -> Msg.MODULE_NOT_DEFINED
+            module == currentModule -> Msg.MODULE_CANNOT_IMPORT_ITSELF
+            module.isAnalysing -> Msg.IMPORT_CYCLE_NOT_ALLOWED
+            else -> null
+        }
+    }
+
     fun resolve(node: ImportStmtNode) {
         val name = node.moduleName
         val module = getModule(name.value)
 
-        when {
-            module == null -> Messages.MODULE_NOT_DEFINED
-            module == currentModule -> Messages.MODULE_CANNOT_IMPORT_ITSELF
-            module.isAnalysing -> Messages.IMPORT_CYCLE_NOT_ALLOWED
-            else -> null
-        }?.let {
+        checkModuleErrors(module)?.let {
             semanticError(it, name.pos)
             return
         }
-        module!!
 
-        resolve(module = module)
+        resolve(module = module!!)
 
         val allExports = module.exportsScope.symbols
         val moduleName = node.moduleName.value
@@ -113,12 +124,13 @@ class SemanticAnalyzer(
                 allExports.map {
                     IdentifierNode(it.key, node.pos)
                 }
+
             else -> emptyList()
         }.forEach { id ->
             val sym = allExports[id.value]
 
             if (sym == null) {
-                semanticError(Messages.F_MODULE_DOES_NOT_EXPORT_SYM.format(moduleName, id.value), id.pos)
+                semanticError(Msg.F_MODULE_DOES_NOT_EXPORT_SYM.format(moduleName, id.value), id.pos)
                 return@forEach
             }
 

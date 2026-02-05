@@ -1,7 +1,7 @@
 package lang.parser
 
 import lang.tokens.KeywordType
-import lang.messages.Messages
+import lang.messages.Msg
 import lang.tokens.OperatorType
 import lang.tokens.ITokenStream
 import lang.tokens.Pos
@@ -68,13 +68,13 @@ class StmtParser(
                 return VoidNode
 
             if (ts.match(Token.RBrace::class)) {
-                syntaxError(Messages.EXPECTED_TOP_LEVEL_DECL, t.pos)
+                syntaxError(Msg.EXPECTED_TOP_LEVEL_DECL, t.pos)
                 ts.next()
                 return VoidNode
             }
 
             if (ts.match(Token.RParen::class, Token.RBracket::class)) {
-                syntaxError(Messages.UNEXPECTED_TOKEN, t.pos)
+                syntaxError(Msg.UNEXPECTED_TOKEN, t.pos)
                 ts.next()
                 return VoidNode
             }
@@ -82,7 +82,7 @@ class StmtParser(
             val expr = parser.parseExpr()
 
             if (!isSingleLine && !ts.match(Token.RBrace::class, Token.LBrace::class))
-                ts.expectSemicolonOrLinebreak(Messages.EXPECTED_SEMICOLON)
+                ts.expectSemicolonOrLinebreak(Msg.EXPECTED_SEMICOLON)
 
             return expr
         }
@@ -103,7 +103,7 @@ class StmtParser(
             KeywordType.MATCH -> ::parseMatchStmt
             KeywordType.IF -> ::parseIfElseStmt
             KeywordType.ELSE -> ::parseElseEntryStmt
-            KeywordType.ELIF -> errorStmt(Messages.EXPECTED_IF)
+            KeywordType.ELIF -> errorStmt(Msg.EXPECTED_IF)
 
             KeywordType.CONST, KeywordType.STATIC, KeywordType.OPEN, KeywordType.ABSTRACT,
             KeywordType.OVERRIDE,
@@ -114,7 +114,7 @@ class StmtParser(
             KeywordType.BREAK -> ::parseBreakStmt
 
             KeywordType.CATCH,
-            KeywordType.FINALLY -> errorStmt(Messages.EXPECTED_TRY)
+            KeywordType.FINALLY -> errorStmt(Msg.EXPECTED_TRY)
 
             KeywordType.RETURN -> ::parseReturnStmt
             KeywordType.CLASS -> ::parseClassStmt
@@ -127,9 +127,9 @@ class StmtParser(
             KeywordType.TRY -> ::parseTryCatchStmt
             KeywordType.NAMESPACE -> ::parseNamespaceStmt
             KeywordType.TYPE -> ::parseTypedefStmt
-            KeywordType.USING -> errorStmt(Messages.USING_NOT_IMPL)
-            KeywordType.OPERATOR -> errorStmt(Messages.EXPECTED_FUNC_DECL)
-            KeywordType.MODULE -> errorStmt(Messages.MODULE_IS_NOT_AT_START)
+            KeywordType.USING -> errorStmt(Msg.USING_NOT_IMPL)
+            KeywordType.OPERATOR -> errorStmt(Msg.EXPECTED_FUNC_DECL)
+            KeywordType.MODULE -> errorStmt(Msg.MODULE_IS_NOT_AT_START)
             KeywordType.IMPORT -> ::parseImportStmt
             KeywordType.FROM -> ::parseFromImportStmt
         }
@@ -140,13 +140,13 @@ class StmtParser(
     private fun parseTypedefStmt(): TypedefStmtNode? {
         val pos = ts.next().pos
 
-        if (!ts.expect(Token.Identifier::class, Messages.EXPECTED_IDENTIFIER))
+        if (!ts.expect(Token.Identifier::class, Msg.EXPECTED_IDENTIFIER))
             return null
 
         val identifier = (ts.next() as Token.Identifier).toIdentifierNode()
 
         if (ts.peek() isNotOperator OperatorType.ASSIGN) {
-            syntaxError(Messages.EXPECTED_ASSIGN, ts.pos)
+            syntaxError(Msg.EXPECTED_ASSIGN, ts.pos)
             return null
         }
 
@@ -180,7 +180,7 @@ class StmtParser(
                 ts.skipTokens(Token.Semicolon::class)
             }
 
-            if (ts.expect(Token.RBrace::class, Messages.EXPECTED_RBRACE))
+            if (ts.expect(Token.RBrace::class, Msg.EXPECTED_RBRACE))
                 ts.next()
 
             BlockNode(nodes = list, pos = pos)
@@ -212,7 +212,7 @@ class StmtParser(
         }
 
         if (catchBody == null && finallyBody == null) {
-            syntaxError(Messages.EXPECTED_CATCH, ts.pos)
+            syntaxError(Msg.EXPECTED_CATCH, ts.pos)
         }
 
         return TryCatchStmtNode(
@@ -243,7 +243,7 @@ class StmtParser(
         val moduleName = parser.parseModuleName(withModuleKeyword = false)
             ?: return null
 
-        if (!ts.expectKeyword(KeywordType.IMPORT, Messages.EXPECTED_IMPORT))
+        if (!ts.expectKeyword(KeywordType.IMPORT, Msg.EXPECTED_IMPORT))
             return null
 
         ts.next()
@@ -277,12 +277,12 @@ class StmtParser(
                 ts.next()
                 t.toIdentifierNode()
             } else {
-                syntaxError(Messages.EXPECTED_IDENTIFIER, t.pos)
+                syntaxError(Msg.EXPECTED_IDENTIFIER, t.pos)
                 null
             }
         } else null
 
-        if (!ts.expect(Token.LBrace::class, Messages.EXPECTED_LBRACE))
+        if (!ts.expect(Token.LBrace::class, Msg.EXPECTED_LBRACE))
             return null
 
         val body = parseBlock()
@@ -319,7 +319,7 @@ class StmtParser(
             val args = parser.parseArgsList() // skipping
 
             if (args.isNotEmpty())
-                syntaxError(Messages.CONSTRUCTORS_CANNOT_HAVE_PARAMS, pos)
+                syntaxError(Msg.CONSTRUCTORS_CANNOT_HAVE_PARAMS, pos)
         }
 
         val body = parseBlock()
@@ -344,7 +344,7 @@ class StmtParser(
                 is BaseDatatypeNode -> expr
 
                 else -> {
-                    syntaxError(Messages.EXPECTED_TYPE_PARAM_NAME, expr.pos)
+                    syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.pos)
                     null
                 }
             }
@@ -377,7 +377,7 @@ class StmtParser(
 
                         val identifier = if (expr.left is IdentifierNode) expr.left as IdentifierNode
                         else {
-                            syntaxError(Messages.EXPECTED_TYPE_PARAM_NAME, expr.pos)
+                            syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.pos)
                             return@forEach
                         }
 
@@ -391,13 +391,13 @@ class StmtParser(
                             )
                         else null
                     } else {
-                        syntaxError(Messages.EXPECTED_TYPE_PARAM_NAME, expr.left.pos)
+                        syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.left.pos)
                         null
                     }
                 }
 
                 else -> {
-                    syntaxError(Messages.EXPECTED_TYPE_PARAM_NAME, expr.pos)
+                    syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.pos)
                     null
                 }
             }
@@ -420,7 +420,7 @@ class StmtParser(
 
         analiseHeader(
             header = header,
-            errorMsg = Messages.EXPECTED_VAR_DECL,
+            errorMsg = Msg.EXPECTED_VAR_DECL,
             handleName = { name = it },
             handleTypeNames = { },
             handleParams = { },
@@ -453,11 +453,11 @@ class StmtParser(
 
         analiseHeader(
             header = header,
-            errorMsg = Messages.EXPECTED_FUNC_DECL,
+            errorMsg = Msg.EXPECTED_FUNC_DECL,
             handleName = { name = it },
             handleTypeNames = {
                 if (it != null)
-                    syntaxError(Messages.TYPE_NAMES_MUST_BE_PLACES_BEFORE_FUNC_NAME, it.pos)
+                    syntaxError(Msg.TYPE_NAMES_MUST_BE_PLACES_BEFORE_FUNC_NAME, it.pos)
             },
             handleParams = { params = it },
             handleSuperType = {
@@ -490,7 +490,7 @@ class StmtParser(
 
         analiseHeader(
             header = header,
-            errorMsg = Messages.EXPECTED_CLASS_DECL,
+            errorMsg = Msg.EXPECTED_CLASS_DECL,
             handleName = { name = it },
             handleTypeNames = { typeNames = it },
             handleParams = { primaryConstrParams = it },
@@ -517,11 +517,11 @@ class StmtParser(
 
         analiseHeader(
             header = header,
-            errorMsg = Messages.EXPECTED_INTERFACE_DECL,
+            errorMsg = Msg.EXPECTED_INTERFACE_DECL,
             handleName = { name = it },
             handleTypeNames = { typeNames = it },
             handleParams = {
-                syntaxError(Messages.INTERFACES_CANNOT_HAVE_CONSTRUCTORS, header.pos)
+                syntaxError(Msg.INTERFACES_CANNOT_HAVE_CONSTRUCTORS, header.pos)
             },
             handleSuperType = { superInterface = it },
             handleInitializer = { initializerBody = it }
@@ -620,7 +620,7 @@ class StmtParser(
             ts.match(Token.LBrace::class) -> parseBlock()
 
             else -> {
-                ts.expectSemicolonOrLinebreak(Messages.EXPECTED_SEMICOLON)
+                ts.expectSemicolonOrLinebreak(Msg.EXPECTED_SEMICOLON)
                 null
             }
         }
@@ -686,12 +686,12 @@ class StmtParser(
             ts.next()
             nameToken.toIdentifierNode()
         } else {
-            syntaxError(Messages.NAME_EXPECTED, nameToken.pos)
+            syntaxError(Msg.NAME_EXPECTED, nameToken.pos)
             return null
         }
 
         if (!ts.match(Token.LBrace::class)) {
-            syntaxError(Messages.UNEXPECTED_TOKEN, ts.pos)
+            syntaxError(Msg.UNEXPECTED_TOKEN, ts.pos)
             ts.skipUntil(Token.LBrace::class, Token.RBrace::class, Token.Keyword::class, Token.Identifier::class)
             return EnumDeclStmtNode(
                 modifiers = null,
@@ -702,7 +702,7 @@ class StmtParser(
         }
 
 
-        if (!ts.expect(Token.LBrace::class, Messages.EXPECTED_LBRACE))
+        if (!ts.expect(Token.LBrace::class, Msg.EXPECTED_LBRACE))
             return EnumDeclStmtNode(
                 modifiers = null,
                 name = enumName,
@@ -721,7 +721,7 @@ class StmtParser(
         if (datatype == null) {
             if (allowAsExpression) return expr
 
-            syntaxError(Messages.EXPECTED_TYPE_NAME, expr.pos)
+            syntaxError(Msg.EXPECTED_TYPE_NAME, expr.pos)
             return null
         }
 
@@ -784,7 +784,7 @@ class StmtParser(
             }
 
             else -> {
-                syntaxError(Messages.EXPECTED_FUNC_DECL, expr.pos)
+                syntaxError(Msg.EXPECTED_FUNC_DECL, expr.pos)
             }
         }
     }
@@ -806,7 +806,7 @@ class StmtParser(
             }
 
             else -> {
-                syntaxError(Messages.EXPECTED_A_DECLARATION, pos)
+                syntaxError(Msg.EXPECTED_A_DECLARATION, pos)
                 null
             }
         }
@@ -831,7 +831,7 @@ class StmtParser(
 //                continue
 
             if (modifiers.any { it::class == modifier::class }) {
-                syntaxError(Messages.F_REPEATED_MODIFIER.format(modifier.keyword.value), t.pos)
+                syntaxError(Msg.F_REPEATED_MODIFIER.format(modifier.keyword.value), t.pos)
                 ts.next()
                 continue
             }
@@ -854,7 +854,7 @@ class StmtParser(
             ts.expect(
                 Token.LBrace::class,
                 Token.Semicolon::class,
-                msg = Messages.EXPECTED_LBRACE_AFTER_CONDITION
+                msg = Msg.EXPECTED_LBRACE_AFTER_CONDITION
             )
         }
 
@@ -915,7 +915,7 @@ class StmtParser(
 
         val body = parseBlock()
 
-        ts.expectKeyword(KeywordType.WHILE, Messages.EXPECTED_WHILE_AND_POST_CONDITION)
+        ts.expectKeyword(KeywordType.WHILE, Msg.EXPECTED_WHILE_AND_POST_CONDITION)
         ts.next()
 
         val condition = parser.parseExpr(ctx = ParsingContext.Condition)
@@ -945,7 +945,7 @@ class StmtParser(
         val t = ts.peek()
 
         if (t isNotOperator OperatorType.ARROW) {
-            syntaxError(Messages.EXPECTED_ARROW_OPERATOR, t.pos)
+            syntaxError(Msg.EXPECTED_ARROW_OPERATOR, t.pos)
             return null
         }
 

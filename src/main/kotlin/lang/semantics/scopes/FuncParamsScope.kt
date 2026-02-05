@@ -1,24 +1,20 @@
 package lang.semantics.scopes
 
-import lang.messages.ErrorHandler
 import lang.nodes.VarDeclStmtNode
 import lang.semantics.symbols.FuncParamListSymbol
 import lang.semantics.symbols.FuncParamSymbol
-import lang.semantics.symbols.Symbol
 import lang.semantics.types.Type
 
 data class FuncParamsScope(
     override val parent: Scope?,
-    override val errorHandler: ErrorHandler
 ) : Scope(
     parent = parent,
-    errorHandler = errorHandler,
     scopeName = ""
 ) {
 
     private val params = mutableListOf<FuncParamSymbol>()
 
-    fun defineParam(node: VarDeclStmtNode, type: Type) : Symbol {
+    fun defineParam(node: VarDeclStmtNode, type: Type) : ScopeResult {
         val name = node.name
 
         val param = FuncParamSymbol(
@@ -28,7 +24,7 @@ data class FuncParamsScope(
         )
 
         params.add(param)
-        return define(param, name.pos)
+        return define(param)
     }
 
     fun getParams() = FuncParamListSymbol(list = params.toList())

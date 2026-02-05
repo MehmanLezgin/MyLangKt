@@ -2,7 +2,7 @@ package lang.lexer
 
 import lang.messages.ErrorHandler
 import lang.core.ILangSpec
-import lang.messages.Messages
+import lang.messages.Msg
 import lang.core.SourceCode
 import lang.tokens.Pos
 import lang.tokens.Token
@@ -278,7 +278,7 @@ open class BaseLexer(
 
         fun handleEscape() {
             if (i + 1 >= s.length)
-                errorAt(Messages.ILLEGAL_ESCAPE_SEQUENCE)
+                errorAt(Msg.ILLEGAL_ESCAPE_SEQUENCE)
 
             val next = s[i + 1]
 
@@ -291,7 +291,7 @@ open class BaseLexer(
                 '\'', '"', '\\' -> sb.append(next)
                 '\n', '\r' -> handleLineContinuation(next)
                 'u' -> handleUnicodeEscape()
-                else -> errorAt("${Messages.ILLEGAL_ESCAPE_SEQUENCE} \\$next")
+                else -> errorAt("${Msg.ILLEGAL_ESCAPE_SEQUENCE} \\$next")
             }
 
             if (next !in listOf('\n', '\r', 'u')) { // normal 2-char escape
@@ -327,7 +327,7 @@ open class BaseLexer(
                 else -> cleanValue.toULong(10)
             }
         } catch (_: NumberFormatException) {
-            lexicalError(Messages.INVALID_INT_LITERAL, pos)
+            lexicalError(Msg.INVALID_INT_LITERAL, pos)
         }
 
         return when {
@@ -343,7 +343,7 @@ open class BaseLexer(
         try {
             clean = value.removeSuffix("d").removeSuffix("D").toFloat()
         } catch (_: NumberFormatException) {
-            lexicalError(Messages.INVALID_FLOAT_LITERAL, pos)
+            lexicalError(Msg.INVALID_FLOAT_LITERAL, pos)
         }
         return Token.Float32(clean, value, pos)
     }
@@ -353,7 +353,7 @@ open class BaseLexer(
         try {
             clean = value.removeSuffix("d").removeSuffix("D").toDouble()
         } catch (_: NumberFormatException) {
-            lexicalError(Messages.INVALID_DOUBLE_LITERAL, pos)
+            lexicalError(Msg.INVALID_DOUBLE_LITERAL, pos)
         }
         return Token.Double64(clean, value, pos)
     }
