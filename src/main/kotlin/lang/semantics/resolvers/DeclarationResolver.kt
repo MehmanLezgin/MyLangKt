@@ -1,6 +1,7 @@
 package lang.semantics.resolvers
 
 import lang.messages.Msg
+import lang.messages.Terms
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
@@ -295,7 +296,9 @@ class DeclarationResolver(
         val type = analyzer.typeResolver.resolve(superType)
 
         if (type.declaration?.modifiers?.isOpen == false)
-            semanticError(Msg.F_MUST_BE_OPEN_TYPE.format(type.declaration?.name), superType.pos)
+            semanticError(Msg.F_MUST_BE_OPEN_TYPE.format(
+                type.declaration?.name ?: Terms.SYMBOL
+            ), superType.pos)
 
         return type
     }
@@ -449,7 +452,7 @@ class DeclarationResolver(
         return resolveModifiers(
             node = node,
             illegalModifiers = namespaceIllegalModifiers,
-            declKindName = Msg.NAMESPACE
+            declKindName = Terms.NAMESPACE
         )
     }
 
@@ -457,7 +460,7 @@ class DeclarationResolver(
         return resolveModifiers(
             node = node,
             illegalModifiers = resolveTypedefModifiers,
-            declKindName = Msg.CLASS
+            declKindName = Terms.CLASS
         )
     }
 
@@ -465,7 +468,7 @@ class DeclarationResolver(
         return resolveModifiers(
             node = node,
             illegalModifiers = classIllegalModifiers,
-            declKindName = Msg.CLASS
+            declKindName = Terms.CLASS
         )
     }
 
@@ -473,7 +476,7 @@ class DeclarationResolver(
         return resolveModifiers(
             node = node,
             illegalModifiers = interfaceIllegalModifiers,
-            declKindName = Msg.INTERFACE
+            declKindName = Terms.INTERFACE
         ).also { it.isAbstract = true }
     }
 
@@ -481,7 +484,7 @@ class DeclarationResolver(
         val modifiers = resolveModifiers(
             node = node,
             illegalModifiers = enumIllegalModifiers,
-            declKindName = Msg.ENUM
+            declKindName = Terms.ENUM
         )
 
         if (node == null) return modifiers
@@ -493,7 +496,7 @@ class DeclarationResolver(
         val modifiers = resolveModifiers(
             node = node,
             illegalModifiers = varIllegalModifiers,
-            declKindName = Msg.VARIABLE
+            declKindName = Terms.VARIABLE
         )
 
         return modifiers
@@ -515,7 +518,7 @@ class DeclarationResolver(
         val modifiers = resolveModifiers(
             node = node,
             illegalModifiers = funcIllegalModifiers,
-            declKindName = Msg.CLASS
+            declKindName = Terms.CLASS
         )
 
         if (node == null) return modifiers

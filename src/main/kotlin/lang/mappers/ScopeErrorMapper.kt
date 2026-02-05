@@ -1,27 +1,35 @@
 package lang.mappers
 
 import lang.messages.Msg
+import lang.messages.Terms
+import lang.messages.Terms.exactly
+import lang.messages.Terms.plural
 import lang.semantics.scopes.ScopeError
 
 object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
     private fun operatorParamMsg(operSymbolStr: String, expected: Int): String {
-        return when (expected) {
-            0 -> Msg.F_OPERATOR_REQUIRES_NO_PARAMS
-            1 -> Msg.F_OPERATOR_REQUIRES_1_PARAM
-            else -> Msg.F_OPERATOR_REQUIRES_X_PARAMS
-        }.format(Msg.NON_STATIC, operSymbolStr, expected)
+        val expectedStr = "${expected.exactly()} ${Terms.PARAM.plural()}"
+
+        return Msg.SymRequiresItem.format(
+            "${Terms.NON_STATIC} ${Terms.OPERATOR}",
+            operSymbolStr,
+            expectedStr
+        )
     }
 
     override fun toSecond(a: ScopeError): String {
         return when (a) {
             is ScopeError.AlreadyDefined ->
-                Msg.F_SYMBOL_ALREADY_DEFINED.format(a.symName)
+                Msg.SymbolAlreadyDefinedIn.format(
+                    name = a.symName,
+                    scopeName = a.scopeName
+                )
 
             is ScopeError.OperParamCountMismatch ->
                 operatorParamMsg(a.oper.symbol, a.expected)
 
             is ScopeError.NotDefined ->
-                Msg.F_SYMBOL_NOT_DEFINED_IN.format(a.symName, a.scopeName)
+                Msg.SymbolNotDefinedIn.format(name = a.symName, scopeName = a.scopeName)
 
             ScopeError.AmbiguousOverloadedFunc -> Msg.AMBIGUOUS_OVERLOADED_FUNCTION
             ScopeError.CannotExport -> Msg.CANNOT_EXPORT
@@ -29,9 +37,8 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
             ScopeError.InvalidConstValue -> Msg.INVALID_CONST_VALUE
             is ScopeError.NoFuncOverload -> {
                 val msg = if (a.isOperator)
-                    Msg.F_NO_OPER_OVERLOAD
-                else
-                    Msg.F_NO_FUNC_OVERLOAD
+                    Msg.NoOperOverload
+                else Msg.NoFuncOverload
 
                 msg.format(
                     a.symName,

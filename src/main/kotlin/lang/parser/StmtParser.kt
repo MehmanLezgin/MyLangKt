@@ -831,7 +831,7 @@ class StmtParser(
 //                continue
 
             if (modifiers.any { it::class == modifier::class }) {
-                syntaxError(Msg.F_REPEATED_MODIFIER.format(modifier.keyword.value), t.pos)
+                syntaxError(Msg.RepeatedModifier.format(modifier.keyword.value), t.pos)
                 ts.next()
                 continue
             }

@@ -6,6 +6,7 @@ import lang.lexer.ILexer
 import lang.lexer.Lexer
 import lang.messages.ErrorHandler
 import lang.messages.Msg
+import lang.messages.Terms
 import lang.nodes.IdentifierNode
 import lang.parser.IParser
 import lang.parser.Parser
@@ -55,7 +56,7 @@ class ModuleManager(
             !dir.exists() -> Msg.F_NO_SUCH_DIRECTORY
             !dir.isDirectory -> Msg.F_NOT_A_DIRECTORY
             else -> null
-        }
+        }?.format(dir.path)
 
         if (errorMsg != null) {
             errorHandler.sourceReadingError(
@@ -111,7 +112,8 @@ class ModuleManager(
                 errorHandler.sourceReadingError(
                     path = file.path,
                     message = Msg.MODULE_ALREADY_EXISTS_IN.format(
-                        moduleName, existingModule.src.file
+                        moduleName,
+                        existingModule.src.file?.path ?: existingModule.name ?: Terms.UNKNOWN_PATH,
                     )
                 )
             }
@@ -150,7 +152,7 @@ class ModuleManager(
         } catch (_: IOException) {
             errorHandler.sourceReadingError(
                 path = file.absoluteFile.path,
-                message = Msg.CANNOT_OPEN_SOURCE_FILE
+                message = Msg.CANNOT_OPEN_SOURCE_FILE.format(file.path)
             )
         }
 

@@ -1,6 +1,8 @@
 package lang.semantics.resolvers
 
 import lang.messages.Msg
+import lang.messages.Terms
+import lang.messages.Terms.ordinal
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
@@ -76,12 +78,8 @@ class TypeResolver(
         return analyzer.withScope(targetScope) {
             val member = target.member.identifier
 
-//            val memberType = resolve(member, asMember = true)
-
             val result = targetScope.resolve(name = member.value, asMember = true)
-                ?: return@withScope semanticError(
-                    Msg.F_SYMBOL_NOT_DEFINED_CUR.format(member.value), target.pos
-                )
+
             result.handle(member.pos) {
                 target bind sym
                 target.member bind sym
@@ -98,11 +96,16 @@ class TypeResolver(
     }
 
     private fun pickSingleFuncSym(
+        name: String,
         funcReceiverExpr: ExprNode,
         overloads: List<FuncSymbol>?
     ): FuncSymbol? {
         if (overloads.isNullOrEmpty())
-            funcReceiverExpr.error(Msg.F_FUNC_NOT_DEFINED)
+            funcReceiverExpr.error(
+                Msg.SymbolNotDefinedIn.format(
+                    Terms.FUNCTION, name, scope.absoluteScopePath
+                )
+            )
         else if (overloads.size > 1)
             funcReceiverExpr.error(Msg.AMBIGUOUS_OVERLOADED_FUNCTION)
         else
@@ -134,7 +137,12 @@ class TypeResolver(
 
             is OverloadedFuncType -> {
                 val costOverloads = scope.resolveBestOverloads(receiverType.overloads, argTypes)
-                val sym = pickSingleFuncSym(funcReceiverExpr = receiver, overloads = costOverloads)
+                val sym = pickSingleFuncSym(
+                    name = receiverType.name,
+                    funcReceiverExpr = receiver,
+                    overloads = costOverloads
+                )
+
                 if (sym != null) {
                     paramTypes = sym.paramTypes
                     params = sym.params
@@ -169,21 +177,29 @@ class TypeResolver(
         for (i in paramTypes.indices) {
             val param = params?.list?.getOrNull(i)
             val paramType = paramTypes[i]
-            val paramName = param?.name ?: "#$i"
+            val paramName = param?.name
 
             val argType = argTypes.getOrNull(i)
 
 
             if (argType == null) {
-                val msg = Msg.F_NO_VALUE_PASSED_FOR_PARAMETER
-                    .format(paramName, paramType)
+                val paramTypeStr = paramType.toString()
+                val msg = if (paramName != null)
+                    Msg.NoValuePassedForParameter.format(paramName = paramName, paramTypeStr)
+                else
+                    Msg.NoValuePassedForParameter.format(paramIndex = i+1, paramTypeStr)
+
                 receiver.error(msg)
                 continue
             }
 
             if (argType != ErrorType && !argType.canCastTo(paramType)) {
-                val msg = Msg.F_ARGUMENT_TYPE_MISMATCH
-                    .format(paramType, argType)
+                val msg = Msg.MismatchExpectedActual
+                    .format(
+                        Terms.ARGUMENT_TYPE,
+                        paramType.toString(),
+                        argType.toString()
+                    )
                 argNodes.getOrNull(i)?.error(msg)
                 continue
             }
@@ -449,7 +465,7 @@ class TypeResolver(
         }
 
         if (operScope == null) {
-            return target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(leftType))
+            return target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(leftType.toString()))
         }
 
         val argTypes = listOf(leftType, rightType)
@@ -457,7 +473,7 @@ class TypeResolver(
 
         return result.handle(target.pos) {
             val operFunc = sym as? FuncSymbol
-                ?: return@handle target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM)
+                ?: return@handle target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(operator.name))
 
             val returnType = when {
                 operFunc.isBuiltInFuncReturnsPtr() -> leftType
@@ -513,8 +529,10 @@ class TypeResolver(
 
             else -> {
                 if (!leftType.canCastTo(rightType)) {
-                    val msg = Msg.F_CANNOT_CAST_TYPE
-                        .format(leftType, rightType)
+                    val msg = Msg.CannotCastType.format(
+                        leftType.toString(),
+                        rightType.toString()
+                    )
 
                     target.error(msg)
                 }
@@ -548,7 +566,11 @@ class TypeResolver(
 
         if (!rightType.canCastTo(leftType)) {
             target.error(
-                Msg.F_TYPE_MISMATCH.format(leftType, rightType)
+                Msg.MismatchExpectedActual.format(
+                    Terms.TYPE,
+                    leftType.toString(),
+                    rightType.toString()
+                )
             )
         }
 
@@ -638,7 +660,7 @@ class TypeResolver(
 
         if (bestFunc == null) {
             val msg = Msg.F_NONE_OF_N_CANDIDATES_APPLICABLE_FOR_TYPE
-                .format(overloads.size, type)
+                .format(overloads.size, type.toString())
 
             target.error(msg)
             return null
@@ -664,7 +686,11 @@ class TypeResolver(
 
         if (initializerType != ErrorType && !initializerType.canCastTo(type))
             target.error(
-                Msg.F_TYPE_MISMATCH.format(type, initializerType)
+                Msg.MismatchExpectedActual.format(
+                    Terms.TYPE,
+                    type.toString(),
+                    initializerType.toString()
+                )
             )
 
         return type
