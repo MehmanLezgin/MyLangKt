@@ -12,7 +12,6 @@ import lang.nodes.BlockNode
 import lang.nodes.DatatypeNode
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
-import lang.nodes.ModifierNode
 import lang.nodes.UnaryOpNode
 import lang.nodes.UnaryOpType
 import lang.nodes.VoidDatatypeNode
@@ -22,7 +21,7 @@ import kotlin.reflect.KClass
 object ParserUtils {
     fun ExprNode.wrapToBody(check: Boolean = true): BlockNode {
         if (check && this is BlockNode) return this
-        return BlockNode(nodes = listOf(this), pos = pos)
+        return BlockNode(nodes = listOf(this), range = range)
     }
 
     infix fun Token.isKeyword(type: KeywordType) = this is Token.Keyword && this.type == type
@@ -43,7 +42,7 @@ object ParserUtils {
         this is Token.Operator && types.any { it.isInstance(this.type) }
 
     fun Token.Identifier.toIdentifierNode() = IdentifierNode(
-        value = value, pos = pos
+        value = value, range = range
     )
 
     fun ExprNode.flattenCommaNode(): List<ExprNode> {
@@ -56,10 +55,10 @@ object ParserUtils {
 
     fun IdentifierNode.toDatatype(): BaseDatatypeNode {
         return when (value) {
-            AutoDatatypeNode.NAME -> AutoDatatypeNode(pos = pos)
-            VoidDatatypeNode.NAME -> VoidDatatypeNode(pos = pos)
+            AutoDatatypeNode.NAME -> AutoDatatypeNode(range = range)
+            VoidDatatypeNode.NAME -> VoidDatatypeNode(range = range)
             else -> DatatypeNode(
-                identifier = this, typeNames = null, isReference = false, isConst = false, pos = pos
+                identifier = this, typeNames = null, isReference = false, isConst = false, range = range
             )
         }
     }

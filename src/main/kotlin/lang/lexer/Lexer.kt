@@ -4,13 +4,13 @@ import lang.messages.MsgHandler
 import lang.core.ILangSpec
 import lang.core.LangSpec.operators
 import lang.messages.Msg
-import lang.core.SourceCode
+import lang.core.ISourceCode
 import lang.tokens.Token
 import lang.tokens.TokenType
 
 
 class Lexer(
-    src: SourceCode,
+    src: ISourceCode,
     langSpec: ILangSpec,
     msgHandler: MsgHandler,
 ) : BaseLexer(src, langSpec, msgHandler) {
@@ -24,7 +24,6 @@ class Lexer(
             const val TRUE = "true"
             const val FALSE = "false"
             const val NULL = "null"
-            const val UNDERSCORE = '_'
             const val DOT = '.'
             const val LPAREN = '('
             const val RPAREN = ')'
@@ -95,7 +94,6 @@ class Lexer(
     }
 
     private fun matchInt(): Token? {
-        val pos = getPos()
         val start = index
 
         val radix = getRadix()
@@ -109,8 +107,9 @@ class Lexer(
 
         val tokenType = getIntTypeByPostfix()
 
-        val value = substr(start, end)
-        return createToken(value, tokenType, pos)
+        val value = substring(start, end)
+        val range = closeRange(value)
+        return createToken(value, tokenType, range)
     }
 
     private fun matchFloat(): Token? {
@@ -151,8 +150,9 @@ class Lexer(
             else -> return null
         }
 
-        val value = substr(start, index)
-        return createToken(value, tokenType, pos)
+        val value = substring(start, index)
+        val range = closeRange(value)
+        return createToken(value, tokenType, range)
     }
 
     private fun matchNumber(): Token? {
@@ -194,12 +194,11 @@ class Lexer(
     }
 
     private fun matchId(): Token {
-        val pos = getPos()
         val start = index
 
         while (cur.isIdentifierChar()) advance()
 
-        val value = substr(start, index)
+        val value = substring(start, index)
 
         val tokenType = when {
             langSpec.keywords.find { it.value == value } != null -> TokenType.KEYWORD
@@ -215,18 +214,19 @@ class Lexer(
             }
         }
 
-        return createToken(value, tokenType, pos)
+        val range = closeRange(value)
+        return createToken(value, tokenType, range)
     }
 
     private fun lexOperator(): Token? {
         val oper = operatorsByLength.firstOrNull { scanFor(it.symbol) } ?: return null
-        val pos = getPos()
-        advance(oper.symbol.length)
-        return Token.Operator(oper.type, oper.precedence, oper.symbol, pos)
+        val operLength = oper.symbol.length
+        advance(operLength)
+        val range = closeRange(oper.symbol)
+        return Token.Operator(oper.type, oper.precedence, oper.symbol, range)
     }
 
     private fun lexOther(): Token? {
-        val pos = getPos()
         val c = cur
         advance()
 
@@ -243,7 +243,8 @@ class Lexer(
             else -> null
         } ?: return null
 
-        return createToken(c.toString(), tokenType, pos)
+        val range = closeRange(c.toString())
+        return createToken(c.toString(), tokenType, range)
     }
 
     private fun matchStringLiteral(): Token? {
@@ -298,14 +299,14 @@ class Lexer(
             return null
         }
 
-        val rawValue = substr(start, index)
-
+        val rawValue = substring(start, index)
+        val range = closeRange(rawValue)
         val value = unescapeString(rawValue, pos)
 
         return when {
-            quote == Symbols.QUOTE_CHAR && value.length == 1 -> Token.Character(value[0], rawValue, pos)
+            quote == Symbols.QUOTE_CHAR && value.length == 1 -> Token.Character(value[0], rawValue, range)
 
-            else -> Token.Str(value, rawValue, pos)
+            else -> Token.Str(value, rawValue, range)
         }
     }
 
@@ -349,7 +350,7 @@ class Lexer(
         return true
     }
 
-    private fun substr(start: Int, end: Int): String {
+    private fun substring(start: Int, end: Int): String {
         val end1 = if (end > source.length - 1) source.length else end
         return source.substring(start, end1)
     }
@@ -359,9 +360,12 @@ class Lexer(
 
     override fun matchToken(): Token? {
         if (index >= source.length)
-            return Token.EOF(getPos())
+            return Token.EOF(closeRange())
 
         skipComments()
+
+//        state.beginRange()
+
         val c = cur
 
         val token = when {
@@ -376,7 +380,7 @@ class Lexer(
             }
         }
 
-        trackNewlines(token?.raw)
+//        trackNewlines(token?.raw)
 
         return token
     }

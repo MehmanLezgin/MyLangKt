@@ -1,17 +1,17 @@
 package lang.nodes
 
-import lang.tokens.Pos
+import lang.core.SourceRange
 
-abstract class BaseDatatypeNode(
-    override val pos: Pos
-) : ExprNode(pos) {
+abstract class BaseDatatypeNode : ExprNode {
+    override val range: SourceRange = SourceRange()
+    
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
         mapper(this)
 }
 
 abstract class QualifiedDatatypeNode(
-    override val pos: Pos
-) : BaseDatatypeNode(pos) {
+    override val range: SourceRange
+) : BaseDatatypeNode() {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
         mapper(this)
 }
@@ -19,8 +19,8 @@ abstract class QualifiedDatatypeNode(
 data class ScopedDatatypeNode(
     val base: QualifiedDatatypeNode,
     val member: DatatypeNode,
-    override val pos: Pos
-) : QualifiedDatatypeNode(pos)
+    override val range: SourceRange
+) : QualifiedDatatypeNode(range)
 
 
 data class DatatypeNode(
@@ -29,8 +29,8 @@ data class DatatypeNode(
     val isConst: Boolean = false,
     var isReference: Boolean = false,
     var ptrLvl: Int = 0,
-    override val pos: Pos
-) : QualifiedDatatypeNode(pos) {
+    override val range: SourceRange
+) : QualifiedDatatypeNode(range) {
 
     val isPointer: Boolean
         get() = ptrLvl > 0
@@ -83,8 +83,8 @@ data class FuncDatatypeNode(
     val isConst: Boolean = false,
     val ptrLvl: Int = 0,
     var isReference: Boolean = false,
-    override val pos: Pos
-) : BaseDatatypeNode(pos) {
+    override val range: SourceRange
+) : BaseDatatypeNode() {
     override fun toString(): String {
         return StringBuilder().apply {
             if (isConst)
@@ -123,9 +123,9 @@ data class FuncDatatypeNode(
 
 
 data class ErrorDatatypeNode(
-    override val pos: Pos,
+    override val range: SourceRange,
     var isReference: Boolean = false
-) : BaseDatatypeNode(pos) {
+) : BaseDatatypeNode() {
     override fun toString(): String {
         return "[ ERROR ]"
     }
@@ -135,9 +135,9 @@ data class ErrorDatatypeNode(
 }
 
 data class VoidDatatypeNode(
-    override val pos: Pos,
+    override val range: SourceRange,
     var isReference: Boolean = false
-) : BaseDatatypeNode(pos) {
+) : BaseDatatypeNode() {
     companion object {
         const val NAME = "void"
     }
@@ -149,9 +149,9 @@ data class VoidDatatypeNode(
 }
 
 data class AutoDatatypeNode(
-    override val pos: Pos,
+    override val range: SourceRange,
     var isReference: Boolean = false
-) : BaseDatatypeNode(pos) {
+) : BaseDatatypeNode() {
     companion object {
         const val NAME = "auto"
     }

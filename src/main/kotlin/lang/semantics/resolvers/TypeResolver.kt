@@ -10,7 +10,7 @@ import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.*
 import lang.semantics.types.*
 import lang.tokens.OperatorType
-import lang.tokens.Pos
+import lang.core.SourceRange
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class TypeResolver(
@@ -44,7 +44,7 @@ class TypeResolver(
 
             val result = targetScope.resolve(name = member.value, asMember = true)
 
-            result.handle(member.pos) {
+            result.handle(member.range) {
                 target bind sym
                 target.member bind sym
                 resolve(member, asMember = true)
@@ -79,7 +79,7 @@ class TypeResolver(
 
             val result = targetScope.resolve(name = member.value, asMember = true)
 
-            result.handle(member.pos) {
+            result.handle(member.range) {
                 target bind sym
                 target.member bind sym
                 resolveIdentifierWithSym(member, sym, isNamespaceCtx)
@@ -256,7 +256,7 @@ class TypeResolver(
                 flags = TypeFlags(isExprType = true)
             )
 
-            else -> symNotDefinedInError(this.name, scope.absoluteScopePath, target.pos)
+            else -> symNotDefinedInError(this.name, scope.absoluteScopePath, target.range)
         }.also { target attach it }
     }
 
@@ -272,7 +272,7 @@ class TypeResolver(
     private fun resolve(target: DatatypeNode, isNamespace: Boolean = false): Type {
         val result = scope.resolve(target.identifier.value)
 
-        return result.handle(target.identifier.pos) {
+        return result.handle(target.identifier.range) {
             target bind sym
 
             val baseType = sym.toTypeForNode(target.identifier, isNamespace)
@@ -291,7 +291,7 @@ class TypeResolver(
         val name = target.identifier
         val result = scope.resolve(name.value)
 
-        return result.handle(name.pos) {
+        return result.handle(name.range) {
             target bind sym
 
             val pointerLevel = target.ptrLvl
@@ -390,7 +390,7 @@ class TypeResolver(
     private fun resolve(target: IdentifierNode, asMember: Boolean = false): Type {
         val result = scope.resolve(name = target.value, asMember = asMember)
 
-        return result.handle(target.pos) {
+        return result.handle(target.range) {
             resolveIdentifierWithSym(target, sym)
         }
     }
@@ -470,7 +470,7 @@ class TypeResolver(
         val argTypes = listOf(leftType, rightType)
         val result = operScope.resolveOperFunc(operator = operator, argTypes = argTypes)
 
-        return result.handle(target.pos) {
+        return result.handle(target.range) {
             val operFunc = sym as? FuncSymbol
                 ?: return@handle target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(operator.name))
 
@@ -699,11 +699,11 @@ class TypeResolver(
         return type
     }
 
-    fun ScopeResult.handle(pos: Pos?, onSuccess: ScopeResult.Success<*>.() -> Type): Type {
+    fun ScopeResult.handle(range: SourceRange?, onSuccess: ScopeResult.Success<*>.() -> Type): Type {
         return when (this) {
             is ScopeResult.Error -> {
-                if (pos != null)
-                    analyzer.scopeError(error, pos)
+                if (range != null)
+                    analyzer.scopeError(error, range)
 
                 ErrorType
             }

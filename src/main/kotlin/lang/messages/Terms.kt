@@ -1,6 +1,7 @@
 package lang.messages
 
 object Terms {
+    const val UNKNOWN = "unknown"
     const val UNKNOWN_PATH = "unknown path"
     const val CLASS = "class"
     const val NAMESPACE = "namespace"

@@ -1,12 +1,12 @@
 package lang.nodes
 
-import lang.tokens.Pos
+import lang.core.SourceRange
 
 data class TypeNameNode(
     val name: IdentifierNode,
     val bound: DatatypeNode?,   // T : Base
-    override val pos: Pos
-) : ExprNode(pos) {
+    override val range: SourceRange
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -20,8 +20,8 @@ data class TypeNameNode(
 
 data class TypeNameListNode(
     val params: List<TypeNameNode>,
-    override val pos: Pos
-) : ExprNode(pos) {
+    override val range: SourceRange
+) : ExprNode {
 
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(

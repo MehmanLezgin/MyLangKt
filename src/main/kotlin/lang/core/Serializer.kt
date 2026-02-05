@@ -56,7 +56,7 @@ object Serializer {
         val type = semanticContext?.types?.get(node)
 
         val header = buildString {
-            append("${getName(node)} pos=${node.pos}\n")
+            append("${getName(node)} range=${node.range}\n")
             symbol?.let { append("${nextIndent}├── symbol: $symbol\n") }
             type?.let { append("${nextIndent}├── type: $type") }
         }
@@ -264,7 +264,6 @@ object Serializer {
                 "typeNames" to node.typeNames,
                 "superInterface" to node.superInterface,
                 "body" to node.body,
-                "pos" to node.pos
             )
 
             is ClassDeclStmtNode -> listOf(
@@ -274,7 +273,6 @@ object Serializer {
                 "primaryConstrParams" to node.primaryConstrParams,
                 "superClass" to node.superClass,
                 "body" to node.body,
-                "pos" to node.pos
             )
 
             is ReturnStmtNode -> listOf(

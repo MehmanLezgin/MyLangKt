@@ -3,12 +3,10 @@ package lang.core
 import lang.tokens.KeywordInfo
 import lang.tokens.OperatorInfo
 import lang.tokens.OperatorType
-import lang.tokens.TokenRule
 
 interface ILangSpec {
     val keywords: List<KeywordInfo>
     val operators: Set<OperatorInfo>
-    val tokenRules: List<TokenRule>
     val moduleNameSeparator: OperatorType
 
     fun getKeywordInfo(value: String): KeywordInfo?

@@ -47,7 +47,7 @@ object CompilerObj {
 
         if (DEBUG_PRINT_TOKENS)
             File(LEXER_RESULT_PATH).printWriter().use { out ->
-                tokenStream.getTokens().forEach { out.println(it); }
+                tokenStream.getTokens().forEach { out.println(it) }
             }
 
         var parser: IParser? = null

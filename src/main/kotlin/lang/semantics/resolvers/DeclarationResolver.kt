@@ -12,7 +12,7 @@ import lang.semantics.types.ErrorType
 import lang.semantics.types.OverloadedFuncType
 import lang.semantics.types.Type
 import lang.tokens.KeywordType
-import lang.tokens.Pos
+import lang.core.SourceRange
 import kotlin.reflect.KClass
 
 class DeclarationResolver(
@@ -49,7 +49,7 @@ class DeclarationResolver(
 
         val result = scope.defineNamespace(node, isExport = modifiers.isExport)
 
-        result.handle(node.pos) {
+        result.handle(node.range) {
             sym.bindAndExport(node, modifiers.isExport)
             if (sym !is NamespaceSymbol) return@handle null
             analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
@@ -63,14 +63,14 @@ class DeclarationResolver(
         node attach type
         if (type is ErrorType) return
         val result = scope.defineTypedef(node, type)
-        result.handle(node.pos) {
+        result.handle(node.range) {
             sym.bindAndExport(node, modifiers.isExport)
         }
     }
 
     private fun resolveAutoVarType(node: VarDeclStmtNode): Type {
         if (node.initializer == null) {
-            semanticError(Msg.EXPECTED_TYPE_NAME, node.name.pos)
+            semanticError(Msg.EXPECTED_TYPE_NAME, node.name.range)
             return ErrorType
         }
 
@@ -131,7 +131,7 @@ class DeclarationResolver(
 //        if (constValue == null) return
         withEffectiveScope(modifiers.isStatic) {
             val result = scope.defineConstVar(node, type, constValue, modifiers)
-            result.handle(node.pos) {
+            result.handle(node.range) {
                 sym.bindAndExport(node, modifiers.isExport)
             }
         }
@@ -152,7 +152,7 @@ class DeclarationResolver(
         if (!isConst) {
             withEffectiveScope(modifiers.isStatic) {
                 val result = scope.defineVar(node, type, modifiers)
-                result.handle(node.pos) {
+                result.handle(node.range) {
                     sym.bindAndExport(node, modifiers.isExport)
                 }
             }
@@ -174,21 +174,21 @@ class DeclarationResolver(
         val paramsScope = scope
 
         if (paramsScope !is FuncParamsScope) {
-            semanticError(Msg.CANNOT_RESOLVE_PARAM_OUTSIDE_FUNC, node.pos)
+            semanticError(Msg.CANNOT_RESOLVE_PARAM_OUTSIDE_FUNC, node.range)
             return
         }
 
         val type = analyzer.typeResolver.resolve(node.dataType)
 
         val result = paramsScope.defineParam(node, type)
-        result.handle(node.pos) {
+        result.handle(node.range) {
             sym.also { node bind it }
         }
 
         if (node.dataType is AutoDatatypeNode)
-            semanticError(Msg.EXPECTED_TYPE_NAME, node.name.pos)
+            semanticError(Msg.EXPECTED_TYPE_NAME, node.name.range)
         else if (type == PrimitivesScope.void)
-            semanticError(Msg.VOID_CANNOT_BE_PARAM_TYPE, node.name.pos)
+            semanticError(Msg.VOID_CANNOT_BE_PARAM_TYPE, node.name.range)
 
         analyzer.typeResolver.resolve(node.dataType)
     }
@@ -218,7 +218,7 @@ class DeclarationResolver(
             pair.second.exportIfNeeded(modifiers.isExport)
             val result = pair.first
 
-            result.handle(node.pos) {
+            result.handle(node.range) {
                 if (sym !is FuncSymbol) return@handle null
 
                 val funcScope = FuncScope(
@@ -239,14 +239,14 @@ class DeclarationResolver(
 
     private fun resolve(node: ConstructorDeclStmtNode) {
         if (scope !is ClassScope)
-            semanticError(Msg.CONSTRUCTOR_OUTSIDE_CLASS_ERROR, node.pos)
+            semanticError(Msg.CONSTRUCTOR_OUTSIDE_CLASS_ERROR, node.range)
 
         resolve(node as FuncDeclStmtNode)
     }
 
     private fun resolve(node: DestructorDeclStmtNode) {
         if (scope !is ClassScope)
-            semanticError(Msg.DESTRUCTOR_OUTSIDE_CLASS_ERROR, node.pos)
+            semanticError(Msg.DESTRUCTOR_OUTSIDE_CLASS_ERROR, node.range)
 
         resolve(node as FuncDeclStmtNode)
     }
@@ -257,12 +257,12 @@ class DeclarationResolver(
         val superType = resolveSuperType(node.superInterface)
 
         if (superType != null && superType.declaration !is InterfaceSymbol) {
-            semanticError(Msg.INTERFACE_CAN_EXTEND_INTERFACE, node.superInterface?.pos)
+            semanticError(Msg.INTERFACE_CAN_EXTEND_INTERFACE, node.superInterface?.range)
         }
 
         val result = scope.defineInterface(node, modifiers, superType)
 
-        result.handle(node.pos) {
+        result.handle(node.range) {
             sym.bindAndExport(node, modifiers.isExport)
             if (sym !is InterfaceSymbol) return@handle null
             analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
@@ -278,10 +278,10 @@ class DeclarationResolver(
             superType.declaration !is InterfaceSymbol &&
             superType.declaration !is ClassSymbol
         )
-            semanticError(Msg.CLASS_CAN_EXTEND_INTERFACE_OR_CLASS, node.superClass?.pos)
+            semanticError(Msg.CLASS_CAN_EXTEND_INTERFACE_OR_CLASS, node.superClass?.range)
 
         val result = scope.defineClass(node, modifiers, superType)
-        result.handle(node.pos) {
+        result.handle(node.range) {
             sym.bindAndExport(node, modifiers.isExport)
             if (sym !is ClassSymbol) return@handle null
             analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
@@ -298,7 +298,7 @@ class DeclarationResolver(
         if (type.declaration?.modifiers?.isOpen == false)
             semanticError(Msg.F_MUST_BE_OPEN_TYPE.format(
                 type.declaration?.name ?: Terms.SYMBOL
-            ), superType.pos)
+            ), superType.range)
 
         return type
     }
@@ -306,7 +306,7 @@ class DeclarationResolver(
     private fun resolve(node: EnumDeclStmtNode) {
         val modifiers = resolveEnumModifiers(node.modifiers)
         val result = scope.defineEnum(node, modifiers)
-        result.handle(node.pos) {
+        result.handle(node.range) {
             sym.bindAndExport(node, modifiers.isExport)
             if (sym !is EnumSymbol) return@handle null
             analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
@@ -385,7 +385,7 @@ class DeclarationResolver(
 
         checkModifier(
             isExport && (scope !is NamespaceScope || !(scope as NamespaceScope).isExport),
-            node.get(ModifierNode.Export::class)?.pos,
+            node.get(ModifierNode.Export::class)?.range,
             Msg.EXPORT_IS_NOT_ALLOWED_IN_THIS_SCOPE
         ) {
             isExport = false
@@ -393,7 +393,7 @@ class DeclarationResolver(
 
         checkModifier(
             isStatic && (scope !is NamespaceScope || scope !is BaseTypeScope),
-            node.get(ModifierNode.Static::class)?.pos,
+            node.get(ModifierNode.Static::class)?.range,
             Msg.STATIC_IS_NOT_ALLOWED_IN_THIS_SCOPE
         ) {
             isStatic = false
@@ -504,12 +504,12 @@ class DeclarationResolver(
 
     private inline fun checkModifier(
         flag: Boolean,
-        pos: Pos?,
+        range: SourceRange?,
         errorMsg: String,
         action: () -> Unit
     ) {
         if (flag) {
-            semanticError(errorMsg, pos)
+            semanticError(errorMsg, range)
             action()
         }
     }
@@ -523,8 +523,8 @@ class DeclarationResolver(
 
         if (node == null) return modifiers
 
-        val staticPos = node.get(ModifierNode.Static::class)?.pos
-        val overridePos = node.get(ModifierNode.Override::class)?.pos
+        val staticPos = node.get(ModifierNode.Static::class)?.range
+        val overridePos = node.get(ModifierNode.Override::class)?.range
 
         if (modifiers.isStatic) {
             checkModifier(
@@ -573,11 +573,11 @@ class DeclarationResolver(
         return modifiers
     }
 
-    fun <T> ScopeResult.handle(pos: Pos?, onSuccess: ScopeResult.Success<*>.() -> T?): T? {
+    fun <T> ScopeResult.handle(range: SourceRange?, onSuccess: ScopeResult.Success<*>.() -> T?): T? {
         return when (this) {
             is ScopeResult.Error -> {
-                if (pos != null)
-                    analyzer.scopeError(error, pos)
+                if (range != null)
+                    analyzer.scopeError(error, range)
                 null
             }
 

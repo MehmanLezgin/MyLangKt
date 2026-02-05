@@ -1,20 +1,13 @@
 package lang.messages
 
-import lang.tokens.Pos
+import lang.core.SourceRange
 
 data class Message(
     val stage: CompileStage,
     val type: MessageType = MessageType.INFO,
     val msg: String,
-    val pos: Pos? = null
+    val range: SourceRange? = null
 ) {
-    override fun toString(): String {
-        if (type == MessageType.INFO)
-            return "${stageToErrorString()}: $msg at $pos"
-
-        return "$stage: (${type.value}) $msg at $pos"
-    }
-
     fun stageToErrorString(): String {
         return when (stage) {
             CompileStage.LEXICAL_ANALYSIS -> "Lexical error"
@@ -31,15 +24,25 @@ data class Message(
     }
 
     fun format(): String {
-        val src = pos?.src
+        val src = range?.src
+
         return buildString {
-            if (pos != null) {
-                val lineIndex = pos.line - 1
+            if (range != null) {
+                val start = range.start
+                val end = range.end
+
+                val lineIndex = start.line - 1
                 val lineText = src?.getLine(lineIndex)
 
-                val posStr = pos.line.toString()
+                val posStr = start.line.toString()
                 val separatorStr = "    | "
                 val pointerOffset = posStr.length + separatorStr.length
+
+                val pointerLength = when {
+                    start.line == end.line -> end.col - start.col
+                    lineText != null -> lineText.length - start.col + 1
+                    else -> 0
+                }
 
                 append("\n\n ")
                     .append(posStr)
@@ -49,12 +52,14 @@ data class Message(
                     append(AnsiColors.CYAN)
                         .append(lineText)
                         .append('\n')
-                        .append(" ".repeat(pos.col - 1 + pointerOffset))
+                        .append(" ".repeat(start.col + pointerOffset))
 
-                    append(AnsiColors.color("^^^", msgColor)).append('\n')
-                        .append(src.file?.absoluteFile ?: "src")
+                    if (pointerLength > 0)
+                        append(AnsiColors.color("^".repeat(pointerLength), msgColor)).append('\n')
+
+                    append(src.path)
                         .append(" (")
-                        .append(pos)
+                        .append(start)
                         .append("): ")
                 }
             }

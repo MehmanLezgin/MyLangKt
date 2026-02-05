@@ -1,38 +1,39 @@
 package lang.nodes
 
 import lang.tokens.OperatorType
-import lang.tokens.Pos
+import lang.core.SourceRange
 
 typealias NodeTransformFunc = (ExprNode) -> ExprNode
 
-abstract class ExprNode(
-    open val pos: Pos
-) {
-    abstract fun mapRecursive(mapper: NodeTransformFunc): ExprNode
+interface ExprNode {
+    val range: SourceRange
+    fun mapRecursive(mapper: NodeTransformFunc): ExprNode
 }
 
-object VoidNode : ExprNode(Pos()) {
+object VoidNode : ExprNode {
+    override val range: SourceRange = SourceRange()
+
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
 
-data class UnknownNode(override val pos: Pos) : ExprNode(pos) {
+data class UnknownNode(override val range: SourceRange) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
 
 open class IdentifierNode(
     val value: String,
-    override val pos: Pos
-) : ExprNode(pos) {
+    override val range: SourceRange
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
         mapper(this)
 }
 
 data class OperNode(
     val operatorType: OperatorType,
-    override val pos: Pos
+    override val range: SourceRange
 ) : IdentifierNode(
     value = operatorType.fullName,
-    pos = pos
+    range = range
 ) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
         mapper(this)
@@ -43,15 +44,15 @@ open class BinOpNode(
     open val right: ExprNode,
     val operator: BinOpType,
     val tokenOperatorType: OperatorType,
-    override val pos: Pos
-) : ExprNode(pos) {
+    override val range: SourceRange
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = BinOpNode(
             left = left.mapRecursive(mapper),
             right = right.mapRecursive(mapper),
             operator = operator,
             tokenOperatorType = tokenOperatorType,
-            pos = pos
+            range = range
         )
         return mapper(newNode)
     }
@@ -60,13 +61,13 @@ open class BinOpNode(
 data class DotAccessNode(
     val base: ExprNode,
     val member: IdentifierNode,
-    override val pos: Pos
-) : ExprNode(pos) {
+    override val range: SourceRange
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = DotAccessNode(
             base = base.mapRecursive(mapper),
             member = member.mapRecursive(mapper) as? IdentifierNode ?: member,
-            pos = pos
+            range = range
         )
         return mapper(newNode)
     }
@@ -75,13 +76,13 @@ data class DotAccessNode(
 /*data class ScopeAccessNode(
     val base: QualifiedDatatypeNode,
     val member: IdentifierNode,
-    override val pos: Pos
-) : ExprNode(pos) {
+    override val range: SourceRange
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = ScopeAccessNode(
             base = base.mapRecursive(mapper) as? QualifiedDatatypeNode ?: base,
             member = member.mapRecursive(mapper) as? IdentifierNode ?: member,
-            pos = pos
+            range = range
         )
 
         return mapper(newNode)
@@ -94,14 +95,14 @@ open class UnaryOpNode(
     open val operand: ExprNode,
     val operator: UnaryOpType,
     val tokenOperatorType: OperatorType,
-    override val pos: Pos
-) : ExprNode(pos) {
+    override val range: SourceRange
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = UnaryOpNode(
             operand = operand.mapRecursive(mapper),
             operator = operator,
             tokenOperatorType = tokenOperatorType,
-            pos = pos
+            range = range
         )
         return mapper(newNode)
     }
@@ -111,8 +112,8 @@ data class FuncCallNode(
     val receiver: ExprNode,
     val args: List<ExprNode>,
     val typeNames: List<ExprNode>?,
-    override val pos: Pos
-) : ExprNode(pos) {
+    override val range: SourceRange
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(
             receiver = receiver.mapRecursive(mapper),
@@ -126,8 +127,8 @@ data class FuncCallNode(
 data class IndexAccessNode(
     val target: ExprNode,
     val indexExpr: ExprNode,
-    override val pos: Pos
-) : ExprNode(pos) {
+    override val range: SourceRange
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(
             target = target.mapRecursive(mapper),
@@ -140,47 +141,47 @@ data class IndexAccessNode(
 data class IncrementNode(
     override val operand: ExprNode,
     val isPost: Boolean,
-    override val pos: Pos
+    override val range: SourceRange
 ) : UnaryOpNode(
     operand = operand,
     operator = UnaryOpType.INCREMENT,
     tokenOperatorType = OperatorType.INCREMENT,
-    pos = pos
+    range = range
 )
 
 data class DecrementNode(
     override val operand: ExprNode,
     val isPost: Boolean,
-    override val pos: Pos
+    override val range: SourceRange
 ) : UnaryOpNode(
     operand = operand,
     operator = UnaryOpType.DECREMENT,
     tokenOperatorType = OperatorType.DECREMENT,
-    pos = pos
+    range = range
 )
 
 open class BlockNode(
     open val nodes: List<ExprNode>,
-    override val pos: Pos
-) : ExprNode(pos) {
+    override val range: SourceRange
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = BlockNode(
             nodes = nodes.map { it.mapRecursive(mapper) },
-            pos = pos
+            range = range
         )
         return mapper(newNode)
     }
 
     companion object {
-        val EMPTY = BlockNode(emptyList(), Pos())
+        fun empty(range: SourceRange) = BlockNode(emptyList(), range)
     }
 }
 
 data class LambdaNode(
     val body: BlockNode,
     val params: List<VarDeclStmtNode>?,
-    override val pos: Pos,
-) : ExprNode(pos) {
+    override val range: SourceRange,
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(
             body = body.mapRecursive(mapper) as? BlockNode ?: body,
@@ -194,8 +195,8 @@ data class LambdaNode(
 
 data class InitialiserList(
     override val nodes: List<ExprNode>,
-    override val pos: Pos
-) : BlockNode(nodes, pos) {
+    override val range: SourceRange
+) : BlockNode(nodes, range) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(
             nodes = nodes.map { it.mapRecursive(mapper) }
@@ -208,10 +209,10 @@ data class ModuleNode(
     val name: String,
 //    val path: String?,
     override val nodes: List<ExprNode>,
-    override val pos: Pos
+    override val range: SourceRange
 ) : BlockNode(
     nodes = nodes,
-    pos = pos
+    range = range
 ) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(

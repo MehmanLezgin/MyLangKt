@@ -1,10 +1,11 @@
 package lang.tokens
 
+import lang.core.SourceRange
 import lang.messages.Msg
 import kotlin.reflect.KClass
 
 interface ITokenStream {
-    val pos: Pos
+    val range: SourceRange
     fun reset()
     fun save()
     fun restore()

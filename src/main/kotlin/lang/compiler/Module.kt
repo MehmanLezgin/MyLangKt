@@ -2,7 +2,7 @@ package lang.compiler
 
 import lang.core.LangSpec
 import lang.core.Serializer
-import lang.core.SourceCode
+import lang.core.ISourceCode
 import lang.nodes.ModuleNode
 import lang.semantics.SemanticContext
 import lang.semantics.scopes.ModuleExportScope
@@ -12,7 +12,7 @@ import java.io.File
 
 data class Module(
     val name: String?,
-    val src: SourceCode,
+    val src: ISourceCode,
     val ast: ModuleNode,
     var scope: ModuleScope? = null
 ) {

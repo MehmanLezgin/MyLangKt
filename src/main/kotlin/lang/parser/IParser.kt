@@ -1,12 +1,7 @@
 package lang.parser
 
-import lang.tokens.Pos
-import lang.nodes.BaseDatatypeNode
-import lang.nodes.BlockNode
-import lang.nodes.ExprNode
-import lang.nodes.IdentifierNode
-import lang.nodes.ModuleNode
-import lang.nodes.VarDeclStmtNode
+import lang.core.SourceRange
+import lang.nodes.*
 import lang.tokens.OperatorType
 
 interface IParser {
@@ -16,8 +11,8 @@ interface IParser {
     fun parseTypenameList(): List<ExprNode>?
     fun parseArgsList(ctx: ParsingContext = ParsingContext.Header): List<ExprNode>
     fun analiseParams(exprList: List<ExprNode>): List<VarDeclStmtNode>?
-    fun syntaxError(msg: String, pos: Pos)
-    fun warning(msg: String, pos: Pos)
+    fun syntaxError(msg: String, range: SourceRange)
+    fun warning(msg: String, range: SourceRange)
     fun analiseDatatypeList(exprList: List<ExprNode>?): List<BaseDatatypeNode>?
     fun parseBlock(): BlockNode
     fun parseModuleName(withModuleKeyword: Boolean = true): IdentifierNode?

@@ -1,7 +1,8 @@
 package lang.tokens
 
-import lang.messages.MsgHandler
+import lang.core.SourceRange
 import lang.lexer.ILexer
+import lang.messages.MsgHandler
 import kotlin.reflect.KClass
 
 open class BaseTokenStream(
@@ -11,14 +12,14 @@ open class BaseTokenStream(
     private val curToken: Token
         get() = peek()
 
-    override val pos: Pos
-        get() = peek().pos
+    override val range: SourceRange
+        get() = peek().range
 
     override fun reset() {
         lexer.reset()
     }
 
-    internal open val eof = Token.EOF(pos = Pos())
+    internal open val eof: Token = Token.EOF(range = SourceRange())
 
     override fun prev(): Token = eof
 
@@ -38,7 +39,7 @@ open class BaseTokenStream(
         if (clazz.isInstance(t)) {
             return true
         }
-        msgHandler.syntaxError(msg = msg, t.pos)
+        msgHandler.syntaxError(msg = msg, t.range)
         return false
     }
 
@@ -49,7 +50,7 @@ open class BaseTokenStream(
             return true
         }
 
-        msgHandler.syntaxError(msg = msg, t.pos)
+        msgHandler.syntaxError(msg = msg, t.range)
         return false
     }
 
@@ -59,7 +60,7 @@ open class BaseTokenStream(
         if (t is Token.Keyword && t.type == type)
             return true
 
-        msgHandler.syntaxError(msg = msg, t.pos)
+        msgHandler.syntaxError(msg = msg, t.range)
         return false
     }
 
@@ -71,11 +72,14 @@ open class BaseTokenStream(
             return true
         }
 
-        if (prev().pos.line < t.pos.line)
+        if (t.isTokenOnNewLine())
             return true
 
         return false
     }
+
+    private fun Token.isTokenOnNewLine() =
+        prev().range.end.line < this.range.start.line
 
     override fun expectSemicolonOrLinebreak(msg: String): Boolean {
         val t = peek()
@@ -86,7 +90,7 @@ open class BaseTokenStream(
             return true
         }
 
-        if (prev().pos.line < t.pos.line)
+        if (t.isTokenOnNewLine())
             return true
 
         when (t) {
@@ -101,7 +105,7 @@ open class BaseTokenStream(
             else -> {}
         }
 
-        msgHandler.syntaxError(msg = msg, t.pos)
+        msgHandler.syntaxError(msg = msg, t.range)
         return false
     }
 

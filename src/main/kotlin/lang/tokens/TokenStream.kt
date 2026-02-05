@@ -2,13 +2,14 @@ package lang.tokens
 
 import lang.messages.MsgHandler
 import lang.core.ILangSpec
-import lang.core.SourceCode
+import lang.core.ISourceCode
+import lang.core.SourceRange
 import lang.lexer.ILexer
 
 
 class TokenStream(
     private val lexer: ILexer,
-    private val src: SourceCode,
+    private val src: ISourceCode,
     private val langSpec: ILangSpec,
     msgHandler: MsgHandler
 ) : BaseTokenStream(
@@ -22,7 +23,7 @@ class TokenStream(
     override val eof by lazy {
         tokens.findLast { it is Token.EOF } as? Token.EOF
             ?: Token.EOF(
-                pos = tokens.lastOrNull()?.pos ?: Pos(src = src)
+                range = tokens.lastOrNull()?.range ?: SourceRange(src = src)
             )
     }
 
@@ -81,12 +82,16 @@ class TokenStream(
         var offset = 0
 
         val newTokens = splits.map {
+            val length = it.symbol.length
+            val newRange = t.range.horizontalCut(offset, length)
+
             val newToken = t.copy(
                 type = it,
                 raw = langSpec.getOperatorInfo(it)?.symbol ?: "",
-                pos = t.pos.copy(col = t.pos.col + offset),
+                range = newRange
             )
-            offset += newToken.raw.length
+
+            offset += length
             newToken
         }
 

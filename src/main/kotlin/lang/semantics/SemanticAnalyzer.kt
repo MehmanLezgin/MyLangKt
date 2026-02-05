@@ -18,7 +18,7 @@ import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.ModuleSymbol
 import lang.semantics.symbols.NamespaceSymbol
 import lang.semantics.symbols.Symbol
-import lang.tokens.Pos
+import lang.core.SourceRange
 
 class SemanticAnalyzer(
     override val msgHandler: MsgHandler,
@@ -33,14 +33,14 @@ class SemanticAnalyzer(
 
     override val semanticContext = SemanticContext()
 
-    override fun scopeError(error: ScopeError, pos: Pos?) {
-        semanticError(msg = ScopeErrorMapper.toSecond(error), pos = pos)
+    override fun scopeError(error: ScopeError, range: SourceRange?) {
+        semanticError(msg = ScopeErrorMapper.toSecond(error), range = range)
     }
 
-    fun importSymbol(sym: Symbol, pos: Pos) {
+    fun importSymbol(sym: Symbol, range: SourceRange) {
         val result = scope.define(sym)
         if (result !is ScopeResult.Error) return
-        scopeError(error = result.error, pos = pos)
+        scopeError(error = result.error, range = range)
     }
 
     override fun exportSymbol(sym: Symbol) {
@@ -52,7 +52,7 @@ class SemanticAnalyzer(
 
         while (cur !is ModuleScope) {
             if (cur !is NamespaceScope) {
-                semanticError("cannot export ${sym.name}", Pos())
+                semanticError("cannot export ${sym.name}", SourceRange())
                 return
             }
             namePath.addFirst(cur.scopeName) // сразу в правильном порядке
@@ -94,7 +94,7 @@ class SemanticAnalyzer(
         val module = getModule(name.value)
 
         checkModuleErrors(module)?.let {
-            semanticError(it, name.pos)
+            semanticError(it, name.range)
             return
         }
 
@@ -115,7 +115,7 @@ class SemanticAnalyzer(
                 )
             }
 
-            importSymbol(sym, node.moduleName.pos)
+            importSymbol(sym, node.moduleName.range)
             return
         }
 
@@ -123,7 +123,7 @@ class SemanticAnalyzer(
             is ImportKind.Named -> node.kind.symbols
             ImportKind.Wildcard ->
                 allExports.map {
-                    IdentifierNode(it.key, node.pos)
+                    IdentifierNode(it.key, node.range)
                 }
 
             else -> emptyList()
@@ -131,11 +131,11 @@ class SemanticAnalyzer(
             val sym = allExports[id.value]
 
             if (sym == null) {
-                semanticError(Msg.F_MODULE_DOES_NOT_EXPORT_SYM.format(moduleName, id.value), id.pos)
+                semanticError(Msg.F_MODULE_DOES_NOT_EXPORT_SYM.format(moduleName, id.value), id.range)
                 return@forEach
             }
 
-            importSymbol(sym, id.pos)
+            importSymbol(sym, id.range)
         }
     }
 
@@ -197,10 +197,10 @@ class SemanticAnalyzer(
         }
     }
 
-    private fun semanticError(msg: String, pos: Pos?) {
-        msgHandler.semanticError(msg, pos)
+    private fun semanticError(msg: String, range: SourceRange?) {
+        msgHandler.semanticError(msg, range)
     }
 
-    override fun warning(msg: String, pos: Pos) =
-        msgHandler.warn(msg = msg, pos = pos, stage = CompileStage.SEMANTIC_ANALYSIS)
+    override fun warning(msg: String, range: SourceRange) =
+        msgHandler.warn(msg = msg, range = range, stage = CompileStage.SEMANTIC_ANALYSIS)
 }

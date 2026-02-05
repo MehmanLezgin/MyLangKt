@@ -1,7 +1,8 @@
 package lang.semantics.resolvers
 
-import lang.messages.MsgHandler
+import lang.core.SourceRange
 import lang.messages.Msg
+import lang.messages.MsgHandler
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
 import lang.semantics.ISemanticAnalyzer
@@ -10,7 +11,6 @@ import lang.semantics.scopes.Scope
 import lang.semantics.symbols.Symbol
 import lang.semantics.types.ErrorType
 import lang.semantics.types.Type
-import lang.tokens.Pos
 
 abstract class BaseResolver<T, TResult>(
     open val analyzer: ISemanticAnalyzer
@@ -23,20 +23,20 @@ abstract class BaseResolver<T, TResult>(
 
     abstract fun resolve(target: T): TResult
 
-    internal fun symNotDefinedError(name: String, pos: Pos) =
-        semanticError(Msg.SymbolNotDefinedIn.format(name = name, scopeName = scope.scopeName), pos)
+    internal fun symNotDefinedError(name: String, range: SourceRange) =
+        semanticError(Msg.SymbolNotDefinedIn.format(name = name, scopeName = scope.scopeName), range)
 
-    internal fun symNotDefinedInError(name: String, scopeName: String?, pos: Pos): ErrorType {
+    internal fun symNotDefinedInError(name: String, scopeName: String?, range: SourceRange): ErrorType {
         return when {
             scopeName.isNullOrEmpty() ->
-                symNotDefinedError(name, pos)
+                symNotDefinedError(name, range)
 
             scope is ModuleScope ->
                 semanticError(
                     Msg.F_MODULE_DOES_NOT_EXPORT_SYM.format(
                         name,
                         scopeName
-                    ), pos
+                    ), range
                 )
 
             else ->
@@ -44,19 +44,19 @@ abstract class BaseResolver<T, TResult>(
                     Msg.SymbolNotDefinedIn.format(
                         name = name,
                         scopeName = scopeName
-                    ), pos
+                    ), range
                 )
         }
     }
 
-    internal fun IdentifierNode.error(func: (String, Pos) -> ErrorType) = func(value, pos)
-    internal fun IdentifierNode.error(func: (String, String, Pos) -> ErrorType) =
-        func(value, scope.absoluteScopePath ?: "", pos)
+    internal fun IdentifierNode.error(func: (String, SourceRange) -> ErrorType) = func(value, range)
+    internal fun IdentifierNode.error(func: (String, String, SourceRange) -> ErrorType) =
+        func(value, scope.absoluteScopePath ?: "", range)
 
-    internal fun ExprNode.error(msg: String) = semanticError(msg, pos)
+    internal fun ExprNode.error(msg: String) = semanticError(msg, range)
 
-    internal fun semanticError(msg: String, pos: Pos?): ErrorType {
-        analyzer.msgHandler.semanticError(msg, pos)
+    internal fun semanticError(msg: String, range: SourceRange?): ErrorType {
+        analyzer.msgHandler.semanticError(msg, range)
         return ErrorType
     }
 

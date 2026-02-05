@@ -1,6 +1,8 @@
 package lang.parser
 
 import lang.core.LangSpec.moduleNameSeparator
+import lang.core.Pos
+import lang.core.SourceRange
 import lang.messages.CompileStage
 import lang.messages.MsgHandler
 import lang.messages.Msg
@@ -35,7 +37,7 @@ class Parser(
         return ModuleNode(
             name = name,
             nodes = list,
-            pos = ts.pos
+            range = ts.range
         )
     }
 
@@ -55,7 +57,7 @@ class Parser(
         if (withModuleKeyword)
             ts.next()
 
-        val pos = ts.pos
+        val range = ts.range
         val list = parseIdsWithSeparatorOper(separator = moduleNameSeparator)
 
         if (withModuleKeyword)
@@ -67,7 +69,7 @@ class Parser(
 
         return IdentifierNode(
             value = name,
-            pos = pos
+            range = range
         )
     }
 
@@ -84,7 +86,7 @@ class Parser(
                 val identifier = ts.peek()
 
                 if (identifier !is Token.Identifier) {
-                    syntaxError(Msg.EXPECTED_IDENTIFIER, identifier.pos)
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, identifier.range)
                     return null
                 }
 
@@ -96,9 +98,9 @@ class Parser(
         return list
     }
 
-    override fun syntaxError(msg: String, pos: Pos) =
-        msgHandler.syntaxError(msg = msg, pos = pos)
+    override fun syntaxError(msg: String, range: SourceRange) =
+        msgHandler.syntaxError(msg = msg, range = range)
 
-    override fun warning(msg: String, pos: Pos) =
-        msgHandler.warn(msg = msg, pos = pos, stage = CompileStage.SYNTAX_ANALYSIS)
+    override fun warning(msg: String, range: SourceRange) =
+        msgHandler.warn(msg = msg, range = range, stage = CompileStage.SYNTAX_ANALYSIS)
 }

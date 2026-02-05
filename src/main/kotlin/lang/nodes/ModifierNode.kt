@@ -1,29 +1,29 @@
 package lang.nodes
 
+import lang.core.SourceRange
 import lang.tokens.KeywordType
-import lang.tokens.Pos
 import kotlin.reflect.KClass
 
 sealed class ModifierNode(
     open val keyword: KeywordType,
-    override val pos: Pos
-) : ExprNode(pos) {
-    data class Private      (override val pos: Pos) : ModifierNode(KeywordType.PRIVATE, pos)
-    data class Public       (override val pos: Pos) : ModifierNode(KeywordType.PUBLIC, pos)
-    data class Protected    (override val pos: Pos) : ModifierNode(KeywordType.PROTECTED, pos)
-    data class Export       (override val pos: Pos) : ModifierNode(KeywordType.EXPORT, pos)
-    data class Static       (override val pos: Pos) : ModifierNode(KeywordType.STATIC, pos)
-    data class Override     (override val pos: Pos) : ModifierNode(KeywordType.OVERRIDE, pos)
-    data class Open         (override val pos: Pos) : ModifierNode(KeywordType.OPEN, pos)
-    data class Abstract     (override val pos: Pos) : ModifierNode(KeywordType.ABSTRACT, pos)
+    override val range: SourceRange
+) : ExprNode {
+    data class Private      (override val range: SourceRange) : ModifierNode(KeywordType.PRIVATE, range)
+    data class Public       (override val range: SourceRange) : ModifierNode(KeywordType.PUBLIC, range)
+    data class Protected    (override val range: SourceRange) : ModifierNode(KeywordType.PROTECTED, range)
+    data class Export       (override val range: SourceRange) : ModifierNode(KeywordType.EXPORT, range)
+    data class Static       (override val range: SourceRange) : ModifierNode(KeywordType.STATIC, range)
+    data class Override     (override val range: SourceRange) : ModifierNode(KeywordType.OVERRIDE, range)
+    data class Open         (override val range: SourceRange) : ModifierNode(KeywordType.OPEN, range)
+    data class Abstract     (override val range: SourceRange) : ModifierNode(KeywordType.ABSTRACT, range)
 
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
 
 data class ModifierSetNode(
-    override val pos: Pos,
+    override val range: SourceRange,
     val nodes: Set<ModifierNode>
-) : ExprNode(pos) {
+) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(
             nodes = nodes.toList().map { it.mapRecursive(mapper) as? ModifierNode ?: it }.toSet()

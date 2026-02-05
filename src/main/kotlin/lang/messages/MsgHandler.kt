@@ -1,6 +1,9 @@
 package lang.messages
 
-import lang.tokens.Pos
+import lang.core.ISourceCode
+import lang.core.Pos
+import lang.core.SourceRange
+import lang.core.toSourceRange
 import java.lang.StringBuilder
 
 class MsgHandler {
@@ -19,35 +22,35 @@ class MsgHandler {
 
     fun clear() = _messages.clear()
 
-    fun warn(stage: CompileStage, msg: String, pos: Pos? = null) {
+    fun warn(stage: CompileStage, msg: String, range: SourceRange? = null) {
         addMessage(
             Message(
                 type = MessageType.WARNING,
                 msg = msg,
                 stage = stage,
-                pos = pos
+                range = range
             )
         )
     }
 
-    fun err(stage: CompileStage, msg: String, pos: Pos? = null) {
+    fun err(stage: CompileStage, msg: String, range: SourceRange? = null) {
         addMessage(
             Message(
                 type = MessageType.ERROR,
                 msg = msg,
                 stage = stage,
-                pos = pos
+                range = range
             )
         )
     }
 
-    fun info(stage: CompileStage, msg: String, pos: Pos? = null) {
+    fun info(stage: CompileStage, msg: String, range: SourceRange? = null) {
         addMessage(
             Message(
                 type = MessageType.INFO,
                 msg = msg,
                 stage = stage,
-                pos = pos
+                range = range
             )
         )
     }
@@ -59,27 +62,35 @@ class MsgHandler {
         )
     }
 
-    fun lexicalError(msg: String, pos: Pos? = null) {
+    fun lexicalError(msg: String, range: SourceRange? = null) {
         err(
             stage = CompileStage.LEXICAL_ANALYSIS,
             msg = msg,
-            pos = pos
+            range = range
         )
     }
 
-    fun syntaxError(msg: String, pos: Pos) {
+    fun lexicalError(msg: String, src: ISourceCode, pos: Pos? = null) {
+        err(
+            stage = CompileStage.LEXICAL_ANALYSIS,
+            msg = msg,
+            range = pos?.toSourceRange(src)
+        )
+    }
+
+    fun syntaxError(msg: String, range: SourceRange) {
         err(
             stage = CompileStage.SYNTAX_ANALYSIS,
             msg = msg,
-            pos = pos
+            range = range
         )
     }
 
-    fun semanticError(msg: String, pos: Pos? = null) {
+    fun semanticError(msg: String, range: SourceRange? = null) {
         err(
             stage = CompileStage.SEMANTIC_ANALYSIS,
             msg = msg,
-            pos = pos
+            range = range
         )
     }
 

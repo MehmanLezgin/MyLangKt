@@ -1,5 +1,6 @@
 package lang.parser
 
+import lang.core.SourceRange
 import lang.mappers.BinOpTypeMapper
 import lang.mappers.UnaryOpTypeMapper
 import lang.messages.Msg
@@ -51,7 +52,7 @@ class ExprParser(
     }*/
 
     private fun blockToLambda(rawBlock: BlockNode): LambdaNode {
-        val pos = rawBlock.pos
+        val range = rawBlock.range
 
         var params: List<VarDeclStmtNode>? = null
 
@@ -73,7 +74,7 @@ class ExprParser(
 
                 block = BlockNode(
                     nodes = newList,
-                    pos = Pos()
+                    range = SourceRange()
                 )
             }
         }
@@ -81,7 +82,7 @@ class ExprParser(
         val lambda = LambdaNode(
             body = block,
             params = params,
-            pos = pos
+            range = range
         )
 
         return lambda
@@ -102,7 +103,7 @@ class ExprParser(
                 is Token.Identifier -> t.toIdentifierNode()
 
                 else -> {
-                    syntaxError(Msg.EXPECTED_IDENTIFIER, t.pos)
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, t.range)
                     break
                 }
             }
@@ -114,11 +115,11 @@ class ExprParser(
                     DotAccessNode(
                         base = chain,
                         member = expr,
-                        pos = op.pos
+                        range = op.range
                     )
 
                 else -> {
-                    syntaxError(Msg.UNEXPECTED_TOKEN, op.pos) // unreachable
+                    syntaxError(Msg.UNEXPECTED_TOKEN, op.range) // unreachable
                     break
                 }
             }
@@ -134,40 +135,40 @@ class ExprParser(
         return when (val t = ts.peek()) {
             is Token.Identifier -> {
                 ts.next()
-                val id = IdentifierNode(value = t.value, pos = t.pos)
+                val id = IdentifierNode(value = t.value, range = t.range)
                 parseDotChain(startChain = id)
             }
 
             is Token.Int32 -> {
-                ts.next(); LiteralNode.IntLiteral(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.IntLiteral(value = t.value, range = t.range)
             }
 
             is Token.Float32 -> {
-                ts.next(); LiteralNode.FloatLiteral(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.FloatLiteral(value = t.value, range = t.range)
             }
 
             is Token.Double64 -> {
-                ts.next(); LiteralNode.DoubleLiteral(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.DoubleLiteral(value = t.value, range = t.range)
             }
 
             is Token.Int64 -> {
-                ts.next(); LiteralNode.LongLiteral(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.LongLiteral(value = t.value, range = t.range)
             }
 
             is Token.Bool -> {
-                ts.next(); LiteralNode.BooleanLiteral(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.BooleanLiteral(value = t.value, range = t.range)
             }
 
             is Token.Null -> {
-                ts.next(); NullLiteralNode(pos = t.pos)
+                ts.next(); NullLiteralNode(range = t.range)
             }
 
             is Token.Str -> {
-                ts.next(); LiteralNode.StringLiteral(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.StringLiteral(value = t.value, range = t.range)
             }
 
             is Token.Character -> {
-                ts.next(); LiteralNode.CharLiteral(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.CharLiteral(value = t.value, range = t.range)
             }
 
             is Token.Keyword -> {
@@ -178,11 +179,11 @@ class ExprParser(
             }
 
             is Token.UInt32 -> {
-                ts.next(); LiteralNode.UIntLiteral(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.UIntLiteral(value = t.value, range = t.range)
             }
 
             is Token.UInt64 -> {
-                ts.next(); LiteralNode.ULongLiteral(value = t.value, pos = t.pos)
+                ts.next(); LiteralNode.ULongLiteral(value = t.value, range = t.range)
             }
 
             is Token.LParen -> {
@@ -201,8 +202,8 @@ class ExprParser(
             is Token.LBrace -> parseLambda()
 
             else -> {
-                syntaxError(Msg.EXPECTED_AN_EXPRESSION, ts.prev().pos)
-                UnknownNode(t.pos)
+                syntaxError(Msg.EXPECTED_AN_EXPRESSION, ts.prev().range)
+                UnknownNode(t.range)
             }
         }
     }
@@ -226,7 +227,7 @@ class ExprParser(
                     receiver = expr,
                     typeNames = null,
                     args = listOf(parseLambda()),
-                    pos = t.pos
+                    range = t.range
                 )
             }
 
@@ -246,7 +247,7 @@ class ExprParser(
                         receiver = expr2,
                         typeNames = null,
                         args = args,
-                        pos = t.pos
+                        range = t.range
                     )
                 }
 
@@ -259,7 +260,7 @@ class ExprParser(
                     IndexAccessNode(
                         target = expr2,
                         indexExpr = indexExpr,
-                        pos = t.pos
+                        range = t.range
                     )
                 }
 
@@ -280,7 +281,7 @@ class ExprParser(
                 IncrementNode(
                     operand = expr,
                     isPost = true,
-                    pos = t.pos
+                    range = t.range
                 )
             }
 
@@ -290,7 +291,7 @@ class ExprParser(
                 DecrementNode(
                     operand = expr,
                     isPost = true,
-                    pos = t.pos
+                    range = t.range
                 )
             }
 
@@ -340,8 +341,8 @@ class ExprParser(
                     }
 
                     else -> {
-                        syntaxError(Msg.EXPECTED_TYPE_NAME, t.pos)
-                        ErrorDatatypeNode(t.pos)
+                        syntaxError(Msg.EXPECTED_TYPE_NAME, t.range)
+                        ErrorDatatypeNode(t.range)
                     }
                 }
             }
@@ -357,7 +358,7 @@ class ExprParser(
                     val args = parseArgsList(ctx = ctx)
 
                     if (datatypeNode !is DatatypeNode) {
-                        syntaxError(Msg.EXPECTED_IDENTIFIER, expr.pos)
+                        syntaxError(Msg.EXPECTED_IDENTIFIER, expr.range)
                         return datatypeNode
                     }
 
@@ -365,7 +366,7 @@ class ExprParser(
                         receiver = datatypeNode.identifier,
                         typeNames = datatypeNode.typeNames,
                         args = args,
-                        pos = expr.pos
+                        range = expr.range
                     )
                 }
 
@@ -382,7 +383,7 @@ class ExprParser(
                     operand = expr,
                     operator = operator,
                     tokenOperatorType = t.type,
-                    pos = t.pos
+                    range = t.range
                 )
             }
 
@@ -393,7 +394,7 @@ class ExprParser(
     override fun parseTypenameList(): List<ExprNode>? {
         // require '<'
         if (ts.peek() isNotOperator OperatorType.LESS) {
-            syntaxError(Msg.EXPECTED_LESS_OP, ts.pos)
+            syntaxError(Msg.EXPECTED_LESS_OP, ts.range)
             return null
         }
 
@@ -421,7 +422,7 @@ class ExprParser(
         if (ts.peek() isOperator OperatorType.GREATER)
             ts.next()
         else
-            syntaxError(Msg.EXPECTED_GREATER_OP, ts.pos)
+            syntaxError(Msg.EXPECTED_GREATER_OP, ts.range)
 
         return list
     }
@@ -429,7 +430,7 @@ class ExprParser(
     private fun parseOperator(): OperNode {
         ts.next()
 
-        val pos = ts.pos
+        val range = ts.range
 
         val operator = if (ts.expect(Token.Operator::class, Msg.EXPECTED_OPERATOR)) {
             ts.next() as Token.Operator
@@ -437,15 +438,15 @@ class ExprParser(
 
         return OperNode(
             operatorType = operator?.type ?: OperatorType.UNKNOWN,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseUnaryExpr(ctx: ParsingContext): ExprNode {
         return when (val t = ts.peek()) {
             is Token.Semicolon -> {
-                syntaxError(Msg.EXPECTED_AN_EXPRESSION, t.pos)
-                UnknownNode(t.pos)
+                syntaxError(Msg.EXPECTED_AN_EXPRESSION, t.range)
+                UnknownNode(t.range)
             }
 
             is Token.Keyword -> {
@@ -454,8 +455,8 @@ class ExprParser(
                     KeywordType.FUNC -> parseFuncDatatype()
                     KeywordType.OPERATOR -> parsePostfixExpr(ctx)
                     else -> {
-                        syntaxError(Msg.UNEXPECTED_TOKEN, t.pos)
-                        UnknownNode(t.pos)
+                        syntaxError(Msg.UNEXPECTED_TOKEN, t.range)
+                        UnknownNode(t.range)
                     }
                 }
             }
@@ -467,7 +468,7 @@ class ExprParser(
                         val operator = unaryOpTypeMapper.toSecond(t.type)
 
                         if (operator == null) {
-                            syntaxError(Msg.EXPECTED_AN_EXPRESSION, t.pos)
+                            syntaxError(Msg.EXPECTED_AN_EXPRESSION, t.range)
                             return parsePostfixExpr(ctx)
                         }
 
@@ -475,7 +476,7 @@ class ExprParser(
                             operand = parseUnaryExpr(ctx),
                             operator = operator,
                             tokenOperatorType = t.type,
-                            pos = t.pos
+                            range = t.range
                         )
                     }
 
@@ -485,7 +486,7 @@ class ExprParser(
                         IncrementNode(
                             operand = parseUnaryExpr(ctx),
                             isPost = false,
-                            pos = t.pos
+                            range = t.range
                         )
                     }
 
@@ -495,7 +496,7 @@ class ExprParser(
                         DecrementNode(
                             operand = parseUnaryExpr(ctx),
                             isPost = false,
-                            pos = t.pos
+                            range = t.range
                         )
                     }
 
@@ -508,18 +509,18 @@ class ExprParser(
     }
 
     private fun parseInitialiserList(): InitialiserList {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         val exprList = parse().flattenCommaNode()
 
         if (ts.expect(Token.RBracket::class, Msg.EXPECTED_RBRACKET))
             ts.next()
 
-        return InitialiserList(nodes = exprList, pos = pos)
+        return InitialiserList(nodes = exprList, range = range)
     }
 
     private fun parseFuncDatatype(isConst: Boolean = false): BaseDatatypeNode {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         if (ts.matchOperator(OperatorType.MUL))
             ts.next() // skip first '*'. (level 1 ptr is also func type)
@@ -535,7 +536,7 @@ class ExprParser(
         val returnDatatype = if (ts.matchOperator(OperatorType.COLON)) {
             ts.next()
             parseDatatype(startIdentifier = null)
-        } else VoidDatatypeNode(ts.pos)
+        } else VoidDatatypeNode(ts.range)
 
         return FuncDatatypeNode(
             paramDatatypes = paramDatatypes,
@@ -543,7 +544,7 @@ class ExprParser(
             isConst = isConst,
             ptrLvl = ptrLvl,
             isReference = isReference,
-            pos = pos
+            range = range
         )
     }
 
@@ -573,14 +574,14 @@ class ExprParser(
             val member = parseSimpleDatatype()
 
             if (member !is DatatypeNode) {
-                syntaxError(Msg.EXPECTED_TYPE_NAME, member.pos)
+                syntaxError(Msg.EXPECTED_TYPE_NAME, member.range)
                 break
             }
 
             datatype = ScopedDatatypeNode(
                 base = datatype,
                 member = member,
-                pos = member.pos
+                range = member.range
             )
 
             memberDatatype = member
@@ -612,14 +613,14 @@ class ExprParser(
                 t is Token.Identifier -> t.toIdentifierNode()
                 t isKeyword KeywordType.FUNC -> return parseFuncDatatype(isConst)
                 else -> {
-                    syntaxError(Msg.EXPECTED_TYPE_NAME, t.pos)
+                    syntaxError(Msg.EXPECTED_TYPE_NAME, t.range)
                     ts.next()
-                    return ErrorDatatypeNode(t.pos)
+                    return ErrorDatatypeNode(t.range)
                 }
             }
         } else startIdentifier
 
-        val pos = identifier.pos
+        val range = identifier.range
 
         var typeNames: List<ExprNode>? = null
 
@@ -637,15 +638,15 @@ class ExprParser(
             typeNames = parseTypenameList()
 
             if (typeNames == null) {
-                syntaxError(Msg.EXPECTED_TYPE_NAME, pos)
-                return ErrorDatatypeNode(pos)
+                syntaxError(Msg.EXPECTED_TYPE_NAME, range)
+                return ErrorDatatypeNode(range)
             }
         }
 
         return DatatypeNode(
             identifier = identifier,
             typeNames = typeNames,
-            pos = pos,
+            range = range,
             ptrLvl = 0,
             isReference = false,
             isConst = isConst
@@ -665,14 +666,14 @@ class ExprParser(
     fun checkReference(): Boolean {
         var isReference = false
         var hasRedundantAmp = false
-        var refPos = ts.pos
+        var refPos = ts.range
 
         ts.splitOperators(mapTag = OperatorType.AMPERSAND)
 
         while (ts.matchOperator(OperatorType.AMPERSAND)) {
             if (isReference && !hasRedundantAmp) {
                 hasRedundantAmp = true
-                refPos = ts.pos
+                refPos = ts.range
             } else isReference = true
             ts.next()
         }
@@ -682,7 +683,7 @@ class ExprParser(
 
         // check if pointer to reference (example: int&**)
         if (isReference && calcPtrLvl() != 0) {
-            val lastPos = ts.pos
+            val lastPos = ts.range
             syntaxError(Msg.POINTER_TO_REFERENCE_IS_NOT_ALLOWED, lastPos)
         }
 
@@ -701,7 +702,7 @@ class ExprParser(
 
             OperatorType.ARROW -> {
                 if (ts.match(Token.RBrace::class))
-                    BlockNode(nodes = emptyList(), pos = op.pos)
+                    BlockNode(nodes = emptyList(), range = op.range)
                 else
                     parser.parseStmt(isSingleLine = true)
             }
@@ -714,7 +715,7 @@ class ExprParser(
         left: ExprNode,
         right: ExprNode,
         opType: OperatorType,
-        pos: Pos
+        range: SourceRange
     ): ExprNode? {
         val compound = opType.compoundToBinary() ?: return null
         val operator = binOpTypeMapper.toSecond(compound) ?: return null
@@ -724,7 +725,7 @@ class ExprParser(
             right = right,
             operator = operator,
             tokenOperatorType = compound,
-            pos = pos
+            range = range
         )
 
         return BinOpNode(
@@ -732,7 +733,7 @@ class ExprParser(
             right = compoundExpr,
             operator = BinOpType.ASSIGN,
             tokenOperatorType = OperatorType.ASSIGN,
-            pos = pos
+            range = range
         )
     }
 
@@ -767,7 +768,7 @@ class ExprParser(
                 left = left,
                 right = right,
                 opType = opType,
-                pos = op.pos
+                range = op.range
             )
 
             if (compoundExpr != null) {
@@ -779,7 +780,7 @@ class ExprParser(
             val operator = binOpTypeMapper.toSecond(opType)
 
             if (operator == null) {
-                syntaxError(Msg.EXPECTED_AN_EXPRESSION, left.pos)
+                syntaxError(Msg.EXPECTED_AN_EXPRESSION, left.range)
                 break
             }
 
@@ -788,16 +789,16 @@ class ExprParser(
                 right = right,
                 operator = operator,
                 tokenOperatorType = opType,
-                pos = op.pos
+                range = op.range
             )
         }
 
         return left
     }
 
-    private fun syntaxError(msg: String, pos: Pos) =
-        parser.syntaxError(msg = msg, pos = pos)
+    private fun syntaxError(msg: String, range: SourceRange) =
+        parser.syntaxError(msg = msg, range = range)
 
-    private fun warning(msg: String, pos: Pos) =
-        parser.warning(msg = msg, pos = pos)
+    private fun warning(msg: String, range: SourceRange) =
+        parser.warning(msg = msg, range = range)
 }

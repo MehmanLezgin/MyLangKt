@@ -1,10 +1,10 @@
 package lang.parser
 
+import lang.core.SourceRange
 import lang.tokens.KeywordType
 import lang.messages.Msg
 import lang.tokens.OperatorType
 import lang.tokens.ITokenStream
-import lang.tokens.Pos
 import lang.tokens.Token
 import lang.mappers.ModifierMapper
 import lang.nodes.AutoDatatypeNode
@@ -68,13 +68,13 @@ class StmtParser(
                 return VoidNode
 
             if (ts.match(Token.RBrace::class)) {
-                syntaxError(Msg.EXPECTED_TOP_LEVEL_DECL, t.pos)
+                syntaxError(Msg.EXPECTED_TOP_LEVEL_DECL, t.range)
                 ts.next()
                 return VoidNode
             }
 
             if (ts.match(Token.RParen::class, Token.RBracket::class)) {
-                syntaxError(Msg.UNEXPECTED_TOKEN, t.pos)
+                syntaxError(Msg.UNEXPECTED_TOKEN, t.range)
                 ts.next()
                 return VoidNode
             }
@@ -88,7 +88,7 @@ class StmtParser(
         }
 
         fun errorStmt(msg: String): () -> ExprNode {
-            syntaxError(msg, t.pos)
+            syntaxError(msg, t.range)
             ts.next()
             return ::voidExprFunc
         }
@@ -138,7 +138,7 @@ class StmtParser(
     }
 
     private fun parseTypedefStmt(): TypedefStmtNode? {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         if (!ts.expect(Token.Identifier::class, Msg.EXPECTED_IDENTIFIER))
             return null
@@ -146,7 +146,7 @@ class StmtParser(
         val identifier = (ts.next() as Token.Identifier).toIdentifierNode()
 
         if (ts.peek() isNotOperator OperatorType.ASSIGN) {
-            syntaxError(Msg.EXPECTED_ASSIGN, ts.pos)
+            syntaxError(Msg.EXPECTED_ASSIGN, ts.range)
             return null
         }
 
@@ -159,7 +159,7 @@ class StmtParser(
         return TypedefStmtNode(
             name = identifier,
             dataType = datatypeNode,
-            pos = pos
+            range = range
         )
     }
 
@@ -172,7 +172,7 @@ class StmtParser(
         val list = mutableListOf<ExprNode>()
 
         return if (isMultilineBody) {
-            val pos = ts.pos
+            val range = ts.range
             ts.next()
 
             while (!ts.match(Token.RBrace::class, Token.EOF::class)) {
@@ -183,7 +183,7 @@ class StmtParser(
             if (ts.expect(Token.RBrace::class, Msg.EXPECTED_RBRACE))
                 ts.next()
 
-            BlockNode(nodes = list, pos = pos)
+            BlockNode(nodes = list, range = range)
         } else {
             val expr = parse(isSingleLine = true).wrapToBody()
             ts.skipTokens(Token.Semicolon::class)
@@ -192,7 +192,7 @@ class StmtParser(
     }
 
     private fun parseTryCatchStmt(): TryCatchStmtNode {
-        val pos = ts.next().pos
+        val range = ts.next().range
         val tryBody = parseBlock()
 
         var catchParam: ExprNode? = null
@@ -212,7 +212,7 @@ class StmtParser(
         }
 
         if (catchBody == null && finallyBody == null) {
-            syntaxError(Msg.EXPECTED_CATCH, ts.pos)
+            syntaxError(Msg.EXPECTED_CATCH, ts.range)
         }
 
         return TryCatchStmtNode(
@@ -220,12 +220,12 @@ class StmtParser(
             catchParam = catchParam,
             catchBody = catchBody,
             finallyBody = finallyBody,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseImportStmt(): ImportStmtNode? {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         val moduleName = parser.parseModuleName(withModuleKeyword = false)
             ?: return null
@@ -233,12 +233,12 @@ class StmtParser(
         return ImportStmtNode(
             moduleName = moduleName,
             kind = ImportKind.Module,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseFromImportStmt(): ImportStmtNode? {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         val moduleName = parser.parseModuleName(withModuleKeyword = false)
             ?: return null
@@ -253,7 +253,7 @@ class StmtParser(
             return ImportStmtNode(
                 moduleName = moduleName,
                 kind = ImportKind.Wildcard,
-                pos = pos
+                range = range
             )
         }
 
@@ -263,12 +263,12 @@ class StmtParser(
         return ImportStmtNode(
             moduleName = moduleName,
             kind = ImportKind.Named(symbols = identifiers),
-            pos = pos
+            range = range
         )
     }
 
     private fun parseNamespaceStmt(): NamespaceStmtNode? {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         val name = if (ts.peek() !is Token.LBrace) {
             val t = ts.peek()
@@ -277,7 +277,7 @@ class StmtParser(
                 ts.next()
                 t.toIdentifierNode()
             } else {
-                syntaxError(Msg.EXPECTED_IDENTIFIER, t.pos)
+                syntaxError(Msg.EXPECTED_IDENTIFIER, t.range)
                 null
             }
         } else null
@@ -290,12 +290,12 @@ class StmtParser(
         return NamespaceStmtNode(
             name = name,
             body = body,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseConstructorStmt(): ConstructorDeclStmtNode {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         var params: List<VarDeclStmtNode>? = null
 
@@ -308,18 +308,18 @@ class StmtParser(
             modifiers = null,
             params = params ?: emptyList(),
             body = body,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseDestructorStmt(): DestructorDeclStmtNode {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         if (ts.match(Token.LParen::class)) {
             val args = parser.parseArgsList() // skipping
 
             if (args.isNotEmpty())
-                syntaxError(Msg.CONSTRUCTORS_CANNOT_HAVE_PARAMS, pos)
+                syntaxError(Msg.CONSTRUCTORS_CANNOT_HAVE_PARAMS, range)
         }
 
         val body = parseBlock()
@@ -327,7 +327,7 @@ class StmtParser(
         return DestructorDeclStmtNode(
             modifiers = null,
             body = body,
-            pos = pos
+            range = range
         )
     }
 
@@ -344,7 +344,7 @@ class StmtParser(
                 is BaseDatatypeNode -> expr
 
                 else -> {
-                    syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.pos)
+                    syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
                     null
                 }
             }
@@ -368,7 +368,7 @@ class StmtParser(
                     TypeNameNode(
                         name = expr,
                         bound = null,
-                        pos = expr.pos
+                        range = expr.range
                     )
                 }
 
@@ -377,7 +377,7 @@ class StmtParser(
 
                         val identifier = if (expr.left is IdentifierNode) expr.left as IdentifierNode
                         else {
-                            syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.pos)
+                            syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
                             return@forEach
                         }
 
@@ -387,17 +387,17 @@ class StmtParser(
                             TypeNameNode(
                                 name = identifier,
                                 bound = datatype,
-                                pos = expr.pos
+                                range = expr.range
                             )
                         else null
                     } else {
-                        syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.left.pos)
+                        syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.left.range)
                         null
                     }
                 }
 
                 else -> {
-                    syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.pos)
+                    syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
                     null
                 }
             }
@@ -406,12 +406,12 @@ class StmtParser(
                 params.add(typeName)
         }
 
-        return TypeNameListNode(params = params, pos = exprList.firstOrNull()?.pos ?: Pos())
+        return TypeNameListNode(params = params, range = exprList.firstOrNull()?.range ?: SourceRange())
     }
 
     private fun buildVarDeclHeader(
         header: ExprNode,
-        pos: Pos = header.pos,
+        range: SourceRange = header.range,
         isMutable: Boolean = true
     ): VarDeclStmtNode? {
         var name: IdentifierNode? = null
@@ -434,9 +434,9 @@ class StmtParser(
             modifiers = null,
             isMutable = isMutable,
             name = name ?: return null,
-            dataType = dataType ?: AutoDatatypeNode(pos),
+            dataType = dataType ?: AutoDatatypeNode(range),
             initializer = initializer,
-            pos = pos
+            range = range
         )
     }
 
@@ -444,7 +444,7 @@ class StmtParser(
         header: ExprNode,
         typeNames: TypeNameListNode?,
         body: BlockNode?,
-        pos: Pos
+        range: SourceRange
     ): FuncDeclStmtNode? {
         var name: IdentifierNode? = null
         var params: List<VarDeclStmtNode>? = null
@@ -457,18 +457,18 @@ class StmtParser(
             handleName = { name = it },
             handleTypeNames = {
                 if (it != null)
-                    syntaxError(Msg.TYPE_NAMES_MUST_BE_PLACES_BEFORE_FUNC_NAME, it.pos)
+                    syntaxError(Msg.TYPE_NAMES_MUST_BE_PLACES_BEFORE_FUNC_NAME, it.range)
             },
             handleParams = { params = it },
             handleSuperType = {
                 returnType =
-                    if (it is AutoDatatypeNode) VoidDatatypeNode(it.pos)
+                    if (it is AutoDatatypeNode) VoidDatatypeNode(it.range)
                     else it
             },
             handleInitializer = { initializerBody = it }
         )
 
-        val finalReturnType = returnType ?: if (body == null) AutoDatatypeNode(pos) else VoidDatatypeNode(pos)
+        val finalReturnType = returnType ?: if (body == null) AutoDatatypeNode(range) else VoidDatatypeNode(range)
 
         return FuncDeclStmtNode(
             modifiers = null,
@@ -477,11 +477,11 @@ class StmtParser(
             typeNames = typeNames,
             returnType = finalReturnType,
             body = initializerBody?.wrapToBody() ?: body,
-            pos = pos
+            range = range
         )
     }
 
-    private fun buildClassStmt(header: ExprNode, body: BlockNode?, pos: Pos): ClassDeclStmtNode? {
+    private fun buildClassStmt(header: ExprNode, body: BlockNode?, range: SourceRange): ClassDeclStmtNode? {
         var name: IdentifierNode? = null
         var typeNames: TypeNameListNode? = null
         var superClass: BaseDatatypeNode? = null
@@ -503,13 +503,13 @@ class StmtParser(
             name = name ?: return null,
             primaryConstrParams = primaryConstrParams,
             typeNames = typeNames,
-            superClass = superClass ?: VoidDatatypeNode(pos),
+            superClass = superClass ?: VoidDatatypeNode(range),
             body = initializerBody?.wrapToBody() ?: body,
-            pos = pos
+            range = range
         )
     }
 
-    private fun buildInterfaceStmt(header: ExprNode, body: BlockNode?, pos: Pos): InterfaceDeclStmtNode? {
+    private fun buildInterfaceStmt(header: ExprNode, body: BlockNode?, range: SourceRange): InterfaceDeclStmtNode? {
         var name: IdentifierNode? = null
         var typeNames: TypeNameListNode? = null
         var superInterface: BaseDatatypeNode? = null
@@ -521,7 +521,7 @@ class StmtParser(
             handleName = { name = it },
             handleTypeNames = { typeNames = it },
             handleParams = {
-                syntaxError(Msg.INTERFACES_CANNOT_HAVE_CONSTRUCTORS, header.pos)
+                syntaxError(Msg.INTERFACES_CANNOT_HAVE_CONSTRUCTORS, header.range)
             },
             handleSuperType = { superInterface = it },
             handleInitializer = { initializerBody = it }
@@ -531,9 +531,9 @@ class StmtParser(
             modifiers = null,
             name = name ?: return null,
             typeNames = typeNames,
-            superInterface = superInterface ?: VoidDatatypeNode(pos),
+            superInterface = superInterface ?: VoidDatatypeNode(range),
             body = initializerBody?.wrapToBody() ?: body,
-            pos = pos
+            range = range
         )
     }
 
@@ -602,14 +602,14 @@ class StmtParser(
                     }
 
                     else -> {
-                        syntaxError(errorMsg, header.pos)
+                        syntaxError(errorMsg, header.range)
                         return
                     }
                 }
             }
 
             else -> {
-                syntaxError(errorMsg, header.pos)
+                syntaxError(errorMsg, header.range)
                 return
             }
         }
@@ -627,7 +627,7 @@ class StmtParser(
     }
 
     private fun parseFuncDeclStmt(): FuncDeclStmtNode? {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         val typeNames = if (ts.matchOperator(OperatorType.LESS))
             analiseTemplateList(parser.parseTypenameList()) else null
@@ -636,11 +636,11 @@ class StmtParser(
 
         val body = parseBodyForDeclStmt()
 
-        return buildFuncDeclStmt(header, typeNames, body, pos)
+        return buildFuncDeclStmt(header, typeNames, body, range)
     }
 
     private fun parseClassStmt(): ClassDeclStmtNode? {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         val header = parser.parseExpr(ctx = ParsingContext.Header)
 
@@ -649,36 +649,36 @@ class StmtParser(
         return buildClassStmt(
             header = header,
             body = body,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseInterfaceStmt(): InterfaceDeclStmtNode? {
-        val pos = ts.next().pos
+        val range = ts.next().range
         val header = parser.parseExpr(ctx = ParsingContext.Header)
         val body = parseBodyForDeclStmt()
 
         return buildInterfaceStmt(
             header = header,
             body = body,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseVarDeclStmt(): VarDeclStmtNode? {
         val isMutable = ts.peek() isKeyword KeywordType.VAR
-        val pos = ts.next().pos
+        val range = ts.next().range
         val expr = parser.parseExpr(ctx = ParsingContext.Header)
 
         return buildVarDeclHeader(
             header = expr,
-            pos = pos,
+            range = range,
             isMutable = isMutable
         )
     }
 
     private fun parseEnumStmt(): EnumDeclStmtNode? {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         val nameToken = ts.peek()
 
@@ -686,18 +686,18 @@ class StmtParser(
             ts.next()
             nameToken.toIdentifierNode()
         } else {
-            syntaxError(Msg.NAME_EXPECTED, nameToken.pos)
+            syntaxError(Msg.NAME_EXPECTED, nameToken.range)
             return null
         }
 
         if (!ts.match(Token.LBrace::class)) {
-            syntaxError(Msg.UNEXPECTED_TOKEN, ts.pos)
+            syntaxError(Msg.UNEXPECTED_TOKEN, ts.range)
             ts.skipUntil(Token.LBrace::class, Token.RBrace::class, Token.Keyword::class, Token.Identifier::class)
             return EnumDeclStmtNode(
                 modifiers = null,
                 name = enumName,
-                body = BlockNode.EMPTY,
-                pos = pos
+                body = BlockNode.empty(range),
+                range = range
             )
         }
 
@@ -706,13 +706,13 @@ class StmtParser(
             return EnumDeclStmtNode(
                 modifiers = null,
                 name = enumName,
-                body = BlockNode.EMPTY,
-                pos = pos
+                body = BlockNode.empty(range),
+                range = range
             )
 
         val items = parseBlock()
 
-        return EnumDeclStmtNode(modifiers = null, name = enumName, body = items, pos = pos)
+        return EnumDeclStmtNode(modifiers = null, name = enumName, body = items, range = range)
     }
 
     private fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean = false): ExprNode? {
@@ -721,7 +721,7 @@ class StmtParser(
         if (datatype == null) {
             if (allowAsExpression) return expr
 
-            syntaxError(Msg.EXPECTED_TYPE_NAME, expr.pos)
+            syntaxError(Msg.EXPECTED_TYPE_NAME, expr.range)
             return null
         }
 
@@ -738,7 +738,7 @@ class StmtParser(
 
     private fun analiseNameNode(expr: ExprNode, msg: String, handleName: (IdentifierNode) -> Unit) {
         if (expr !is IdentifierNode) {
-            syntaxError(msg, expr.pos)
+            syntaxError(msg, expr.range)
             return
         }
 
@@ -784,18 +784,18 @@ class StmtParser(
             }
 
             else -> {
-                syntaxError(Msg.EXPECTED_FUNC_DECL, expr.pos)
+                syntaxError(Msg.EXPECTED_FUNC_DECL, expr.range)
             }
         }
     }
 
-    private fun parseContinueStmt() = ContinueStmtNode(pos = ts.next().pos)
+    private fun parseContinueStmt() = ContinueStmtNode(range = ts.next().range)
 
-    private fun parseBreakStmt() = BreakStmtNode(pos = ts.next().pos)
+    private fun parseBreakStmt() = BreakStmtNode(range = ts.next().range)
 
     private fun parseDeclarationWithModifiers(): DeclStmtNode? {
         val modifiers = parseModifiers()
-        val pos = ts.pos
+        val range = ts.range
 
         val stmt = parse()
 
@@ -806,7 +806,7 @@ class StmtParser(
             }
 
             else -> {
-                syntaxError(Msg.EXPECTED_A_DECLARATION, pos)
+                syntaxError(Msg.EXPECTED_A_DECLARATION, range)
                 null
             }
         }
@@ -815,7 +815,7 @@ class StmtParser(
     }
 
     private fun parseModifiers(): ModifierSetNode {
-        val pos = ts.pos
+        val range = ts.range
 
         val modifiers = mutableSetOf<ModifierNode>()
 
@@ -826,12 +826,12 @@ class StmtParser(
                 break
 
             val modifier = modifierMapper.toSecond(t) ?: break
-//                syntaxError(Messages.INVALID_MODIFIER, t.pos)
+//                syntaxError(Messages.INVALID_MODIFIER, t.range)
 //                ts.next()
 //                continue
 
             if (modifiers.any { it::class == modifier::class }) {
-                syntaxError(Msg.RepeatedModifier.format(modifier.keyword.value), t.pos)
+                syntaxError(Msg.RepeatedModifier.format(modifier.keyword.value), t.range)
                 ts.next()
                 continue
             }
@@ -840,7 +840,7 @@ class StmtParser(
             ts.next()
         }
 
-        return ModifierSetNode(nodes = modifiers, pos = pos)
+        return ModifierSetNode(nodes = modifiers, range = range)
     }
 
     private fun voidExprFunc() = VoidNode
@@ -863,7 +863,7 @@ class StmtParser(
     }
 
     override fun parseIfElseStmt(): IfElseStmtNode {
-        val pos = ts.pos
+        val range = ts.range
         ts.next()
 
         val (condition, body) = parseConditionAndBody()
@@ -888,12 +888,12 @@ class StmtParser(
             condition = condition,
             body = body,
             elseBody = elseBody,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseWhileStmt(): WhileStmtNode {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         val (condition, body) = parseConditionAndBody()
 
@@ -906,12 +906,12 @@ class StmtParser(
             condition = condition,
             body = body,
             elseBody = elseBody,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseDoWhileStmt(): DoWhileStmtNode {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         val body = parseBlock()
 
@@ -923,29 +923,29 @@ class StmtParser(
         return DoWhileStmtNode(
             condition = condition,
             body = body,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseForLoopStmt(): ForLoopStmtNode {
-        val pos = ts.next().pos
+        val range = ts.next().range
 
         val (condition, body) = parseConditionAndBody()
 
         return ForLoopStmtNode(
             condition = condition,
             body = body,
-            pos = pos
+            range = range
         )
     }
 
 
     private fun parseElseEntryStmt(): ElseEntryNode? {
-        val pos = ts.next().pos
+        val range = ts.next().range
         val t = ts.peek()
 
         if (t isNotOperator OperatorType.ARROW) {
-            syntaxError(Msg.EXPECTED_ARROW_OPERATOR, t.pos)
+            syntaxError(Msg.EXPECTED_ARROW_OPERATOR, t.range)
             return null
         }
 
@@ -953,12 +953,12 @@ class StmtParser(
 
         return ElseEntryNode(
             expr = parse(),
-            pos = pos
+            range = range
         )
     }
 
     private fun parseMatchStmt(): MatchStmtNode {
-        val pos = ts.pos
+        val range = ts.range
         ts.next()
 
         var target: ExprNode?
@@ -976,12 +976,12 @@ class StmtParser(
         return MatchStmtNode(
             target = target,
             body = body,
-            pos = pos
+            range = range
         )
     }
 
     private fun parseReturnStmt(): ReturnStmtNode {
-        val pos = ts.pos
+        val range = ts.range
         ts.next()
 
         val stmt = if (ts.matchSemicolonOrLinebreak())
@@ -990,13 +990,13 @@ class StmtParser(
 
         return ReturnStmtNode(
             expr = stmt,
-            pos = pos
+            range = range
         )
     }
 
-    private fun syntaxError(msg: String, pos: Pos) =
-        parser.syntaxError(msg = msg, pos = pos)
+    private fun syntaxError(msg: String, range: SourceRange) =
+        parser.syntaxError(msg = msg, range = range)
 
-    private fun warning(msg: String, pos: Pos) =
-        parser.warning(msg = msg, pos = pos)
+    private fun warning(msg: String, range: SourceRange) =
+        parser.warning(msg = msg, range = range)
 }

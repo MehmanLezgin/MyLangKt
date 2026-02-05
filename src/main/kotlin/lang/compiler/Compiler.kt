@@ -1,19 +1,20 @@
 package lang.compiler
 
+import lang.core.FileSourceCode
+import lang.core.ISourceCode
 import lang.core.LangSpec
-import lang.core.SourceCode
+import lang.core.Pos
+import lang.core.SourceRange
 import lang.lexer.ILexer
 import lang.lexer.Lexer
-import lang.messages.MsgHandler
 import lang.messages.Msg
-import lang.messages.Terms
+import lang.messages.MsgHandler
 import lang.nodes.IdentifierNode
 import lang.parser.IParser
 import lang.parser.Parser
 import lang.semantics.SemanticAnalyzer
 import lang.semantics.SemanticContext
 import lang.tokens.ITokenStream
-import lang.tokens.Pos
 import lang.tokens.TokenStream
 import java.io.File
 import java.io.IOException
@@ -49,7 +50,7 @@ class ModuleManager(
             .toAbsolutePath()
             .toFile()
 
-    fun addFromRoot(path: String = "", callback: ModuleCallback): List<Module>? {
+    fun addFromRoot(path: String = "", callback: ModuleCallback?): List<Module>? {
         val dir = path.absolute()
 
         val errorMsg = when {
@@ -76,7 +77,7 @@ class ModuleManager(
         }
     }
 
-    fun addFromFile(path: String, callback: ModuleCallback): Module? {
+    fun addFromFile(path: String, callback: ModuleCallback?): Module? {
         val file = path.absolute()
 
         val src = readSourceFile(file, msgHandler) ?: return null
@@ -113,7 +114,7 @@ class ModuleManager(
                     path = file.path,
                     msg = Msg.MODULE_ALREADY_EXISTS_IN.format(
                         moduleName,
-                        existingModule.src.file?.path ?: existingModule.name ?: Terms.UNKNOWN_PATH,
+                        existingModule.src.path,
                     )
                 )
             }
@@ -129,25 +130,26 @@ class ModuleManager(
 
         modules[moduleName] = module
 
-        callback(module, tokenStream)
+        callback?.invoke(module, tokenStream)
         return module
     }
 
-    private fun randModuleName(path: String, src: SourceCode) =
+    private fun randModuleName(path: String, src: ISourceCode) =
         IdentifierNode(
             value = "\$Module${path.hashCode()}",
-            pos = Pos(src = src)
+            range = SourceRange(src = src)
         )
 
-    private fun readSourceFile(file: File, msgHandler: MsgHandler): SourceCode? {
-        var src: SourceCode? = null
+    private fun readSourceFile(file: File, msgHandler: MsgHandler): ISourceCode? {
+        var src: ISourceCode? = null
 
         try {
             val content = file.readText()
 
-            src = SourceCode(
+            src = FileSourceCode(
                 content = content,
-                file = file
+                file = file,
+                displayName = file.nameWithoutExtension
             )
         } catch (_: IOException) {
             msgHandler.sourceReadingError(
@@ -159,8 +161,6 @@ class ModuleManager(
         return src
     }
 }
-
-fun errorHandler() = MsgHandler()
 
 fun program(
     path: String,
@@ -197,19 +197,19 @@ fun Program.printErrors() {
 
 fun ModuleManager.root(
     path: String = "",
-    callback: ModuleCallback = { _, _ -> }
+    callback: ModuleCallback? = null
 ) =
     addFromRoot(path, callback)
 
 fun ModuleManager.file(
     path: String,
-    callback: ModuleCallback = { _, _ -> }
+    callback: ModuleCallback? = null
 ) =
     addFromFile(path, callback)
 
 fun ModuleManager.entry(
     path: String,
-    callback: ModuleCallback = { _, _ -> }
+    callback: ModuleCallback? = null
 ) {
     val module = addFromFile(path, callback)
     this.entryModule = module

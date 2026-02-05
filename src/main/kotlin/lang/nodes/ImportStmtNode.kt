@@ -1,6 +1,6 @@
 package lang.nodes
 
-import lang.tokens.Pos
+import lang.core.SourceRange
 
 sealed class ImportKind {
     object Module : ImportKind()
@@ -13,7 +13,7 @@ sealed class ImportKind {
 data class ImportStmtNode(
     val moduleName: IdentifierNode,
     val kind: ImportKind,
-    override val pos: Pos
-) : StmtNode(pos) {
+    override val range: SourceRange
+) : StmtNode {
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
