@@ -1,7 +1,8 @@
 package lang.parser
 
 import lang.core.LangSpec.moduleNameSeparator
-import lang.messages.ErrorHandler
+import lang.messages.CompileStage
+import lang.messages.MsgHandler
 import lang.messages.Msg
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
@@ -13,7 +14,7 @@ import lang.tokens.*
 
 class Parser(
     val ts: ITokenStream,
-    val errorHandler: ErrorHandler,
+    val msgHandler: MsgHandler,
 ) : IParser {
     private val exprParser: IExprParser = ExprParser(
         ts = ts,
@@ -96,8 +97,8 @@ class Parser(
     }
 
     override fun syntaxError(msg: String, pos: Pos) =
-        errorHandler.syntaxError(msg = msg, pos = pos)
+        msgHandler.syntaxError(msg = msg, pos = pos)
 
     override fun warning(msg: String, pos: Pos) =
-        errorHandler.syntaxError(msg = msg, pos = pos)
+        msgHandler.warn(msg = msg, pos = pos, stage = CompileStage.SYNTAX_ANALYSIS)
 }

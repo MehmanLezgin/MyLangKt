@@ -1,7 +1,5 @@
 package lang.semantics.scopes
 
-import lang.messages.ErrorHandler
-
 open class BaseTypeScope(
     override val parent: Scope?,
     override val scopeName: String,

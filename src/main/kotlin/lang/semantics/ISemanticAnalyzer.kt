@@ -1,7 +1,7 @@
 package lang.semantics
 
 import lang.compiler.Module
-import lang.messages.ErrorHandler
+import lang.messages.MsgHandler
 import lang.nodes.BlockNode
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
@@ -13,7 +13,7 @@ import lang.tokens.Pos
 
 interface ISemanticAnalyzer {
     val scope: Scope
-    val errorHandler: ErrorHandler
+    val msgHandler: MsgHandler
 
     val declResolver: DeclarationResolver
     val constResolver: ConstResolver
@@ -32,4 +32,5 @@ interface ISemanticAnalyzer {
     fun withScopeResolveBody(targetScope: Scope, body: BlockNode?)
 
     fun scopeError(error: ScopeError, pos: Pos?)
+    fun warning(msg: String, pos: Pos)
 }

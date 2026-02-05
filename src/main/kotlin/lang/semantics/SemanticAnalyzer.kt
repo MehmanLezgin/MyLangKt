@@ -3,7 +3,8 @@ package lang.semantics
 import lang.compiler.Module
 import lang.compiler.ModuleManager
 import lang.mappers.ScopeErrorMapper
-import lang.messages.ErrorHandler
+import lang.messages.CompileStage
+import lang.messages.MsgHandler
 import lang.messages.Msg
 import lang.nodes.*
 import lang.semantics.resolvers.ConstResolver
@@ -20,7 +21,7 @@ import lang.semantics.symbols.Symbol
 import lang.tokens.Pos
 
 class SemanticAnalyzer(
-    override val errorHandler: ErrorHandler,
+    override val msgHandler: MsgHandler,
     val moduleMgr: ModuleManager
 ) : ISemanticAnalyzer {
     override var scope: Scope = Scope(parent = null)
@@ -144,7 +145,6 @@ class SemanticAnalyzer(
         node.nodes.forEach { childNode -> resolve(childNode) }
     }
 
-
     fun resolve(node: ExprNode) {
         when (node) {
             is DeclStmtNode -> declResolver.resolve(node)
@@ -198,6 +198,9 @@ class SemanticAnalyzer(
     }
 
     private fun semanticError(msg: String, pos: Pos?) {
-        errorHandler.semanticError(msg, pos)
+        msgHandler.semanticError(msg, pos)
     }
+
+    override fun warning(msg: String, pos: Pos) =
+        msgHandler.warn(msg = msg, pos = pos, stage = CompileStage.SEMANTIC_ANALYSIS)
 }

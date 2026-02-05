@@ -1,9 +1,7 @@
 package lang.semantics.scopes
 
-import lang.messages.ErrorHandler
 import lang.nodes.ConstructorDeclStmtNode
 import lang.nodes.DestructorDeclStmtNode
-import lang.semantics.symbols.ClassSymbol
 import lang.semantics.symbols.Symbol
 
 data class ClassScope(

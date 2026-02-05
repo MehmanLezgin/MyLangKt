@@ -1,6 +1,6 @@
 package lang.lexer
 
-import lang.messages.ErrorHandler
+import lang.messages.MsgHandler
 import lang.core.ILangSpec
 import lang.messages.Msg
 import lang.core.SourceCode
@@ -14,7 +14,7 @@ import kotlin.text.iterator
 open class BaseLexer(
     val src: SourceCode,
     val langSpec: ILangSpec,
-    val errorHandler: ErrorHandler,
+    val msgHandler: MsgHandler,
 ) : ILexer {
 
     internal val source = src.content
@@ -359,6 +359,6 @@ open class BaseLexer(
     }
 
     internal fun lexicalError(message: String, pos: Pos) {
-        errorHandler.lexicalError(message, pos)
+        msgHandler.lexicalError(message, pos)
     }
 }

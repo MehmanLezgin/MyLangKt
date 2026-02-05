@@ -13,7 +13,7 @@ fun main(args: Array<String>) {
 
         }.toList().map { it.second }
 
-        val semanticContext = if (errorHandler.hasErrors) null else analise()
+        val semanticContext = if (msgHandler.hasErrors) null else analise()
 
         moduleList.print(
             basePath = basePath,

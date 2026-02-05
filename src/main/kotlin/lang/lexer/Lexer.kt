@@ -1,6 +1,6 @@
 package lang.lexer
 
-import lang.messages.ErrorHandler
+import lang.messages.MsgHandler
 import lang.core.ILangSpec
 import lang.core.LangSpec.operators
 import lang.messages.Msg
@@ -12,8 +12,8 @@ import lang.tokens.TokenType
 class Lexer(
     src: SourceCode,
     langSpec: ILangSpec,
-    errorHandler: ErrorHandler,
-) : BaseLexer(src, langSpec, errorHandler) {
+    msgHandler: MsgHandler,
+) : BaseLexer(src, langSpec, msgHandler) {
     private val operatorsByLength = operators.sortedBy { -it.symbol.length }
 
     private companion object {

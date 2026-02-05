@@ -4,7 +4,7 @@ import lang.core.LangSpec
 import lang.core.SourceCode
 import lang.lexer.ILexer
 import lang.lexer.Lexer
-import lang.messages.ErrorHandler
+import lang.messages.MsgHandler
 import lang.messages.Msg
 import lang.messages.Terms
 import lang.nodes.IdentifierNode
@@ -21,10 +21,10 @@ import java.nio.file.Path
 
 
 class Program(val path: String) {
-    var errorHandler: ErrorHandler = ErrorHandler()
+    var msgHandler: MsgHandler = MsgHandler()
 
     var moduleManager: ModuleManager = ModuleManager(
-        errorHandler = errorHandler,
+        msgHandler = msgHandler,
         path = path
     )
 
@@ -34,7 +34,7 @@ class Program(val path: String) {
 typealias ModuleCallback = (m: Module, ts: ITokenStream) -> Unit
 
 class ModuleManager(
-    val errorHandler: ErrorHandler,
+    val msgHandler: MsgHandler,
     path: String
 ) {
     private val basePath = Path.of(path)
@@ -59,9 +59,9 @@ class ModuleManager(
         }?.format(dir.path)
 
         if (errorMsg != null) {
-            errorHandler.sourceReadingError(
+            msgHandler.sourceReadingError(
                 path = dir.path,
-                message = errorMsg
+                msg = errorMsg
             )
             return null
         }
@@ -79,11 +79,11 @@ class ModuleManager(
     fun addFromFile(path: String, callback: ModuleCallback): Module? {
         val file = path.absolute()
 
-        val src = readSourceFile(file, errorHandler) ?: return null
+        val src = readSourceFile(file, msgHandler) ?: return null
 
         val lexer: ILexer = Lexer(
             src = src,
-            errorHandler = errorHandler,
+            msgHandler = msgHandler,
             langSpec = LangSpec
         )
 
@@ -91,12 +91,12 @@ class ModuleManager(
             lexer = lexer,
             langSpec = LangSpec,
             src = src,
-            errorHandler = errorHandler
+            msgHandler = msgHandler
         )
 
         val parser: IParser = Parser(
             ts = tokenStream,
-            errorHandler = errorHandler
+            msgHandler = msgHandler
         )
 
         var moduleNameId = parser.parseModuleName()
@@ -109,9 +109,9 @@ class ModuleManager(
             val existingModule = modules[moduleNameId.value]
 
             if (existingModule != null) {
-                errorHandler.sourceReadingError(
+                msgHandler.sourceReadingError(
                     path = file.path,
-                    message = Msg.MODULE_ALREADY_EXISTS_IN.format(
+                    msg = Msg.MODULE_ALREADY_EXISTS_IN.format(
                         moduleName,
                         existingModule.src.file?.path ?: existingModule.name ?: Terms.UNKNOWN_PATH,
                     )
@@ -139,7 +139,7 @@ class ModuleManager(
             pos = Pos(src = src)
         )
 
-    private fun readSourceFile(file: File, errorHandler: ErrorHandler): SourceCode? {
+    private fun readSourceFile(file: File, msgHandler: MsgHandler): SourceCode? {
         var src: SourceCode? = null
 
         try {
@@ -150,9 +150,9 @@ class ModuleManager(
                 file = file
             )
         } catch (_: IOException) {
-            errorHandler.sourceReadingError(
+            msgHandler.sourceReadingError(
                 path = file.absoluteFile.path,
-                message = Msg.CANNOT_OPEN_SOURCE_FILE.format(file.path)
+                msg = Msg.CANNOT_OPEN_SOURCE_FILE.format(file.path)
             )
         }
 
@@ -160,7 +160,7 @@ class ModuleManager(
     }
 }
 
-fun errorHandler() = ErrorHandler()
+fun errorHandler() = MsgHandler()
 
 fun program(
     path: String,
@@ -173,13 +173,13 @@ fun Program.analise(): SemanticContext? {
     moduleManager.entryModule?.ast ?: return null
 
     val analyzer = SemanticAnalyzer(
-        errorHandler = errorHandler,
+        msgHandler = msgHandler,
         moduleMgr = moduleManager
     )
 
     val entryModule = moduleManager.entryModule
     if (entryModule == null) {
-        errorHandler.sourceReadingError(path, Msg.ENTRY_SOURCE_NOT_DEFINED)
+        msgHandler.sourceReadingError(path, Msg.ENTRY_SOURCE_NOT_DEFINED)
         return null
     }
 
@@ -192,24 +192,24 @@ fun Program.modules(block: ModuleManager.() -> Unit): MutableMap<String, Module>
 }
 
 fun Program.printErrors() {
-    errorHandler.printAll()
+    msgHandler.printAll()
 }
 
 fun ModuleManager.root(
     path: String = "",
-    callback: ModuleCallback = {m,ts -> }
+    callback: ModuleCallback = { _, _ -> }
 ) =
     addFromRoot(path, callback)
 
 fun ModuleManager.file(
     path: String,
-    callback: ModuleCallback = {m,ts -> }
+    callback: ModuleCallback = { _, _ -> }
 ) =
     addFromFile(path, callback)
 
 fun ModuleManager.entry(
     path: String,
-    callback: ModuleCallback = {m,ts -> }
+    callback: ModuleCallback = { _, _ -> }
 ) {
     val module = addFromFile(path, callback)
     this.entryModule = module

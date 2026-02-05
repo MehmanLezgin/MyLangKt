@@ -1,6 +1,6 @@
 package lang.tokens
 
-import lang.messages.ErrorHandler
+import lang.messages.MsgHandler
 import lang.core.ILangSpec
 import lang.core.SourceCode
 import lang.lexer.ILexer
@@ -10,10 +10,10 @@ class TokenStream(
     private val lexer: ILexer,
     private val src: SourceCode,
     private val langSpec: ILangSpec,
-    errorHandler: ErrorHandler
+    msgHandler: MsgHandler
 ) : BaseTokenStream(
     lexer = lexer,
-    errorHandler = errorHandler
+    msgHandler = msgHandler
 ) {
     private var tokens: MutableList<Token> = mutableListOf()
     private var index: Int = 0

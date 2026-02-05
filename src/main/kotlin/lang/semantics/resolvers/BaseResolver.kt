@@ -1,6 +1,6 @@
 package lang.semantics.resolvers
 
-import lang.messages.ErrorHandler
+import lang.messages.MsgHandler
 import lang.messages.Msg
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
@@ -18,8 +18,8 @@ abstract class BaseResolver<T, TResult>(
     internal val scope: Scope
         get() = analyzer.scope
 
-    internal val errorHandler: ErrorHandler
-        get() = analyzer.errorHandler
+    internal val msgHandler: MsgHandler
+        get() = analyzer.msgHandler
 
     abstract fun resolve(target: T): TResult
 
@@ -56,7 +56,7 @@ abstract class BaseResolver<T, TResult>(
     internal fun ExprNode.error(msg: String) = semanticError(msg, pos)
 
     internal fun semanticError(msg: String, pos: Pos?): ErrorType {
-        analyzer.errorHandler.semanticError(msg, pos)
+        analyzer.msgHandler.semanticError(msg, pos)
         return ErrorType
     }
 

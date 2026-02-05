@@ -1,13 +1,12 @@
 package lang.tokens
 
-import lang.core.SourceCode
-import lang.messages.ErrorHandler
+import lang.messages.MsgHandler
 import lang.lexer.ILexer
 import kotlin.reflect.KClass
 
 open class BaseTokenStream(
     private val lexer: ILexer,
-    private val errorHandler: ErrorHandler
+    private val msgHandler: MsgHandler
 ) : ITokenStream {
     private val curToken: Token
         get() = peek()
@@ -39,7 +38,7 @@ open class BaseTokenStream(
         if (clazz.isInstance(t)) {
             return true
         }
-        errorHandler.syntaxError(msg = msg, t.pos)
+        msgHandler.syntaxError(msg = msg, t.pos)
         return false
     }
 
@@ -50,7 +49,7 @@ open class BaseTokenStream(
             return true
         }
 
-        errorHandler.syntaxError(msg = msg, t.pos)
+        msgHandler.syntaxError(msg = msg, t.pos)
         return false
     }
 
@@ -60,7 +59,7 @@ open class BaseTokenStream(
         if (t is Token.Keyword && t.type == type)
             return true
 
-        errorHandler.syntaxError(msg = msg, t.pos)
+        msgHandler.syntaxError(msg = msg, t.pos)
         return false
     }
 
@@ -102,7 +101,7 @@ open class BaseTokenStream(
             else -> {}
         }
 
-        errorHandler.syntaxError(msg = msg, t.pos)
+        msgHandler.syntaxError(msg = msg, t.pos)
         return false
     }
 

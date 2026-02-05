@@ -2,22 +2,32 @@ package lang.messages
 
 import lang.tokens.Pos
 
-class ErrorMsg(
+data class Message(
     val stage: CompileStage,
-    val message: String,
+    val type: MessageType = MessageType.INFO,
+    val msg: String,
     val pos: Pos? = null
 ) {
     override fun toString(): String {
-        return "${stageToString()}: $message at $pos"
+        if (type == MessageType.INFO)
+            return "${stageToErrorString()}: $msg at $pos"
+
+        return "$stage: (${type.value}) $msg at $pos"
     }
 
-    fun stageToString(): String {
+    fun stageToErrorString(): String {
         return when (stage) {
             CompileStage.LEXICAL_ANALYSIS -> "Lexical error"
             CompileStage.SYNTAX_ANALYSIS -> "Syntax error"
             CompileStage.SEMANTIC_ANALYSIS -> "Semantic error"
             else -> "IO error"
         }
+    }
+
+    private val msgColor = when (type) {
+        MessageType.INFO -> AnsiColors.INFO
+        MessageType.ERROR -> AnsiColors.ERROR
+        MessageType.WARNING -> AnsiColors.WARNING
     }
 
     fun format(): String {
@@ -41,18 +51,18 @@ class ErrorMsg(
                         .append('\n')
                         .append(" ".repeat(pos.col - 1 + pointerOffset))
 
-                    append(AnsiColors.color("^^^", AnsiColors.ERROR)).append('\n')
-                        .append(src?.file?.absoluteFile ?: "src")
+                    append(AnsiColors.color("^^^", msgColor)).append('\n')
+                        .append(src.file?.absoluteFile ?: "src")
                         .append(" (")
                         .append(pos)
                         .append("): ")
                 }
             }
 
-            append(AnsiColors.ERROR)
-                .append(stageToString())
+            append(msgColor)
+                .append(stageToErrorString())
                 .append(": ")
-                .append(AnsiColors.color(message, AnsiColors.ERROR, null, true))
+                .append(AnsiColors.color(msg, msgColor, null, true))
                 .append(AnsiColors.RESET)
                 .append('\n')
 

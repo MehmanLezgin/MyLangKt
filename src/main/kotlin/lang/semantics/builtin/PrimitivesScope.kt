@@ -1,6 +1,6 @@
 package lang.semantics.builtin
 
-import lang.messages.ErrorHandler
+import lang.messages.MsgHandler
 import lang.semantics.builtin.modules.mathModule
 import lang.semantics.builtin.types.*
 import lang.semantics.scopes.Scope
@@ -91,13 +91,13 @@ object PrimitivesScope : Scope(
 
 
     init {
-        val errorHandler = ErrorHandler()
+        val msgHandler = MsgHandler()
 
         primitives(allPrimitives)
 
         mathModule()
 
-        if (errorHandler.hasErrors)
-            println(errorHandler.formatErrors())
+        if (msgHandler.hasErrors)
+            println(msgHandler.formatErrors())
     }
 }

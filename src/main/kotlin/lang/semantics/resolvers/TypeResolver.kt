@@ -2,7 +2,6 @@ package lang.semantics.resolvers
 
 import lang.messages.Msg
 import lang.messages.Terms
-import lang.messages.Terms.ordinal
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
@@ -599,6 +598,7 @@ class TypeResolver(
         )
     }
 
+/*
     private fun resolveTemplateArgs(typeNames: List<ExprNode>?): List<TemplateArg> {
         if (typeNames == null) return emptyList()
 
@@ -621,6 +621,7 @@ class TypeResolver(
             return@map TemplateArg.ArgType(type = type)
         }
     }
+*/
 
 
     /*private fun resolve(target: UserTypeSymbol): Type {
@@ -629,9 +630,11 @@ class TypeResolver(
         }
     }*/
 
+/*
     private fun resolve(target: UnaryOpNode): Type {
         return ErrorType
     }
+*/
 
     private fun resolve(target: LiteralNode<*>): Type {
         val type = when (target) {
@@ -711,6 +714,8 @@ class TypeResolver(
         }
     }
 
+/*
     fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Type) =
         this.handle(null, onSuccess)
+*/
 }
