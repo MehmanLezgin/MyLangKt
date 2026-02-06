@@ -11,7 +11,9 @@ import lang.parser.ParserUtils.isKeyword
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.isOperator
 import lang.parser.ParserUtils.isSimpleUnaryOp
+import lang.parser.ParserUtils.range
 import lang.parser.ParserUtils.toIdentifierNode
+import lang.parser.ParserUtils.tryConvertToDatatype
 import lang.tokens.*
 
 class ExprParser(
@@ -93,7 +95,7 @@ class ExprParser(
         blockToLambda(rawBlock = parser.parseBlock())
 
 
-    private fun parseDotChain(startChain: ExprNode): ExprNode {
+    private fun parseDotChain(startChain: ExprNode, ctx: ParsingContext): ExprNode {
         return ts.captureRange {
             var chain: ExprNode = startChain
 
@@ -126,7 +128,7 @@ class ExprParser(
                     }
                 }
 
-                chain = parsePostfixExpr(ParsingContext.Default, chain)
+                chain = parsePostfixExpr(ctx = ctx, chain)
             }
 
             chain
@@ -140,7 +142,7 @@ class ExprParser(
             is Token.Identifier -> {
                 ts.next()
                 val id = IdentifierNode(value = t.value, range = t.range)
-                parseDotChain(startChain = id)
+                parseDotChain(startChain = id, ctx = ctx)
             }
 
             is Token.Int32 -> {
@@ -198,7 +200,7 @@ class ExprParser(
 
 
                 if (ts.peek() isOperator OperatorType.DOT)
-                    parseDotChain(startChain = expr)
+                    parseDotChain(startChain = expr, ctx = ctx)
                 else expr
             }
 
@@ -402,7 +404,7 @@ class ExprParser(
         }
     }
 
-    override fun parseTypenameList(): List<ExprNode>? {
+    override fun parseTypenameList(): TypeNameListNode? {
         // require '<'
         if (ts.peek() isNotOperator OperatorType.LESS) {
             syntaxError(Msg.EXPECTED_LESS_OP, ts.range)
@@ -420,22 +422,110 @@ class ExprParser(
             return null
 
         // step inside of <...>
-        ts.next()
-
-        // handling empty '<>'
-        if (ts.peek() isOperator OperatorType.GREATER) {
+        val list = ts.captureRange {
             ts.next()
-            return emptyList()
+
+            // handling empty '<>'
+            if (ts.peek() isOperator OperatorType.GREATER) {
+                ts.next()
+                return@captureRange emptyList()
+            }
+
+            val list = parseBinaryExpr(1, closeToken, ParsingContext.TypeArg)
+                .flattenCommaNode()
+
+            if (ts.peek() isOperator OperatorType.GREATER)
+                ts.next()
+            else
+                syntaxError(Msg.EXPECTED_GREATER_OP, ts.range)
+
+            list
         }
 
-        val list = parseBinaryExpr(1, closeToken, ParsingContext.TypeArg).flattenCommaNode()
+        return analiseTemplateList(list)
+    }
 
-        if (ts.peek() isOperator OperatorType.GREATER)
-            ts.next()
-        else
-            syntaxError(Msg.EXPECTED_GREATER_OP, ts.range)
+    override fun analiseTemplateList(exprList: List<ExprNode>?): TypeNameListNode? {
+        if (exprList.isNullOrEmpty())
+            return null
 
-        return list
+        val params: MutableList<TypeNameNode> = mutableListOf()
+
+        exprList.forEach { expr ->
+            val typeName: TypeNameNode? = when (expr) {
+                is IdentifierNode -> {
+                    TypeNameNode(
+                        name = expr,
+                        bound = null,
+                        range = expr.range
+                    )
+                }
+
+                is BinOpNode -> {
+                    if (expr.operator == BinOpType.COLON) {
+
+                        val identifier =
+                            if (expr.left is IdentifierNode) expr.left as IdentifierNode
+                            else {
+                                syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
+                                return@forEach
+                            }
+
+                        val datatype = analiseAsDatatype(expr.right, allowAsExpression = false)
+
+                        if (datatype is DatatypeNode)
+                            TypeNameNode(
+                                name = identifier,
+                                bound = datatype,
+                                range = expr.range
+                            )
+                        else null
+                    } else {
+                        syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.left.range)
+                        null
+                    }
+                }
+
+                else -> {
+                    syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
+                    null
+                }
+            }
+
+            if (typeName != null)
+                params.add(typeName)
+        }
+
+        return TypeNameListNode(
+            params = params,
+            range = exprList.range(defaultEmpty = SourceRange())
+        )
+    }
+
+    override fun analiseAsDatatype(
+        expr: ExprNode,
+        allowAsExpression: Boolean
+    ): ExprNode? {
+        val datatype = expr.tryConvertToDatatype()
+
+        if (datatype == null) {
+            if (allowAsExpression) return expr
+
+            syntaxError(Msg.EXPECTED_TYPE_NAME, expr.range)
+            return null
+        }
+
+        if (datatype !is DatatypeNode) return datatype
+
+        var successful = true
+
+        datatype.typeNames?.params?.forEach { typeName ->
+            successful = successful && analiseAsDatatype(typeName.name, true) != null
+            if (typeName.bound != null)
+                successful = successful && analiseAsDatatype(typeName.bound, true) != null
+        }
+
+        return if (successful) datatype else null
     }
 
     private fun parseOperator(): OperNode {
@@ -635,7 +725,7 @@ class ExprParser(
             } else startIdentifier
 
 
-            var typeNames: List<ExprNode>? = null
+            var typeNames: TypeNameListNode? = null
 
 
             if (ts.matchOperator(OperatorType.SCOPE)) {
@@ -651,11 +741,6 @@ class ExprParser(
 
             if (ts.matchOperator(OperatorType.LESS)) {
                 typeNames = parseTypenameList()
-
-                if (typeNames == null) {
-                    syntaxError(Msg.EXPECTED_TYPE_NAME, range)
-                    return@captureRange ErrorDatatypeNode(range)
-                }
             }
 
             return@captureRange DatatypeNode(

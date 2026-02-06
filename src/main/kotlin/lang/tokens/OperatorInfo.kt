@@ -3,6 +3,7 @@ package lang.tokens
 enum class OperatorType(val symbol: String) {
     UNKNOWN("?"),
 
+    INFIX("\$infix"),
     INCREMENT("++"),
     DECREMENT("--"),
     NON_NULL_ASSERT("!!"),

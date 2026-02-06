@@ -17,8 +17,8 @@ import kotlin.reflect.KClass
 
 class DeclarationResolver(
     override val analyzer: ISemanticAnalyzer
-) : BaseResolver<DeclStmtNode, Unit>(analyzer = analyzer) {
-    override fun resolve(target: DeclStmtNode) {
+) : BaseResolver<DeclStmtNode<*>, Unit>(analyzer = analyzer) {
+    override fun resolve(target: DeclStmtNode<*>) {
         when (target) {
             is VarDeclStmtNode -> resolve(target)
             is ConstructorDeclStmtNode -> resolve(target)

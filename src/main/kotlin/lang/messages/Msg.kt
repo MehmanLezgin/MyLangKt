@@ -8,6 +8,11 @@ object Msg {
     const val INVALID_CONST_VALUE = "Invalid const value"
     const val CANNOT_EXPORT = "Cannot export"
 
+    object X_CANNOT_HAVE_Y : FormattableMsg {
+        fun format(x: String, y: String) =
+            "$x cannot have $y"
+    }
+
     object CANNOT_FIND_DECLARATION_OF_SYM : FormattableMsg {
         fun format(name: String) =
             "Cannot find declaration of '$name'"

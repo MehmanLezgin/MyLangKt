@@ -12,6 +12,10 @@ object LangSpec : ILangSpec {
         KeywordInfo(type = type)
     }
 
+    val InfixOperator by lazy {
+        operators.find { it.type == OperatorType.INFIX }!!
+    }
+
     private val operatorsRaw = arrayOf(
         arrayOf(
             OperatorInfo(OperatorType.SIZEOF),
@@ -54,6 +58,9 @@ object LangSpec : ILangSpec {
         ),
         arrayOf(
             OperatorInfo(OperatorType.BIN_OR),
+        ),
+        arrayOf(
+            OperatorInfo(OperatorType.INFIX)
         ),
         arrayOf(
             OperatorInfo(OperatorType.LESS),

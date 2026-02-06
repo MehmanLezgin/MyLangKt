@@ -41,7 +41,7 @@ class TokenStream(
     }
 
     override fun prev() =
-        if (index > 0) tokens[index - 1]
+        if (index > 0 && index < tokens.size) tokens[index - 1]
         else eof
 
     override fun peek() = atIndex(index)
@@ -101,6 +101,7 @@ class TokenStream(
 
     override fun splitOperators(mapTag: OperatorType) {
         save()
+        0..1 step 1
         val map = OperatorMaps.superMap[mapTag] ?: return
 
         while (true) {

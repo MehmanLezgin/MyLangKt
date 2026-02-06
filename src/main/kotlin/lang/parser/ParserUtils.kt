@@ -1,5 +1,6 @@
 package lang.parser
 
+import lang.core.SourceRange
 import lang.mappers.BinOpTypeMapper
 import lang.mappers.UnaryOpTypeMapper
 import lang.tokens.KeywordType
@@ -105,5 +106,11 @@ object ParserUtils {
 
     fun OperatorType.isSimpleUnaryOp() = this in simpleUnaryOps
 
-
+    fun <T: ExprNode> List<T>.range(defaultEmpty: SourceRange) : SourceRange {
+        return when (size) {
+            0 -> defaultEmpty
+            1 -> get(0).range
+            else -> get(0).range untilEndOf get(1).range
+        }
+    }
 }

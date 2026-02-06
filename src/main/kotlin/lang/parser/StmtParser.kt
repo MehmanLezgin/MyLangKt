@@ -7,6 +7,8 @@ import lang.tokens.OperatorType
 import lang.tokens.ITokenStream
 import lang.tokens.Token
 import lang.mappers.ModifierMapper
+import lang.messages.Terms
+import lang.messages.Terms.plural
 import lang.nodes.AutoDatatypeNode
 import lang.nodes.BaseDatatypeNode
 import lang.nodes.BinOpNode
@@ -20,6 +22,7 @@ import lang.nodes.DatatypeNode
 import lang.nodes.DeclStmtNode
 import lang.nodes.DestructorDeclStmtNode
 import lang.nodes.DoWhileStmtNode
+import lang.nodes.DotAccessNode
 import lang.nodes.ElseEntryNode
 import lang.nodes.EnumDeclStmtNode
 import lang.nodes.ExprNode
@@ -36,6 +39,7 @@ import lang.nodes.ModifierNode
 import lang.nodes.ModifierSetNode
 import lang.nodes.NamespaceStmtNode
 import lang.nodes.ReturnStmtNode
+import lang.nodes.ScopedDatatypeNode
 import lang.nodes.TryCatchStmtNode
 import lang.nodes.TypeNameListNode
 import lang.nodes.TypeNameNode
@@ -46,6 +50,7 @@ import lang.nodes.VoidNode
 import lang.nodes.WhileStmtNode
 import lang.parser.ParserUtils.isKeyword
 import lang.parser.ParserUtils.isNotOperator
+import lang.parser.ParserUtils.range
 import lang.parser.ParserUtils.toDatatype
 import lang.parser.ParserUtils.toIdentifierNode
 import lang.parser.ParserUtils.tryConvertToDatatype
@@ -152,7 +157,7 @@ class StmtParser(
             }
 
             ts.next()
-            val datatypeNode = analiseAsDatatype(
+            val datatypeNode = parser.analiseAsDatatype(
                 expr = parser.parseExpr(ctx = ParsingContext.TypeArg),
                 allowAsExpression = false
             ) as? BaseDatatypeNode? ?: return@captureRange null
@@ -372,63 +377,6 @@ class StmtParser(
         return datatypes
     }
 
-    private fun analiseTemplateList(exprList: List<ExprNode>?): TypeNameListNode? {
-        if (exprList.isNullOrEmpty())
-            return null
-
-        val params: MutableList<TypeNameNode> = mutableListOf()
-
-        exprList.forEach { expr ->
-            val typeName: TypeNameNode? = when (expr) {
-                is IdentifierNode -> {
-                    TypeNameNode(
-                        name = expr,
-                        bound = null,
-                        range = expr.range
-                    )
-                }
-
-                is BinOpNode -> {
-                    if (expr.operator == BinOpType.COLON) {
-
-                        val identifier =
-                            if (expr.left is IdentifierNode) expr.left as IdentifierNode
-                            else {
-                                syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
-                                return@forEach
-                            }
-
-                        val datatype = analiseAsDatatype(expr.right, allowAsExpression = false)
-
-                        if (datatype is DatatypeNode)
-                            TypeNameNode(
-                                name = identifier,
-                                bound = datatype,
-                                range = expr.range
-                            )
-                        else null
-                    } else {
-                        syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.left.range)
-                        null
-                    }
-                }
-
-                else -> {
-                    syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
-                    null
-                }
-            }
-
-            if (typeName != null)
-                params.add(typeName)
-        }
-
-        return TypeNameListNode(
-            params = params,
-            range = exprList.firstOrNull()?.range ?: SourceRange()
-        )
-    }
-
     private fun buildVarDeclHeader(
         header: ExprNode,
         range: SourceRange = header.range,
@@ -441,9 +389,30 @@ class StmtParser(
         analiseHeader(
             header = header,
             errorMsg = Msg.EXPECTED_VAR_DECL,
-            handleName = { name = it },
-            handleTypeNames = { },
-            handleParams = { },
+            handleName = {
+                if (it !is IdentifierNode) {
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, it.range)
+                    return@analiseHeader
+                }
+
+                name = it
+            },
+            handleTypeNames = {
+                if (it == null) return@analiseHeader
+                syntaxError(
+                    Msg.X_CANNOT_HAVE_Y
+                        .format(Terms.VARIABLE, Terms.TYPE_NAME.plural(it.params.size)),
+                    it.range
+                )
+            },
+            handleParams = {
+                if (it == null) return@analiseHeader
+                syntaxError(
+                    Msg.X_CANNOT_HAVE_Y
+                        .format(Terms.VARIABLE, Terms.PARAM.plural(it.size)),
+                    it.range(header.range)
+                )
+            },
             handleSuperType = { dataType = it },
             handleInitializer = {
                 initializer = if (it is VoidNode) null else it
@@ -466,7 +435,7 @@ class StmtParser(
         body: BlockNode?,
         range: SourceRange
     ): FuncDeclStmtNode? {
-        var name: IdentifierNode? = null
+        var name: ExprNode? = null
         var params: List<VarDeclStmtNode>? = null
         var returnType: BaseDatatypeNode? = null
         var initializerBody: ExprNode? = null
@@ -474,7 +443,9 @@ class StmtParser(
         analiseHeader(
             header = header,
             errorMsg = Msg.EXPECTED_FUNC_DECL,
-            handleName = { name = it },
+            handleName = {
+                name = it
+            },
             handleTypeNames = {
                 if (it != null)
                     syntaxError(Msg.TYPE_NAMES_MUST_BE_PLACES_BEFORE_FUNC_NAME, it.range)
@@ -516,7 +487,14 @@ class StmtParser(
         analiseHeader(
             header = header,
             errorMsg = Msg.EXPECTED_CLASS_DECL,
-            handleName = { name = it },
+            handleName = {
+                if (it !is IdentifierNode) {
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, it.range)
+                    return@analiseHeader
+                }
+
+                name = it
+            },
             handleTypeNames = { typeNames = it },
             handleParams = { primaryConstrParams = it },
             handleSuperType = { superClass = it },
@@ -547,7 +525,14 @@ class StmtParser(
         analiseHeader(
             header = header,
             errorMsg = Msg.EXPECTED_INTERFACE_DECL,
-            handleName = { name = it },
+            handleName = {
+                if (it !is IdentifierNode) {
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, it.range)
+                    return@analiseHeader
+                }
+
+                name = it
+            },
             handleTypeNames = { typeNames = it },
             handleParams = {
                 syntaxError(Msg.INTERFACES_CANNOT_HAVE_CONSTRUCTORS, header.range)
@@ -570,14 +555,14 @@ class StmtParser(
     private fun analiseHeader(
         header: ExprNode,
         errorMsg: String,
-        handleName: (IdentifierNode) -> Unit,
+        handleName: (ExprNode) -> Unit,
         handleTypeNames: (TypeNameListNode?) -> Unit,
         handleParams: (List<VarDeclStmtNode>?) -> Unit,
         handleSuperType: (BaseDatatypeNode?) -> Unit,
         handleInitializer: (ExprNode?) -> Unit
     ) {
-        fun analiseSuperClass(expr: ExprNode) {
-            handleSuperType(analiseAsDatatype(expr) as BaseDatatypeNode?)
+        fun analiseSuperType(expr: ExprNode) {
+            handleSuperType(parser.analiseAsDatatype(expr) as BaseDatatypeNode?)
         }
 
         fun handleNameAndParams(expr: ExprNode) {
@@ -593,11 +578,19 @@ class StmtParser(
         when (header) {
             is IdentifierNode -> {
                 // only name: func fn {}
-                analiseNameNode(header, errorMsg, handleName)
+                analiseNameNode(header, errorMsg, handleName, handleTypeNames)
             }
 
             is DatatypeNode -> {
                 handleNameAndParams(header)
+            }
+
+            is ScopedDatatypeNode -> {
+                handleName(header)
+            }
+
+            is DotAccessNode -> {
+                handleName(header)
             }
 
             is FuncCallNode -> {
@@ -627,7 +620,7 @@ class StmtParser(
 
                     BinOpType.COLON -> {
                         handleNameAndParams(header.left)
-                        analiseSuperClass(header.right)
+                        analiseSuperType(header.right)
                     }
 
                     else -> {
@@ -660,7 +653,7 @@ class StmtParser(
             ts.next()
 
             val typeNames = if (ts.matchOperator(OperatorType.LESS))
-                analiseTemplateList(parser.parseTypenameList()) else null
+                parser.parseTypenameList() else null
 
             val header = parser.parseExpr(ctx = ParsingContext.FuncHeader)
 
@@ -764,41 +757,28 @@ class StmtParser(
         }
     }
 
-    private fun analiseAsDatatype(
-        expr: ExprNode,
-        allowAsExpression: Boolean = false
-    ): ExprNode? {
-        val datatype = expr.tryConvertToDatatype()
-
-        if (datatype == null) {
-            if (allowAsExpression) return expr
-
-            syntaxError(Msg.EXPECTED_TYPE_NAME, expr.range)
-            return null
-        }
-
-        if (datatype !is DatatypeNode) return datatype
-
-        var successful = true
-
-        datatype.typeNames?.forEach { typeName ->
-            successful = successful && analiseAsDatatype(typeName, true) != null
-        }
-
-        return if (successful) datatype else null
-    }
-
     private fun analiseNameNode(
         expr: ExprNode,
         msg: String,
-        handleName: (IdentifierNode) -> Unit
+        handleName: (ExprNode) -> Unit,
+        handleTypeNames: (TypeNameListNode?) -> Unit
     ) {
-        if (expr !is IdentifierNode) {
-            syntaxError(msg, expr.range)
-            return
-        }
+        when (expr) {
+            is IdentifierNode -> {
+                handleName(expr)
+            }
 
-        handleName(expr)
+            is ScopedDatatypeNode -> {
+                handleName(expr)
+                handleTypeNames(expr.member.typeNames)
+            }
+
+            is DotAccessNode -> {
+                handleName(expr)
+            }
+
+            else -> syntaxError(msg, expr.range)
+        }
     }
 
     private fun analiseParams(
@@ -822,24 +802,24 @@ class StmtParser(
     private fun analiseNameAndParams(
         expr: ExprNode,
         msg: String,
-        handleName: (IdentifierNode) -> Unit,
+        handleName: (ExprNode) -> Unit,
         handleTypeNames: (TypeNameListNode?) -> Unit,
         handleParams: (List<VarDeclStmtNode>?) -> Unit
     ) {
         when (expr) {
             is IdentifierNode -> {
-                analiseNameNode(expr, msg, handleName)
+                handleName(expr)
             }
 
             is FuncCallNode -> {
-                analiseNameNode(expr.receiver, msg, handleName)
-                handleTypeNames(analiseTemplateList(expr.typeNames))
+                analiseNameNode(expr.receiver, msg, handleName, handleTypeNames)
+                handleTypeNames(expr.typeNames)
                 analiseParams(expr.args, handleParams)
             }
 
             is DatatypeNode -> {
-                analiseNameNode(expr.identifier, msg, handleName)
-                handleTypeNames(analiseTemplateList(expr.typeNames))
+                handleName(expr.identifier)
+                handleTypeNames(expr.typeNames)
             }
 
             else -> {
@@ -852,14 +832,14 @@ class StmtParser(
 
     private fun parseBreakStmt() = BreakStmtNode(range = ts.next().range)
 
-    private fun parseDeclarationWithModifiers(): DeclStmtNode? {
+    private fun parseDeclarationWithModifiers(): DeclStmtNode<*>? {
         val modifiers = parseModifiers()
         val range = ts.range
 
         val stmt = parse()
 
         val stmtWithMod = when {
-            stmt is DeclStmtNode -> {
+            stmt is DeclStmtNode<*> -> {
                 stmt.modifiers = modifiers
                 stmt
             }
@@ -1067,7 +1047,6 @@ class StmtParser(
             )
         }
     }
-
 
     private fun syntaxError(msg: String, range: SourceRange) =
         parser.syntaxError(msg = msg, range = range)

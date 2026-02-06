@@ -108,17 +108,39 @@ open class UnaryOpNode(
     }
 }
 
-data class FuncCallNode(
-    val receiver: ExprNode,
-    val args: List<ExprNode>,
-    val typeNames: List<ExprNode>?,
+open class FuncCallNode(
+    open val receiver: ExprNode,
+    open val args: List<ExprNode>,
+    open val typeNames: TypeNameListNode?,
     override val range: SourceRange
 ) : ExprNode {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = FuncCallNode(
+            receiver = receiver.mapRecursive(mapper),
+            args = args.map { it.mapRecursive(mapper) },
+            typeNames = typeNames?.mapRecursive(mapper) as? TypeNameListNode ?: typeNames,
+            range = range
+        )
+        return mapper(newNode)
+    }
+}
+
+data class InfixFuncCallNode(
+    override val receiver: ExprNode,
+    override val args: List<ExprNode>,
+    override val typeNames: TypeNameListNode?,
+    override val range: SourceRange
+) : FuncCallNode(
+    receiver = receiver,
+    args = args,
+    typeNames = typeNames,
+    range = range
+) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(
             receiver = receiver.mapRecursive(mapper),
             args = args.map { it.mapRecursive(mapper) },
-            typeNames = typeNames?.map { it.mapRecursive(mapper) }
+            typeNames = typeNames?.mapRecursive(mapper) as? TypeNameListNode ?: typeNames,
         )
         return mapper(newNode)
     }

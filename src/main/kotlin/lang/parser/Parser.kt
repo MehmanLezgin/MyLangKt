@@ -3,15 +3,18 @@ package lang.parser
 import lang.core.LangSpec.moduleNameSeparator
 import lang.core.SourceRange
 import lang.messages.CompileStage
-import lang.messages.MsgHandler
 import lang.messages.Msg
+import lang.messages.MsgHandler
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
 import lang.nodes.ModuleNode
 import lang.parser.ParserUtils.isNotKeyword
 import lang.parser.ParserUtils.isOperator
 import lang.parser.ParserUtils.toIdentifierNode
-import lang.tokens.*
+import lang.tokens.ITokenStream
+import lang.tokens.KeywordType
+import lang.tokens.OperatorType
+import lang.tokens.Token
 
 class Parser(
     val ts: ITokenStream,
@@ -50,6 +53,12 @@ class Parser(
     override fun analiseParams(exprList: List<ExprNode>) = stmtParser.analiseParams(exprList)
     override fun analiseDatatypeList(exprList: List<ExprNode>?) = stmtParser.analiseDatatypeList(exprList)
     override fun parseBlock() = stmtParser.parseBlock()
+    override fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean) =
+        exprParser.analiseAsDatatype(expr, allowAsExpression)
+
+    override fun analiseTemplateList(exprList: List<ExprNode>?) =
+        exprParser.analiseTemplateList(exprList)
+
 
     override fun parseModuleName(withModuleKeyword: Boolean): IdentifierNode? {
         if (withModuleKeyword && ts.peek() isNotKeyword KeywordType.MODULE)

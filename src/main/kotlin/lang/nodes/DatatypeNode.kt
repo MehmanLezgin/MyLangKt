@@ -4,7 +4,7 @@ import lang.core.SourceRange
 
 abstract class BaseDatatypeNode : ExprNode {
     override val range: SourceRange = SourceRange()
-    
+
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
         mapper(this)
 }
@@ -25,7 +25,7 @@ data class ScopedDatatypeNode(
 
 data class DatatypeNode(
     val identifier: IdentifierNode,
-    val typeNames: List<ExprNode>? = null,
+    val typeNames: TypeNameListNode? = null,
     val isConst: Boolean = false,
     var isReference: Boolean = false,
     var ptrLvl: Int = 0,
@@ -44,9 +44,7 @@ data class DatatypeNode(
         val newNode = this.copy(
             identifier = identifier.mapRecursive(mapper) as? IdentifierNode
                 ?: identifier,
-            typeNames = typeNames?.map {
-                it.mapRecursive(mapper)
-            }
+            typeNames = typeNames?.mapRecursive(mapper) as? TypeNameListNode ?: typeNames
         )
         return mapper(newNode)
     }

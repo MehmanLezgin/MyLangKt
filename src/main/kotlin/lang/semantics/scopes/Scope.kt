@@ -226,21 +226,24 @@ open class Scope(
             modifiers = modifiers
         )
         else {
+            val name = if (node.name is IdentifierNode)
+                (node.name as IdentifierNode).value else node.name.toString()
+
             when (node) {
                 is ConstructorDeclStmtNode -> ConstructorSymbol(
-                    name = name.value,
+                    name = name,
                     params = params,
                     returnType = returnType,
                     modifiers = modifiers
                 )
 
                 is DestructorDeclStmtNode -> DestructorSymbol(
-                    name = name.value,
+                    name = name,
                     returnType = returnType
                 )
 
                 else -> FuncSymbol(
-                    name = name.value,
+                    name = name,
                     params = params,
                     returnType = returnType,
                     modifiers = modifiers
