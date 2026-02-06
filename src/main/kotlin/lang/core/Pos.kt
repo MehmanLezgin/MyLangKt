@@ -8,5 +8,11 @@ data class Pos(
     override fun toString(): String {
         return "$line:$col"
     }
+
+    operator fun compareTo(other: Pos): Int =
+        when {
+            line != other.line -> line - other.line
+            else -> col - other.col
+        }
 }
 

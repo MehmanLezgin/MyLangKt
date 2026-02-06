@@ -45,31 +45,33 @@ data class Message(
                 }
 
                 append("\n\n ")
-                    .append(posStr)
-                    .append(separatorStr)
+                append(posStr)
+                append(separatorStr)
 
                 if (src != null) {
                     append(AnsiColors.CYAN)
-                        .append(lineText)
-                        .append('\n')
-                        .append(" ".repeat(start.col + pointerOffset))
+                    append(lineText)
+                    append('\n')
+                    append(" ".repeat(start.col + pointerOffset))
 
-                    if (pointerLength > 0)
-                        append(AnsiColors.color("^".repeat(pointerLength), msgColor)).append('\n')
+                    if (pointerLength > 0) {
+                        append(AnsiColors.color("^".repeat(pointerLength), msgColor))
+                        append('\n')
+                    }
 
                     append(src.path)
-                        .append(" (")
-                        .append(start)
-                        .append("): ")
+                    append(" (")
+                    append(start)
+                    append("): ")
                 }
             }
 
             append(msgColor)
-                .append(stageToErrorString())
-                .append(": ")
-                .append(AnsiColors.color(msg, msgColor, null, true))
-                .append(AnsiColors.RESET)
-                .append('\n')
+            append(stageToErrorString())
+            append(": ")
+            append(AnsiColors.color(msg, msgColor, null, true))
+            append(AnsiColors.RESET)
+            append('\n')
 
         }
     }

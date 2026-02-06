@@ -1,11 +1,14 @@
 package lang.tokens
 
+import lang.core.RangeBuilder
 import lang.core.SourceRange
 import lang.messages.Msg
 import kotlin.reflect.KClass
 
 interface ITokenStream {
     val range: SourceRange
+    val prevRange: SourceRange
+
     fun reset()
     fun save()
     fun restore()
@@ -28,4 +31,6 @@ interface ITokenStream {
     fun matchOperator(vararg types: OperatorType): Boolean
     fun splitOperators(mapTag: OperatorType)
     fun getTokens(): List<Token>
+    fun <T> captureRangeToCur(block: RangeBuilder.() -> T): T
+    fun <T> captureRange(block: RangeBuilder.() -> T): T
 }

@@ -138,29 +138,31 @@ class StmtParser(
     }
 
     private fun parseTypedefStmt(): TypedefStmtNode? {
-        val range = ts.next().range
+        return ts.captureRange {
+            ts.next()
 
-        if (!ts.expect(Token.Identifier::class, Msg.EXPECTED_IDENTIFIER))
-            return null
+            if (!ts.expect(Token.Identifier::class, Msg.EXPECTED_IDENTIFIER))
+                return@captureRange null
 
-        val identifier = (ts.next() as Token.Identifier).toIdentifierNode()
+            val identifier = (ts.next() as Token.Identifier).toIdentifierNode()
 
-        if (ts.peek() isNotOperator OperatorType.ASSIGN) {
-            syntaxError(Msg.EXPECTED_ASSIGN, ts.range)
-            return null
+            if (ts.peek() isNotOperator OperatorType.ASSIGN) {
+                syntaxError(Msg.EXPECTED_ASSIGN, ts.range)
+                return@captureRange null
+            }
+
+            ts.next()
+            val datatypeNode = analiseAsDatatype(
+                expr = parser.parseExpr(ctx = ParsingContext.TypeArg),
+                allowAsExpression = false
+            ) as? BaseDatatypeNode? ?: return@captureRange null
+
+            TypedefStmtNode(
+                name = identifier,
+                dataType = datatypeNode,
+                range = resultRange
+            )
         }
-
-        ts.next()
-        val datatypeNode = analiseAsDatatype(
-            expr = parser.parseExpr(ctx = ParsingContext.TypeArg),
-            allowAsExpression = false
-        ) as? BaseDatatypeNode? ?: return null
-
-        return TypedefStmtNode(
-            name = identifier,
-            dataType = datatypeNode,
-            range = range
-        )
     }
 
     override fun parseBlock(): BlockNode {
@@ -172,18 +174,19 @@ class StmtParser(
         val list = mutableListOf<ExprNode>()
 
         return if (isMultilineBody) {
-            val range = ts.range
-            ts.next()
-
-            while (!ts.match(Token.RBrace::class, Token.EOF::class)) {
-                list.add(parse())
-                ts.skipTokens(Token.Semicolon::class)
-            }
-
-            if (ts.expect(Token.RBrace::class, Msg.EXPECTED_RBRACE))
+            ts.captureRange {
                 ts.next()
 
-            BlockNode(nodes = list, range = range)
+                while (!ts.match(Token.RBrace::class, Token.EOF::class)) {
+                    list.add(parse())
+                    ts.skipTokens(Token.Semicolon::class)
+                }
+
+                if (ts.expect(Token.RBrace::class, Msg.EXPECTED_RBRACE))
+                    ts.next()
+
+                BlockNode(nodes = list, range = resultRange)
+            }
         } else {
             val expr = parse(isSingleLine = true).wrapToBody()
             ts.skipTokens(Token.Semicolon::class)
@@ -192,143 +195,156 @@ class StmtParser(
     }
 
     private fun parseTryCatchStmt(): TryCatchStmtNode {
-        val range = ts.next().range
-        val tryBody = parseBlock()
-
-        var catchParam: ExprNode? = null
-        var catchBody: BlockNode? = null
-        var finallyBody: BlockNode? = null
-
-        if (ts.peek() isKeyword KeywordType.CATCH) {
+        return ts.captureRange {
             ts.next()
-            val pair = parseConditionAndBody()
-            catchParam = pair.first
-            catchBody = pair.second
-        }
+            val tryBody = parseBlock()
 
-        if (ts.peek() isKeyword KeywordType.FINALLY) {
-            ts.next()
-            finallyBody = parseBlock()
-        }
+            var catchParam: ExprNode? = null
+            var catchBody: BlockNode? = null
+            var finallyBody: BlockNode? = null
 
-        if (catchBody == null && finallyBody == null) {
-            syntaxError(Msg.EXPECTED_CATCH, ts.range)
-        }
+            if (ts.peek() isKeyword KeywordType.CATCH) {
+                ts.next()
+                val pair = parseConditionAndBody()
+                catchParam = pair.first
+                catchBody = pair.second
+            }
 
-        return TryCatchStmtNode(
-            tryBody = tryBody,
-            catchParam = catchParam,
-            catchBody = catchBody,
-            finallyBody = finallyBody,
-            range = range
-        )
+            if (ts.peek() isKeyword KeywordType.FINALLY) {
+                ts.next()
+                finallyBody = parseBlock()
+            }
+
+            if (catchBody == null && finallyBody == null) {
+                syntaxError(Msg.EXPECTED_CATCH, ts.range)
+            }
+
+            TryCatchStmtNode(
+                tryBody = tryBody,
+                catchParam = catchParam,
+                catchBody = catchBody,
+                finallyBody = finallyBody,
+                range = resultRange
+            )
+        }
     }
 
     private fun parseImportStmt(): ImportStmtNode? {
-        val range = ts.next().range
-
-        val moduleName = parser.parseModuleName(withModuleKeyword = false)
-            ?: return null
-
-        return ImportStmtNode(
-            moduleName = moduleName,
-            kind = ImportKind.Module,
-            range = range
-        )
-    }
-
-    private fun parseFromImportStmt(): ImportStmtNode? {
-        val range = ts.next().range
-
-        val moduleName = parser.parseModuleName(withModuleKeyword = false)
-            ?: return null
-
-        if (!ts.expectKeyword(KeywordType.IMPORT, Msg.EXPECTED_IMPORT))
-            return null
-
-        ts.next()
-
-        if (ts.matchOperator(OperatorType.MUL)) {
+        return ts.captureRange {
             ts.next()
-            return ImportStmtNode(
+
+            val moduleName = parser.parseModuleName(withModuleKeyword = false)
+                ?: return@captureRange null
+
+            ImportStmtNode(
                 moduleName = moduleName,
-                kind = ImportKind.Wildcard,
-                range = range
+                kind = ImportKind.Module,
+                range = resultRange
             )
         }
+    }
 
-        val identifiers = parser.parseIdsWithSeparatorOper(separator = OperatorType.COMMA)
-            ?: return null
 
-        return ImportStmtNode(
-            moduleName = moduleName,
-            kind = ImportKind.Named(symbols = identifiers),
-            range = range
-        )
+    private fun parseFromImportStmt(): ImportStmtNode? {
+        return ts.captureRange {
+            ts.next()
+
+            val moduleName = parser.parseModuleName(withModuleKeyword = false)
+                ?: return@captureRange null
+
+            if (!ts.expectKeyword(KeywordType.IMPORT, Msg.EXPECTED_IMPORT))
+                return@captureRange null
+
+            ts.next()
+
+            if (ts.matchOperator(OperatorType.MUL)) {
+                ts.next()
+                return@captureRange ImportStmtNode(
+                    moduleName = moduleName,
+                    kind = ImportKind.Wildcard,
+                    range = resultRange
+                )
+            }
+
+            val identifiers = parser.parseIdsWithSeparatorOper(separator = OperatorType.COMMA)
+                ?: return@captureRange null
+
+            ImportStmtNode(
+                moduleName = moduleName,
+                kind = ImportKind.Named(symbols = identifiers),
+                range = resultRange
+            )
+        }
     }
 
     private fun parseNamespaceStmt(): NamespaceStmtNode? {
-        val range = ts.next().range
+        return ts.captureRange {
+            ts.next()
 
-        val name = if (ts.peek() !is Token.LBrace) {
-            val t = ts.peek()
+            val name = if (ts.peek() !is Token.LBrace) {
+                val t = ts.peek()
 
-            if (t is Token.Identifier) {
-                ts.next()
-                t.toIdentifierNode()
-            } else {
-                syntaxError(Msg.EXPECTED_IDENTIFIER, t.range)
-                null
-            }
-        } else null
+                if (t is Token.Identifier) {
+                    ts.next()
+                    t.toIdentifierNode()
+                } else {
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, t.range)
+                    null
+                }
+            } else null
 
-        if (!ts.expect(Token.LBrace::class, Msg.EXPECTED_LBRACE))
-            return null
+            if (!ts.expect(Token.LBrace::class, Msg.EXPECTED_LBRACE))
+                return@captureRange null
 
-        val body = parseBlock()
+            val body = parseBlock()
 
-        return NamespaceStmtNode(
-            name = name,
-            body = body,
-            range = range
-        )
+            NamespaceStmtNode(
+                name = name,
+                body = body,
+                range = resultRange
+            )
+        }
     }
 
     private fun parseConstructorStmt(): ConstructorDeclStmtNode {
-        val range = ts.next().range
+        return ts.captureRange {
+            ts.next()
 
-        var params: List<VarDeclStmtNode>? = null
+            var params: List<VarDeclStmtNode>? = null
 
-        if (ts.match(Token.LParen::class))
-            analiseParams(parser.parseArgsList()) { params = it }
+            if (ts.match(Token.LParen::class))
+                analiseParams(parser.parseArgsList()) { params = it }
 
-        val body = parseBlock()
+            val body = parseBlock()
 
-        return ConstructorDeclStmtNode(
-            modifiers = null,
-            params = params ?: emptyList(),
-            body = body,
-            range = range
-        )
+            ConstructorDeclStmtNode(
+                modifiers = null,
+                params = params ?: emptyList(),
+                body = body,
+                range = resultRange
+            )
+        }
     }
 
     private fun parseDestructorStmt(): DestructorDeclStmtNode {
-        val range = ts.next().range
+        return ts.captureRange {
+            ts.next()
 
-        if (ts.match(Token.LParen::class)) {
-            val args = parser.parseArgsList() // skipping
+            if (ts.match(Token.LParen::class)) {
+                val args = parser.parseArgsList() // skipping
 
-            if (args.isNotEmpty())
-                syntaxError(Msg.CONSTRUCTORS_CANNOT_HAVE_PARAMS, range)
+                if (args.isNotEmpty())
+                    syntaxError(Msg.CONSTRUCTORS_CANNOT_HAVE_PARAMS, startRange)
+            }
+
+            val body = parseBlock()
+
+            DestructorDeclStmtNode(
+                modifiers = null,
+                body = body,
+                range = resultRange
+            )
         }
-
-        val body = parseBlock()
-
-        return DestructorDeclStmtNode(
-            modifiers = null,
-            body = body,
-            range = range
-        )
     }
 
     override fun analiseDatatypeList(exprList: List<ExprNode>?): List<BaseDatatypeNode>? {
@@ -375,11 +391,12 @@ class StmtParser(
                 is BinOpNode -> {
                     if (expr.operator == BinOpType.COLON) {
 
-                        val identifier = if (expr.left is IdentifierNode) expr.left as IdentifierNode
-                        else {
-                            syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
-                            return@forEach
-                        }
+                        val identifier =
+                            if (expr.left is IdentifierNode) expr.left as IdentifierNode
+                            else {
+                                syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
+                                return@forEach
+                            }
 
                         val datatype = analiseAsDatatype(expr.right, allowAsExpression = false)
 
@@ -406,7 +423,10 @@ class StmtParser(
                 params.add(typeName)
         }
 
-        return TypeNameListNode(params = params, range = exprList.firstOrNull()?.range ?: SourceRange())
+        return TypeNameListNode(
+            params = params,
+            range = exprList.firstOrNull()?.range ?: SourceRange()
+        )
     }
 
     private fun buildVarDeclHeader(
@@ -468,7 +488,8 @@ class StmtParser(
             handleInitializer = { initializerBody = it }
         )
 
-        val finalReturnType = returnType ?: if (body == null) AutoDatatypeNode(range) else VoidDatatypeNode(range)
+        val finalReturnType =
+            returnType ?: if (body == null) AutoDatatypeNode(range) else VoidDatatypeNode(range)
 
         return FuncDeclStmtNode(
             modifiers = null,
@@ -481,7 +502,11 @@ class StmtParser(
         )
     }
 
-    private fun buildClassStmt(header: ExprNode, body: BlockNode?, range: SourceRange): ClassDeclStmtNode? {
+    private fun buildClassStmt(
+        header: ExprNode,
+        body: BlockNode?,
+        range: SourceRange
+    ): ClassDeclStmtNode? {
         var name: IdentifierNode? = null
         var typeNames: TypeNameListNode? = null
         var superClass: BaseDatatypeNode? = null
@@ -509,7 +534,11 @@ class StmtParser(
         )
     }
 
-    private fun buildInterfaceStmt(header: ExprNode, body: BlockNode?, range: SourceRange): InterfaceDeclStmtNode? {
+    private fun buildInterfaceStmt(
+        header: ExprNode,
+        body: BlockNode?,
+        range: SourceRange
+    ): InterfaceDeclStmtNode? {
         var name: IdentifierNode? = null
         var typeNames: TypeNameListNode? = null
         var superInterface: BaseDatatypeNode? = null
@@ -627,95 +656,118 @@ class StmtParser(
     }
 
     private fun parseFuncDeclStmt(): FuncDeclStmtNode? {
-        val range = ts.next().range
+        return ts.captureRange {
+            ts.next()
 
-        val typeNames = if (ts.matchOperator(OperatorType.LESS))
-            analiseTemplateList(parser.parseTypenameList()) else null
+            val typeNames = if (ts.matchOperator(OperatorType.LESS))
+                analiseTemplateList(parser.parseTypenameList()) else null
 
-        val header = parser.parseExpr(ctx = ParsingContext.FuncHeader)
+            val header = parser.parseExpr(ctx = ParsingContext.FuncHeader)
 
-        val body = parseBodyForDeclStmt()
+            val body = parseBodyForDeclStmt()
 
-        return buildFuncDeclStmt(header, typeNames, body, range)
+            buildFuncDeclStmt(header, typeNames, body, resultRange)
+        }
     }
 
     private fun parseClassStmt(): ClassDeclStmtNode? {
-        val range = ts.next().range
+        return ts.captureRange {
+            ts.next()
 
-        val header = parser.parseExpr(ctx = ParsingContext.Header)
+            val header = parser.parseExpr(ctx = ParsingContext.Header)
 
-        val body = parseBodyForDeclStmt()
+            val body = parseBodyForDeclStmt()
 
-        return buildClassStmt(
-            header = header,
-            body = body,
-            range = range
-        )
+            buildClassStmt(
+                header = header,
+                body = body,
+                range = resultRange
+            )
+        }
     }
 
     private fun parseInterfaceStmt(): InterfaceDeclStmtNode? {
-        val range = ts.next().range
-        val header = parser.parseExpr(ctx = ParsingContext.Header)
-        val body = parseBodyForDeclStmt()
+        return ts.captureRange {
+            ts.next()
+            val header = parser.parseExpr(ctx = ParsingContext.Header)
+            val body = parseBodyForDeclStmt()
 
-        return buildInterfaceStmt(
-            header = header,
-            body = body,
-            range = range
-        )
+            buildInterfaceStmt(
+                header = header,
+                body = body,
+                range = resultRange
+            )
+        }
     }
 
     private fun parseVarDeclStmt(): VarDeclStmtNode? {
         val isMutable = ts.peek() isKeyword KeywordType.VAR
-        val range = ts.next().range
-        val expr = parser.parseExpr(ctx = ParsingContext.Header)
+        return ts.captureRange {
+            ts.next()
+            val expr = parser.parseExpr(ctx = ParsingContext.Header)
 
-        return buildVarDeclHeader(
-            header = expr,
-            range = range,
-            isMutable = isMutable
-        )
+            buildVarDeclHeader(
+                header = expr,
+                range = resultRange,
+                isMutable = isMutable
+            )
+        }
     }
 
     private fun parseEnumStmt(): EnumDeclStmtNode? {
-        val range = ts.next().range
-
-        val nameToken = ts.peek()
-
-        val enumName = if (nameToken is Token.Identifier) {
+        return ts.captureRange {
             ts.next()
-            nameToken.toIdentifierNode()
-        } else {
-            syntaxError(Msg.NAME_EXPECTED, nameToken.range)
-            return null
-        }
 
-        if (!ts.match(Token.LBrace::class)) {
-            syntaxError(Msg.UNEXPECTED_TOKEN, ts.range)
-            ts.skipUntil(Token.LBrace::class, Token.RBrace::class, Token.Keyword::class, Token.Identifier::class)
-            return EnumDeclStmtNode(
+            val nameToken = ts.peek()
+
+            val enumName = if (nameToken is Token.Identifier) {
+                ts.next()
+                nameToken.toIdentifierNode()
+            } else {
+                syntaxError(Msg.NAME_EXPECTED, nameToken.range)
+                return@captureRange null
+            }
+
+            if (!ts.match(Token.LBrace::class)) {
+                syntaxError(Msg.UNEXPECTED_TOKEN, ts.range)
+                ts.skipUntil(
+                    Token.LBrace::class,
+                    Token.RBrace::class,
+                    Token.Keyword::class,
+                    Token.Identifier::class
+                )
+                return@captureRange EnumDeclStmtNode(
+                    modifiers = null,
+                    name = enumName,
+                    body = BlockNode.empty(resultRange),
+                    range = resultRange
+                )
+            }
+
+
+            if (!ts.expect(Token.LBrace::class, Msg.EXPECTED_LBRACE))
+                return@captureRange EnumDeclStmtNode(
+                    modifiers = null,
+                    name = enumName,
+                    body = BlockNode.empty(resultRange),
+                    range = resultRange
+                )
+
+            val items = parseBlock()
+
+            EnumDeclStmtNode(
                 modifiers = null,
                 name = enumName,
-                body = BlockNode.empty(range),
-                range = range
+                body = items,
+                range = resultRange
             )
         }
-
-
-        if (!ts.expect(Token.LBrace::class, Msg.EXPECTED_LBRACE))
-            return EnumDeclStmtNode(
-                modifiers = null,
-                name = enumName,
-                body = BlockNode.empty(range),
-                range = range
-            )
-
-        val items = parseBlock()
-
-        return EnumDeclStmtNode(modifiers = null, name = enumName, body = items, range = range)
     }
 
-    private fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean = false): ExprNode? {
+    private fun analiseAsDatatype(
+        expr: ExprNode,
+        allowAsExpression: Boolean = false
+    ): ExprNode? {
         val datatype = expr.tryConvertToDatatype()
 
         if (datatype == null) {
@@ -736,7 +788,11 @@ class StmtParser(
         return if (successful) datatype else null
     }
 
-    private fun analiseNameNode(expr: ExprNode, msg: String, handleName: (IdentifierNode) -> Unit) {
+    private fun analiseNameNode(
+        expr: ExprNode,
+        msg: String,
+        handleName: (IdentifierNode) -> Unit
+    ) {
         if (expr !is IdentifierNode) {
             syntaxError(msg, expr.range)
             return
@@ -745,7 +801,10 @@ class StmtParser(
         handleName(expr)
     }
 
-    private fun analiseParams(exprList: List<ExprNode>, handleParams: (List<VarDeclStmtNode>?) -> Unit) {
+    private fun analiseParams(
+        exprList: List<ExprNode>,
+        handleParams: (List<VarDeclStmtNode>?) -> Unit
+    ) {
         handleParams(analiseParams(exprList))
     }
 
@@ -815,32 +874,32 @@ class StmtParser(
     }
 
     private fun parseModifiers(): ModifierSetNode {
-        val range = ts.range
+        return ts.captureRange {
+            val modifiers = mutableSetOf<ModifierNode>()
 
-        val modifiers = mutableSetOf<ModifierNode>()
+            while (true) {
+                val t = ts.peek()
 
-        while (true) {
-            val t = ts.peek()
+                if (t !is Token.Keyword)
+                    break
 
-            if (t !is Token.Keyword)
-                break
+                val modifier = modifierMapper.toSecond(t) ?: break
 
-            val modifier = modifierMapper.toSecond(t) ?: break
-//                syntaxError(Messages.INVALID_MODIFIER, t.range)
-//                ts.next()
-//                continue
+                if (modifiers.any { it::class == modifier::class }) {
+                    syntaxError(
+                        Msg.RepeatedModifier.format(modifier.keyword.value),
+                        t.range
+                    )
+                    ts.next()
+                    continue
+                }
 
-            if (modifiers.any { it::class == modifier::class }) {
-                syntaxError(Msg.RepeatedModifier.format(modifier.keyword.value), t.range)
+                modifiers.add(modifier)
                 ts.next()
-                continue
             }
 
-            modifiers.add(modifier)
-            ts.next()
+            ModifierSetNode(nodes = modifiers, range = resultRange)
         }
-
-        return ModifierSetNode(nodes = modifiers, range = range)
     }
 
     private fun voidExprFunc() = VoidNode
@@ -863,136 +922,152 @@ class StmtParser(
     }
 
     override fun parseIfElseStmt(): IfElseStmtNode {
-        val range = ts.range
-        ts.next()
+        return ts.captureRange {
+            ts.next()
 
-        val (condition, body) = parseConditionAndBody()
+            val (condition, body) = parseConditionAndBody()
 
-        val t = ts.peek()
+            val t = ts.peek()
 
-        val elseBody =
-            when {
-                t isKeyword KeywordType.ELSE -> {
-                    ts.next()
-                    parseBlock()
+            val elseBody =
+                when {
+                    t isKeyword KeywordType.ELSE -> {
+                        ts.next()
+                        parseBlock()
+                    }
+
+                    t isKeyword KeywordType.ELIF -> {
+                        parseIfElseStmt().wrapToBody()
+                    }
+
+                    else -> null
                 }
 
-                t isKeyword KeywordType.ELIF -> {
-                    parseIfElseStmt().wrapToBody()
-                }
-
-                else -> null
-            }
-
-        return IfElseStmtNode(
-            condition = condition,
-            body = body,
-            elseBody = elseBody,
-            range = range
-        )
+            IfElseStmtNode(
+                condition = condition,
+                body = body,
+                elseBody = elseBody,
+                range = resultRange
+            )
+        }
     }
 
     private fun parseWhileStmt(): WhileStmtNode {
-        val range = ts.next().range
-
-        val (condition, body) = parseConditionAndBody()
-
-        val elseBody = if (ts.peek() isKeyword KeywordType.ELSE) {
+        return ts.captureRange {
             ts.next()
-            parseBlock()
-        } else null
 
-        return WhileStmtNode(
-            condition = condition,
-            body = body,
-            elseBody = elseBody,
-            range = range
-        )
+            val (condition, body) = parseConditionAndBody()
+
+            val elseBody = if (ts.peek() isKeyword KeywordType.ELSE) {
+                ts.next()
+                parseBlock()
+            } else null
+
+            WhileStmtNode(
+                condition = condition,
+                body = body,
+                elseBody = elseBody,
+                range = resultRange
+            )
+        }
     }
 
     private fun parseDoWhileStmt(): DoWhileStmtNode {
-        val range = ts.next().range
+        return ts.captureRange {
+            ts.next()
 
-        val body = parseBlock()
+            val body = parseBlock()
 
-        ts.expectKeyword(KeywordType.WHILE, Msg.EXPECTED_WHILE_AND_POST_CONDITION)
-        ts.next()
+            ts.expectKeyword(
+                KeywordType.WHILE,
+                Msg.EXPECTED_WHILE_AND_POST_CONDITION
+            )
+            ts.next()
 
-        val condition = parser.parseExpr(ctx = ParsingContext.Condition)
+            val condition = parser.parseExpr(ctx = ParsingContext.Condition)
 
-        return DoWhileStmtNode(
-            condition = condition,
-            body = body,
-            range = range
-        )
+            DoWhileStmtNode(
+                condition = condition,
+                body = body,
+                range = resultRange
+            )
+        }
     }
 
     private fun parseForLoopStmt(): ForLoopStmtNode {
-        val range = ts.next().range
+        return ts.captureRange {
+            ts.next()
 
-        val (condition, body) = parseConditionAndBody()
+            val (condition, body) = parseConditionAndBody()
 
-        return ForLoopStmtNode(
-            condition = condition,
-            body = body,
-            range = range
-        )
+            ForLoopStmtNode(
+                condition = condition,
+                body = body,
+                range = resultRange
+            )
+        }
     }
 
 
     private fun parseElseEntryStmt(): ElseEntryNode? {
-        val range = ts.next().range
-        val t = ts.peek()
+        return ts.captureRange {
+            ts.next()
+            val t = ts.peek()
 
-        if (t isNotOperator OperatorType.ARROW) {
-            syntaxError(Msg.EXPECTED_ARROW_OPERATOR, t.range)
-            return null
+            if (t isNotOperator OperatorType.ARROW) {
+                syntaxError(Msg.EXPECTED_ARROW_OPERATOR, t.range)
+                return@captureRange null
+            }
+
+            ts.next()
+
+            ElseEntryNode(
+                expr = parse(),
+                range = resultRange
+            )
         }
-
-        ts.next()
-
-        return ElseEntryNode(
-            expr = parse(),
-            range = range
-        )
     }
 
     private fun parseMatchStmt(): MatchStmtNode {
-        val range = ts.range
-        ts.next()
+        return ts.captureRange {
+            ts.next()
 
-        var target: ExprNode?
-        var body: BlockNode
+            var target: ExprNode?
+            var body: BlockNode
 
-        if (ts.match(Token.LBrace::class)) {
-            target = null
-            body = parseBlock()
-        } else {
-            val pair = parseConditionAndBody()
-            target = pair.first
-            body = pair.second
+            if (ts.match(Token.LBrace::class)) {
+                target = null
+                body = parseBlock()
+            } else {
+                val pair = parseConditionAndBody()
+                target = pair.first
+                body = pair.second
+            }
+
+            MatchStmtNode(
+                target = target,
+                body = body,
+                range = resultRange
+            )
         }
-
-        return MatchStmtNode(
-            target = target,
-            body = body,
-            range = range
-        )
     }
+
 
     private fun parseReturnStmt(): ReturnStmtNode {
-        val range = ts.range
-        ts.next()
+        return ts.captureRange {
+            ts.next()
 
-        val stmt = if (ts.matchSemicolonOrLinebreak())
-            VoidNode
-        else parse()
+            val stmt = if (ts.matchSemicolonOrLinebreak())
+                VoidNode
+            else parse()
 
-        return ReturnStmtNode(
-            expr = stmt,
-            range = range
-        )
+            ReturnStmtNode(
+                expr = stmt,
+                range = resultRange
+            )
+        }
     }
+
 
     private fun syntaxError(msg: String, range: SourceRange) =
         parser.syntaxError(msg = msg, range = range)

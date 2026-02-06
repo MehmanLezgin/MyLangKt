@@ -4,17 +4,18 @@ import java.io.File
 
 private const val LEXER_RESULT_PATH = "C:/TMP txt/lang/lexer_result.txt"
 
-fun main(args: Array<String>) {
+fun main() {
     val basePath = "C:/TMP txt/lang/"
 
     program(basePath) {
         var tokens: List<Token> = emptyList()
+
         val moduleList = modules {
             extension("i")
 
 //            root("modules")
 
-            entry("./main.i") { module, ts ->
+            entry("./main.i") { _, ts ->
                 tokens = ts.getTokens()
             }
 

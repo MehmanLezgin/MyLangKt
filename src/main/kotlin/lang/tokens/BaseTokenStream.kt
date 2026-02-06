@@ -1,5 +1,6 @@
 package lang.tokens
 
+import lang.core.RangeBuilder
 import lang.core.SourceRange
 import lang.lexer.ILexer
 import lang.messages.MsgHandler
@@ -9,17 +10,25 @@ open class BaseTokenStream(
     private val lexer: ILexer,
     private val msgHandler: MsgHandler
 ) : ITokenStream {
-    private val curToken: Token
-        get() = peek()
-
     override val range: SourceRange
         get() = peek().range
+
+    override val prevRange: SourceRange
+        get() = prev().range
+
+    internal open val eof: Token = Token.EOF(range = SourceRange())
+
+    override fun <T> captureRangeToCur(block: RangeBuilder.() -> T): T {
+        return RangeBuilder(range) { range }.block()
+    }
+
+    override fun <T> captureRange(block: RangeBuilder.() -> T): T {
+        return RangeBuilder(range) { prevRange }.block()
+    }
 
     override fun reset() {
         lexer.reset()
     }
-
-    internal open val eof: Token = Token.EOF(range = SourceRange())
 
     override fun prev(): Token = eof
 

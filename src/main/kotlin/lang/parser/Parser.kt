@@ -1,7 +1,6 @@
 package lang.parser
 
 import lang.core.LangSpec.moduleNameSeparator
-import lang.core.Pos
 import lang.core.SourceRange
 import lang.messages.CompileStage
 import lang.messages.MsgHandler
@@ -31,14 +30,16 @@ class Parser(
     override fun parseModule(name: String): ModuleNode {
         val list = mutableListOf<ExprNode>()
 
-        while (!ts.match(Token.EOF::class))
-            list.add(stmtParser.parse())
+        return ts.captureRangeToCur {
+            while (!ts.match(Token.EOF::class))
+                list.add(stmtParser.parse())
 
-        return ModuleNode(
-            name = name,
-            nodes = list,
-            range = ts.range
-        )
+            ModuleNode(
+                name = name,
+                nodes = list,
+                range = resultRange
+            )
+        }
     }
 
     override fun parseExpr(ctx: ParsingContext) = exprParser.parse(ctx = ctx)
@@ -57,20 +58,21 @@ class Parser(
         if (withModuleKeyword)
             ts.next()
 
-        val range = ts.range
-        val list = parseIdsWithSeparatorOper(separator = moduleNameSeparator)
+        return ts.captureRange {
+            val list = parseIdsWithSeparatorOper(separator = moduleNameSeparator)
 
-        if (withModuleKeyword)
-            ts.expectSemicolonOrLinebreak(Msg.EXPECTED_SEMICOLON)
+            if (withModuleKeyword)
+                ts.expectSemicolonOrLinebreak(Msg.EXPECTED_SEMICOLON)
 
-        val name = list?.joinToString(
-            separator = moduleNameSeparator.symbol
-        ) { it.value } ?: return null
+            val name = list?.joinToString(
+                separator = moduleNameSeparator.symbol
+            ) { it.value } ?: return@captureRange null
 
-        return IdentifierNode(
-            value = name,
-            range = range
-        )
+            IdentifierNode(
+                value = name,
+                range = resultRange
+            )
+        }
     }
 
     override fun parseIdsWithSeparatorOper(separator: OperatorType): List<IdentifierNode>? {

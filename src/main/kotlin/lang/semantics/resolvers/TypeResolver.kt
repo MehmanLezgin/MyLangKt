@@ -34,8 +34,14 @@ class TypeResolver(
         val baseType = resolve(target.base)
         val targetScope = baseType.declaration?.staticScope?.instanceScope
 
-        if (!baseType.isExprType || targetScope == null) {
-            target.base.error(Msg.EXPECTED_VALUE_OR_REF)
+        if (!baseType.isExprType) {
+            if (baseType != ErrorType)
+                target.base.error(Msg.EXPECTED_VALUE_OR_REF)
+            return ErrorType
+        }
+
+        if (targetScope == null) {
+            target.base.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(Terms.SYMBOL))
             return ErrorType
         }
 
@@ -630,11 +636,10 @@ class TypeResolver(
         }
     }*/
 
-/*
+
     private fun resolve(target: UnaryOpNode): Type {
         return ErrorType
     }
-*/
 
     private fun resolve(target: LiteralNode<*>): Type {
         val type = when (target) {
