@@ -7,6 +7,10 @@ interface FormattableMsg
 object Msg {
     const val INVALID_CONST_VALUE = "Invalid const value"
     const val CANNOT_EXPORT = "Cannot export"
+    object EXPECTED_X_NAME : FormattableMsg {
+        fun format(itemKind: String) =
+            "Expected $itemKind name"
+    }
 
     object X_CANNOT_HAVE_Y : FormattableMsg {
         fun format(x: String, y: String) =
@@ -55,6 +59,11 @@ object Msg {
     object F_MODIFIER_IS_NOT_ALLOWED_ON : FormattableMsg {
         fun format(modifierName: String, declKindName: String) =
             "Modifier '$modifierName' is not allowed on $declKindName"
+    }
+
+    object F_MODIFIER_IS_NOT_INAPPLICABLE_ON_THIS_X : FormattableMsg {
+        fun format(modName: String, itemName: String) =
+            "'$modName' modifier is inapplicable to this ${itemName}"
     }
 
     object F_MODIFIER_IS_INCOMPATIBLE_WITH : FormattableMsg {

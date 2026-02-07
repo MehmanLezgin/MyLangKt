@@ -1,7 +1,7 @@
 package lang.lexer
 
 import lang.messages.MsgHandler
-import lang.core.ILangSpec
+import lang.core.LangSpec
 import lang.core.LangSpec.operators
 import lang.messages.Msg
 import lang.core.ISourceCode
@@ -11,10 +11,10 @@ import lang.tokens.TokenType
 
 class Lexer(
     src: ISourceCode,
-    langSpec: ILangSpec,
+    langSpec: LangSpec,
     msgHandler: MsgHandler,
 ) : BaseLexer(src, langSpec, msgHandler) {
-    private val operatorsByLength = operators.sortedBy { -it.symbol.length }
+    private val operatorsByLength = operators.toList().map { it.second }.sortedBy { -it.raw.length }
 
     private companion object {
         const val DIGITS_10 = "0123456789"
@@ -201,9 +201,9 @@ class Lexer(
         val value = substring(start, index)
 
         val tokenType = when {
-            langSpec.keywords.find { it.value == value } != null -> TokenType.KEYWORD
+            langSpec.getKeywordInfo(value) != null -> TokenType.KEYWORD
 
-            langSpec.operators.find { it.symbol == value } != null -> TokenType.OPER
+            langSpec.getOperatorInfo(value) != null -> TokenType.OPER
 
             else -> when (value) {
                 Symbols.INT -> TokenType.IDENTIFIER
@@ -219,11 +219,11 @@ class Lexer(
     }
 
     private fun lexOperator(): Token? {
-        val oper = operatorsByLength.firstOrNull { scanFor(it.symbol) } ?: return null
-        val operLength = oper.symbol.length
+        val oper = operatorsByLength.firstOrNull { scanFor(it.raw) } ?: return null
+        val operLength = oper.raw.length
         advance(operLength)
-        val range = closeRange(oper.symbol)
-        return Token.Operator(oper.type, oper.precedence, oper.symbol, range)
+        val range = closeRange(oper.raw)
+        return Token.Operator(oper.type, oper.precedence, oper.raw, range)
     }
 
     private fun lexOther(): Token? {
@@ -375,8 +375,10 @@ class Lexer(
             c.isQuote() -> matchStringLiteral()                                         // str and char literals
             else -> {
                 val t = lexOperator() ?: lexOther()
-                if (t == null) lexicalError(Msg.UNEXPECTED_TOKEN, getPos())
-                t
+                if (t == null) {
+                    lexicalError(Msg.UNEXPECTED_TOKEN, getPos())
+                }
+                return t
             }
         }
 

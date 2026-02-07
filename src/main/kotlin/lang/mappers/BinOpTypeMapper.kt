@@ -1,6 +1,6 @@
 package lang.mappers
 
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 import lang.nodes.BinOpType
 
 class BinOpTypeMapper : IOneWayMapper<OperatorType, BinOpType?> {

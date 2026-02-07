@@ -1,7 +1,7 @@
 package lang.lexer
 
 import lang.messages.MsgHandler
-import lang.core.ILangSpec
+import lang.core.LangSpec
 import lang.messages.Msg
 import lang.core.ISourceCode
 import lang.core.Pos
@@ -14,7 +14,7 @@ import kotlin.text.iterator
 
 open class BaseLexer(
     val src: ISourceCode,
-    val langSpec: ILangSpec,
+    val langSpec: LangSpec,
     val msgHandler: MsgHandler,
 ) : ILexer {
 
@@ -207,7 +207,7 @@ open class BaseLexer(
             TokenType.NULL -> Token.Null(value, range)
 
             TokenType.KEYWORD -> {
-                val keywordType = langSpec.getKeywordInfo(value)?.type ?: return Token.Unknown(raw = value, range = range)
+                val keywordType = langSpec.keywords[value] ?.type ?: return Token.Unknown(raw = value, range = range)
                 Token.Keyword(keywordType, value, range)
             }
 

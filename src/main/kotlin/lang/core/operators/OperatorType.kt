@@ -1,6 +1,6 @@
-package lang.tokens
+package lang.core.operators
 
-enum class OperatorType(val symbol: String) {
+enum class OperatorType(val raw: String) {
     UNKNOWN("?"),
 
     INFIX("\$infix"),
@@ -69,7 +69,7 @@ enum class OperatorType(val symbol: String) {
     COMMA(",");
 
     val fullName: String
-        get() = "\$operator $symbol"
+        get() = "\$operator $raw"
 
     fun compoundToBinary() : OperatorType? {
         return when (this) {
@@ -86,44 +86,4 @@ enum class OperatorType(val symbol: String) {
             else -> null
         }
     }
-}
-
-
-data class OperatorInfo(
-//    val symbol: String,
-    val type: OperatorType,
-    val precedence: Int = -1
-) {
-    val symbol: String
-        get() = type.symbol
-}
-
-object OperatorMaps {
-    val triBracketsMap = mapOf(
-        OperatorType.LESS_EQUAL to listOf(OperatorType.LESS, OperatorType.ASSIGN),
-        OperatorType.GREATER_EQUAL to listOf(OperatorType.GREATER, OperatorType.ASSIGN),
-
-        OperatorType.SHIFT_LEFT to listOf(OperatorType.LESS, OperatorType.LESS),
-        OperatorType.SHIFT_LEFT_ASSIGN to listOf(OperatorType.LESS, OperatorType.LESS, OperatorType.ASSIGN),
-
-        OperatorType.SHIFT_RIGHT to listOf(OperatorType.GREATER, OperatorType.GREATER),
-        OperatorType.SHIFT_RIGHT_ASSIGN to listOf(OperatorType.GREATER, OperatorType.GREATER, OperatorType.ASSIGN),
-    )
-
-    val ampersandMap = mapOf(
-        OperatorType.AMPERSAND to listOf(OperatorType.AMPERSAND),
-        OperatorType.AND to listOf(OperatorType.AMPERSAND, OperatorType.AMPERSAND),
-        OperatorType.BIN_AND_ASSIGN to listOf(OperatorType.AMPERSAND, OperatorType.ASSIGN)
-    )
-
-    val multiplyMap = mapOf(
-        OperatorType.MUL to listOf(OperatorType.MUL),
-        OperatorType.MUL_ASSIGN to listOf(OperatorType.MUL, OperatorType.ASSIGN),
-    )
-
-    val superMap = mapOf(
-        OperatorType.LESS to triBracketsMap,
-        OperatorType.AMPERSAND to ampersandMap,
-        OperatorType.MUL to multiplyMap,
-    )
 }

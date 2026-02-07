@@ -46,7 +46,7 @@ data class Module(
 fun List<Module>.print(basePath: String, semanticContext: SemanticContext?) {
     this.forEach { module ->
         val moduleName = module.name
-            ?.replace(LangSpec.moduleNameSeparator.symbol, ".")
+            ?.replace(LangSpec.moduleNameSeparator.raw, ".")
 
         module.print(
             path = "${basePath}ast/ast_$moduleName.txt",

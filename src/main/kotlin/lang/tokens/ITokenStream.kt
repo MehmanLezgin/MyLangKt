@@ -1,5 +1,7 @@
 package lang.tokens
 
+import lang.core.KeywordType
+import lang.core.operators.OperatorType
 import lang.core.RangeBuilder
 import lang.core.SourceRange
 import lang.messages.Msg

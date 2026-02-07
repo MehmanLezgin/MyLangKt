@@ -26,7 +26,7 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
                 )
 
             is ScopeError.OperParamCountMismatch ->
-                operatorParamMsg(a.oper.symbol, a.expected)
+                operatorParamMsg(a.oper.raw, a.expected)
 
             is ScopeError.NotDefined ->
                 Msg.SymbolNotDefinedIn.format(name = a.symName, scopeName = a.scopeName)

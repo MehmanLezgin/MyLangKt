@@ -14,7 +14,7 @@ import lang.semantics.symbols.TypeSymbol
 import lang.semantics.types.ConstValue
 import lang.semantics.types.PrimitiveType
 import lang.semantics.types.Type
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 
 //fun PrimitiveType.toConst() =
 //    this.setFlags(isConst = true) as PrimitiveType

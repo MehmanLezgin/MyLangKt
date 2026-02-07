@@ -6,6 +6,7 @@ import lang.messages.MsgHandler
 import lang.nodes.BlockNode
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
+import lang.semantics.resolvers.ModifierResolver
 import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
@@ -18,6 +19,7 @@ interface ISemanticAnalyzer {
     val declResolver: DeclarationResolver
     val constResolver: ConstResolver
     val typeResolver: TypeResolver
+    val modResolver: ModifierResolver
 
     val semanticContext: SemanticContext
 

@@ -1,7 +1,7 @@
 package lang.semantics.builtin
 
 import lang.semantics.types.Type
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 
 class TypeGroup(
     private val types: List<Type>

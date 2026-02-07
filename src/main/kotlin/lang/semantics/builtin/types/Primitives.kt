@@ -7,7 +7,7 @@ import lang.semantics.types.ConstValue
 import lang.semantics.types.PrimitiveSize
 import lang.semantics.types.PrimitiveType
 import lang.semantics.types.TypeFlags
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 
 private object SymNames {
     const val MIN_VALUE = "MIN_VALUE"

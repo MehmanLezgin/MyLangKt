@@ -31,6 +31,7 @@ data class DatatypeNode(
     var ptrLvl: Int = 0,
     override val range: SourceRange
 ) : QualifiedDatatypeNode(range) {
+    fun isSimple() = typeNames == null && !isConst && !isReference && ptrLvl == 0
 
     val isPointer: Boolean
         get() = ptrLvl > 0

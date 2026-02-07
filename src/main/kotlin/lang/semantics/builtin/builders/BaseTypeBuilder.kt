@@ -8,7 +8,7 @@ import lang.semantics.symbols.Modifiers
 import lang.semantics.symbols.TypeSymbol
 import lang.semantics.types.ConstValue
 import lang.semantics.types.Type
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 
 abstract class BaseTypeBuilder<T: TypeSymbol>(open val name: String, open val parent: Scope) {
     internal var superTypeScope: BaseTypeScope? = null

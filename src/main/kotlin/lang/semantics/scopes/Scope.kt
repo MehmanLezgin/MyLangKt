@@ -6,7 +6,7 @@ import lang.semantics.symbols.*
 import lang.semantics.types.ConstValue
 import lang.semantics.types.ErrorType.castCost
 import lang.semantics.types.Type
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 import kotlin.random.Random
 
 open class Scope(
@@ -212,7 +212,7 @@ open class Scope(
         return define(sym)
     }
 
-    fun defineFunc(
+    /*fun defineFunc(
         node: FuncDeclStmtNode,
         params: FuncParamListSymbol,
         returnType: Type,
@@ -229,6 +229,47 @@ open class Scope(
             val name = if (node.name is IdentifierNode)
                 (node.name as IdentifierNode).value else node.name.toString()
 
+            when (node) {
+                is ConstructorDeclStmtNode -> ConstructorSymbol(
+                    name = name,
+                    params = params,
+                    returnType = returnType,
+                    modifiers = modifiers
+                )
+
+                is DestructorDeclStmtNode -> DestructorSymbol(
+                    name = name,
+                    returnType = returnType
+                )
+
+                else -> FuncSymbol(
+                    name = name,
+                    params = params,
+                    returnType = returnType,
+                    modifiers = modifiers
+                )
+            }
+        }
+
+        return defineFunc(funcSym) to funcSym
+    }*/
+
+    fun defineFunc(
+        node: FuncDeclStmtNode,
+        nameId: IdentifierNode,
+        params: FuncParamListSymbol,
+        returnType: Type,
+        modifiers: Modifiers
+    ): Pair<ScopeResult, FuncSymbol> {
+        val name = nameId.value
+
+        val funcSym = if (nameId is OperNode) OperatorFuncSymbol(
+            operator = nameId.operatorType,
+            params = params,
+            returnType = returnType,
+            modifiers = modifiers
+        )
+        else {
             when (node) {
                 is ConstructorDeclStmtNode -> ConstructorSymbol(
                     name = name,
@@ -288,7 +329,7 @@ open class Scope(
                 defineOrOverloadFunction(funcSym = funcSym, existingSym = definedSymResult.sym)
 
             is ScopeResult.Error ->
-                define(sym = funcSym)
+                define(sym = funcSym.toOverloadedFuncSymbol()) // always store as overloaded
         }
     }
 

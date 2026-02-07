@@ -1,6 +1,9 @@
 package lang.parser
 
+import lang.core.KeywordType
 import lang.core.LangSpec
+import lang.core.operators.OperatorMaps
+import lang.core.operators.OperatorType
 import lang.core.SourceRange
 import lang.mappers.BinOpTypeMapper
 import lang.mappers.UnaryOpTypeMapper
@@ -29,16 +32,22 @@ class ExprParser(
     }
 
     override fun parseArgsList(ctx: ParsingContext): List<ExprNode> {
+//        val startsWithLParen = ts.match(Token.LParen::class)
+
         val list: MutableList<ExprNode> = mutableListOf()
-        ts.next()
+
+//        if (startsWithLParen)
+            ts.next()
 
         if (!ts.match(Token.RParen::class)) {
             val expr = parse().flattenCommaNode()
             list.addAll(expr)
         }
 
-        ts.expect(Token.RParen::class, Msg.EXPECTED_RPAREN)
-        ts.next()
+//        if (startsWithLParen) {
+            ts.expect(Token.RParen::class, Msg.EXPECTED_RPAREN)
+            ts.next()
+//        }
 
         if (ctx == ParsingContext.Default && ts.match(Token.LBrace::class)) {
             parseLambda().let { lambda ->
@@ -839,6 +848,12 @@ class ExprParser(
         )
     }
 
+    private fun canParseInfix(minPrec: Int): Boolean {
+        val t = ts.peek()
+        val prec = LangSpec.InfixOperator.precedence
+        return prec >= minPrec && ts.prev().areOnSameLine(t)
+    }
+
     private fun parseBinaryExpr(
         minPrec: Int,
         stopToken: Token? = null,
@@ -846,22 +861,27 @@ class ExprParser(
     ): ExprNode {
         return ts.captureRange {
             var left = parseUnaryExpr(ctx)
+//            infix fun Int.a(b: Int) : Int = 1
+//            infix fun Int.b(b: Int) : Int = 1
+//            fun c() : Int = 1
+//
+//            1 a c()
 
             while (true) {
                 val t = ts.peek()
-                // 1 plus 2*a minus 3
 
                 var prec = LangSpec.InfixOperator.precedence
 
-                if (t is Token.Identifier && prec >= minPrec) {
+                if (t is Token.Identifier && canParseInfix(minPrec)) {
                     val receiver = t.toIdentifierNode()
                     ts.next()
+//                    val right = parseArgsList(ctx)
                     val right = parseBinaryExpr(prec + 1, stopToken, ctx)
 
                     left = InfixFuncCallNode(
                         receiver = receiver,
                         typeNames = null,
-                        args = listOf(left, right),
+                        args = listOf(left) + right,
                         range = resultRange
                     )
                     continue

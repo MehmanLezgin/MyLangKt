@@ -1,8 +1,10 @@
 package lang.tokens
 
 import lang.messages.MsgHandler
-import lang.core.ILangSpec
+import lang.core.LangSpec
 import lang.core.ISourceCode
+import lang.core.operators.OperatorMaps
+import lang.core.operators.OperatorType
 import lang.core.SourceRange
 import lang.lexer.ILexer
 
@@ -10,7 +12,7 @@ import lang.lexer.ILexer
 class TokenStream(
     private val lexer: ILexer,
     private val src: ISourceCode,
-    private val langSpec: ILangSpec,
+    private val langSpec: LangSpec,
     msgHandler: MsgHandler
 ) : BaseTokenStream(
     lexer = lexer,
@@ -41,7 +43,7 @@ class TokenStream(
     }
 
     override fun prev() =
-        if (index > 0 && index < tokens.size) tokens[index - 1]
+        if (index > 0) tokens[index - 1]
         else eof
 
     override fun peek() = atIndex(index)
@@ -82,12 +84,12 @@ class TokenStream(
         var offset = 0
 
         val newTokens = splits.map {
-            val length = it.symbol.length
+            val length = it.raw.length
             val newRange = t.range.horizontalCut(offset, length)
 
             val newToken = t.copy(
                 type = it,
-                raw = langSpec.getOperatorInfo(it)?.symbol ?: "",
+                raw = langSpec.getOperatorInfo(it)?.raw ?: "",
                 range = newRange
             )
 

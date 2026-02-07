@@ -3,8 +3,8 @@ package lang.parser
 import lang.core.SourceRange
 import lang.mappers.BinOpTypeMapper
 import lang.mappers.UnaryOpTypeMapper
-import lang.tokens.KeywordType
-import lang.tokens.OperatorType
+import lang.core.KeywordType
+import lang.core.operators.OperatorType
 import lang.nodes.AutoDatatypeNode
 import lang.nodes.BaseDatatypeNode
 import lang.nodes.BinOpNode

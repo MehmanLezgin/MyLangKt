@@ -2,7 +2,7 @@ package lang.semantics.scopes
 
 import lang.semantics.symbols.Symbol
 import lang.semantics.types.Type
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 
 sealed class ScopeResult {
     data class Success<T : Symbol>(val sym: T) : ScopeResult()

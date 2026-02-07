@@ -1,7 +1,7 @@
 package lang.nodes
 
 import lang.core.SourceRange
-import lang.tokens.KeywordType
+import lang.core.KeywordType
 import kotlin.reflect.KClass
 
 sealed class ModifierNode(
@@ -16,6 +16,7 @@ sealed class ModifierNode(
     data class Override     (override val range: SourceRange) : ModifierNode(KeywordType.OVERRIDE, range)
     data class Open         (override val range: SourceRange) : ModifierNode(KeywordType.OPEN, range)
     data class Abstract     (override val range: SourceRange) : ModifierNode(KeywordType.ABSTRACT, range)
+    data class Infix        (override val range: SourceRange) : ModifierNode(KeywordType.INFIX, range)
 
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }

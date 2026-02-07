@@ -9,7 +9,7 @@ import lang.semantics.builtin.isBuiltInFuncReturnsPtr
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.*
 import lang.semantics.types.*
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 import lang.core.SourceRange
 
 @OptIn(ExperimentalUnsignedTypes::class)

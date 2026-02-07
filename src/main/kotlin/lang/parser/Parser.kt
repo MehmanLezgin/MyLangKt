@@ -12,8 +12,8 @@ import lang.parser.ParserUtils.isNotKeyword
 import lang.parser.ParserUtils.isOperator
 import lang.parser.ParserUtils.toIdentifierNode
 import lang.tokens.ITokenStream
-import lang.tokens.KeywordType
-import lang.tokens.OperatorType
+import lang.core.KeywordType
+import lang.core.operators.OperatorType
 import lang.tokens.Token
 
 class Parser(
@@ -74,7 +74,7 @@ class Parser(
                 ts.expectSemicolonOrLinebreak(Msg.EXPECTED_SEMICOLON)
 
             val name = list?.joinToString(
-                separator = moduleNameSeparator.symbol
+                separator = moduleNameSeparator.raw
             ) { it.value } ?: return@captureRange null
 
             IdentifierNode(

@@ -1,9 +1,9 @@
 package lang.parser
 
 import lang.core.SourceRange
-import lang.tokens.KeywordType
+import lang.core.KeywordType
 import lang.messages.Msg
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 import lang.tokens.ITokenStream
 import lang.tokens.Token
 import lang.mappers.ModifierMapper
@@ -42,18 +42,17 @@ import lang.nodes.ReturnStmtNode
 import lang.nodes.ScopedDatatypeNode
 import lang.nodes.TryCatchStmtNode
 import lang.nodes.TypeNameListNode
-import lang.nodes.TypeNameNode
 import lang.nodes.TypedefStmtNode
 import lang.nodes.VarDeclStmtNode
 import lang.nodes.VoidDatatypeNode
 import lang.nodes.VoidNode
 import lang.nodes.WhileStmtNode
 import lang.parser.ParserUtils.isKeyword
+import lang.parser.ParserUtils.isNotKeyword
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.range
 import lang.parser.ParserUtils.toDatatype
 import lang.parser.ParserUtils.toIdentifierNode
-import lang.parser.ParserUtils.tryConvertToDatatype
 import lang.parser.ParserUtils.wrapToBody
 
 class StmtParser(
@@ -103,6 +102,7 @@ class StmtParser(
             KeywordType.LET -> ::parseVarDeclStmt
 
             KeywordType.FUNC -> ::parseFuncDeclStmt
+
             KeywordType.DO -> ::parseDoWhileStmt
             KeywordType.WHILE -> ::parseWhileStmt
             KeywordType.MATCH -> ::parseMatchStmt
@@ -110,9 +110,11 @@ class StmtParser(
             KeywordType.ELSE -> ::parseElseEntryStmt
             KeywordType.ELIF -> errorStmt(Msg.EXPECTED_IF)
 
-            KeywordType.CONST, KeywordType.STATIC, KeywordType.OPEN, KeywordType.ABSTRACT,
-            KeywordType.OVERRIDE,
-            KeywordType.PRIVATE, KeywordType.PUBLIC, KeywordType.PROTECTED, KeywordType.EXPORT ->
+            KeywordType.CONST, KeywordType.STATIC,
+            KeywordType.OPEN, KeywordType.ABSTRACT,
+            KeywordType.OVERRIDE, KeywordType.INFIX,
+            KeywordType.PRIVATE, KeywordType.PUBLIC,
+            KeywordType.PROTECTED, KeywordType.EXPORT ->
                 ::parseDeclarationWithModifiers
 
             KeywordType.CONTINUE -> ::parseContinueStmt
@@ -657,7 +659,9 @@ class StmtParser(
 
             val header = parser.parseExpr(ctx = ParsingContext.FuncHeader)
 
-            val body = parseBodyForDeclStmt()
+            val body = if (ts.match(Token.LBrace::class))
+                parseBodyForDeclStmt()
+            else null
 
             buildFuncDeclStmt(header, typeNames, body, resultRange)
         }

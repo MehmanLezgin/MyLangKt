@@ -39,7 +39,10 @@ data class Message(
                 val pointerOffset = posStr.length + separatorStr.length
 
                 val pointerLength = when {
-                    start.line == end.line -> end.col - start.col
+                    start.line == end.line ->
+                        if (end.col == start.col) 1
+                        else end.col - start.col
+
                     lineText != null -> lineText.length - start.col + 1
                     else -> 0
                 }

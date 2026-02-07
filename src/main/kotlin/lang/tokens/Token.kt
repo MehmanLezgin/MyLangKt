@@ -2,6 +2,8 @@
 
 package lang.tokens
 
+import lang.core.KeywordType
+import lang.core.operators.OperatorType
 import lang.core.SourceRange
 
 sealed class Token(
@@ -41,4 +43,8 @@ sealed class Token(
         override val raw: String,
         override val range: SourceRange
     ) : Token(raw, range)
+}
+
+fun Token.areOnSameLine(other: Token): Boolean {
+    return this.range.end.line == other.range.start.line
 }

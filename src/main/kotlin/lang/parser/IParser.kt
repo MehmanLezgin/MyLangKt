@@ -2,7 +2,7 @@ package lang.parser
 
 import lang.core.SourceRange
 import lang.nodes.*
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 
 interface IParser {
     fun parseModule(name: String) : ModuleNode

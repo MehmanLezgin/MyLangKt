@@ -19,6 +19,7 @@ import lang.semantics.symbols.ModuleSymbol
 import lang.semantics.symbols.NamespaceSymbol
 import lang.semantics.symbols.Symbol
 import lang.core.SourceRange
+import lang.semantics.resolvers.ModifierResolver
 
 class SemanticAnalyzer(
     override val msgHandler: MsgHandler,
@@ -27,9 +28,10 @@ class SemanticAnalyzer(
     override var scope: Scope = Scope(parent = null)
     private var currentModule: Module? = null
 
-    override val declResolver: DeclarationResolver = DeclarationResolver(analyzer = this)
-    override val constResolver: ConstResolver = ConstResolver(analyzer = this)
-    override val typeResolver: TypeResolver = TypeResolver(analyzer = this)
+    override val declResolver = DeclarationResolver(analyzer = this)
+    override val constResolver = ConstResolver(analyzer = this)
+    override val typeResolver = TypeResolver(analyzer = this)
+    override val modResolver = ModifierResolver(analyzer = this)
 
     override val semanticContext = SemanticContext()
 

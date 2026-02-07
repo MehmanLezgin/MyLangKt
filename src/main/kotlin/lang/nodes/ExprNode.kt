@@ -1,6 +1,6 @@
 package lang.nodes
 
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 import lang.core.SourceRange
 
 typealias NodeTransformFunc = (ExprNode) -> ExprNode

@@ -49,11 +49,7 @@ abstract class BaseResolver<T, TResult>(
         }
     }
 
-    internal fun IdentifierNode.error(func: (String, SourceRange) -> ErrorType) = func(value, range)
-    internal fun IdentifierNode.error(func: (String, String, SourceRange) -> ErrorType) =
-        func(value, scope.absoluteScopePath ?: "", range)
-
-    internal fun ExprNode.error(msg: String) = semanticError(msg, range)
+    fun ExprNode.error(msg: String) = semanticError(msg, range)
 
     internal fun semanticError(msg: String, range: SourceRange?): ErrorType {
         analyzer.msgHandler.semanticError(msg, range)

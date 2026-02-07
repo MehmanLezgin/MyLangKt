@@ -75,6 +75,7 @@ class MsgHandler {
             stage = CompileStage.LEXICAL_ANALYSIS,
             msg = msg,
             range = pos?.toSourceRange(src)
+
         )
     }
 

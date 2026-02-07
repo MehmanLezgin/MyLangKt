@@ -1,6 +1,7 @@
-package lang.tokens
+package lang.core
 
 enum class KeywordType(val value: String) {
+    INFIX("infix"),
     IMPORT("import"),
     FROM("from"),
     MODULE("module"),

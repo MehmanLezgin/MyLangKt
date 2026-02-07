@@ -1,6 +1,7 @@
 package lang.messages
 
 object Terms {
+    const val EXTENSION = "extension"
     const val UNKNOWN = "unknown"
     const val UNKNOWN_PATH = "unknown path"
     const val TYPE_NAME = "type name"

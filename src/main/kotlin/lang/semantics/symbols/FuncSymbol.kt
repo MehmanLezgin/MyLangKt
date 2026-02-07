@@ -4,12 +4,13 @@ import lang.nodes.ExprNode
 import lang.semantics.types.FuncType
 import lang.semantics.types.Type
 import lang.semantics.types.TypeFlags
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
+import lang.messages.Terms
 
-data class FuncParamSymbol(
+open class FuncParamSymbol(
     override val name: String,
-    val type: Type,
-    val defaultValue: ExprNode?
+    open val type: Type,
+    val defaultValue: ExprNode? = null
 ) : Symbol(name = name) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -22,6 +23,14 @@ data class FuncParamSymbol(
         return type.hashCode()
     }
 }
+
+class FuncExtensionParamSymbol(
+    override val type: Type,
+) : FuncParamSymbol(
+    name = "\\$${Terms.EXTENSION}",
+    type = type,
+    defaultValue = null
+)
 
 data class FuncParamListSymbol(
     val list: List<FuncParamSymbol> = listOf()
@@ -46,7 +55,7 @@ data class OverloadedFuncSymbol(
     val overloads: MutableList<FuncSymbol> = mutableListOf(),
     override val modifiers: Modifiers = Modifiers()
 ) : Symbol(name = name, modifiers = modifiers) {
-    fun hasOverload(funcSym: FuncSymbol?) : Boolean {
+    fun hasOverload(funcSym: FuncSymbol?): Boolean {
         if (funcSym == null) return false
         return overloads.find { it == funcSym } != null
     }
@@ -54,9 +63,9 @@ data class OverloadedFuncSymbol(
 
 open class FuncSymbol(
     override val name: String,
-//    open val typeNames: TypeNameListNode?,
     open val params: FuncParamListSymbol,
     open val returnType: Type,
+    val isExtension: Boolean = false,
     override val modifiers: Modifiers = Modifiers()
 ) : Symbol(name = name, modifiers = modifiers) {
     val paramTypes: List<Type>
@@ -143,6 +152,7 @@ data class ConstructorSymbol(
     params = params,
     returnType = returnType,
 )
+
 data class DestructorSymbol(
     override val name: String,
     override val returnType: Type

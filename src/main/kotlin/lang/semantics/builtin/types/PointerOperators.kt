@@ -6,7 +6,7 @@ import lang.semantics.builtin.PrimitivesScope.voidPtr
 import lang.semantics.builtin.builders.FuncBuilder
 import lang.semantics.builtin.globalOperFunc
 import lang.semantics.symbols.BuiltInOperatorFuncSymbol
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 
 fun PrimitivesScope.buildPtrOperPlus() =
     globalOperFunc(OperatorType.PLUS) {

@@ -6,7 +6,7 @@ import lang.semantics.symbols.FuncParamListSymbol
 import lang.semantics.symbols.FuncSymbol
 import lang.semantics.symbols.Modifiers
 import lang.semantics.types.Type
-import lang.tokens.OperatorType
+import lang.core.operators.OperatorType
 
 class FuncBuilder(val name: String) {
     private var oper: OperatorType? = null
