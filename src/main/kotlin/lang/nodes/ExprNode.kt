@@ -5,7 +5,7 @@ import lang.core.SourceRange
 
 typealias NodeTransformFunc = (ExprNode) -> ExprNode
 
-interface ExprNode {
+sealed interface ExprNode {
     val range: SourceRange
     fun mapRecursive(mapper: NodeTransformFunc): ExprNode
 }

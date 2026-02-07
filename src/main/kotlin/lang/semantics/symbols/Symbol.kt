@@ -1,10 +1,9 @@
 package lang.semantics.symbols
 
-import lang.nodes.ExprNode
 import lang.semantics.types.ConstValue
 import lang.semantics.types.Type
 
-open class Symbol(
+sealed class Symbol(
     open val name: String,
     open val modifiers: Modifiers = Modifiers()
 )

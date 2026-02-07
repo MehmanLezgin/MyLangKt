@@ -1,8 +1,9 @@
 package lang.compiler
 
 import lang.core.LangSpec
-import lang.core.Serializer
+import lang.core.serializer.AstSerializer
 import lang.core.ISourceCode
+import lang.core.serializer.ScopeSerializer
 import lang.nodes.ModuleNode
 import lang.semantics.SemanticContext
 import lang.semantics.scopes.ModuleExportScope
@@ -18,7 +19,8 @@ data class Module(
 ) {
     var isReady = false
     var isAnalysing = false
-//    val imports = mutableMapOf<String, Symbol>()
+
+    //    val imports = mutableMapOf<String, Symbol>()
 //    val exports = mutableMapOf<String, Symbol>()
 //    val importsScope by lazy { Scope(parent = null, errorHandler = scope?.errorHandler ?: ErrorHandler()) }
     val exportsScope by lazy { ModuleExportScope() }
@@ -31,13 +33,23 @@ data class Module(
         exportsScope.export(namePath, symbol)
     }
 
-    fun print(path: String, semanticContext: SemanticContext?) {
+    fun printAST(path: String, semanticContext: SemanticContext?) {
         File(path).printWriter().use { out ->
             out.println(
-                Serializer.formatNode(
-                    node = this.ast,
+                AstSerializer.serialize(
+                    root = this.ast,
                     semanticContext = semanticContext
                 )
+            )
+        }
+    }
+
+    fun printScope(path: String) {
+        val scope = this.scope ?: return
+
+        File(path).printWriter().use { out ->
+            out.println(
+                ScopeSerializer.serialize(scope)
             )
         }
     }
@@ -48,9 +60,13 @@ fun List<Module>.print(basePath: String, semanticContext: SemanticContext?) {
         val moduleName = module.name
             ?.replace(LangSpec.moduleNameSeparator.raw, ".")
 
-        module.print(
+        module.printAST(
             path = "${basePath}ast/ast_$moduleName.txt",
             semanticContext = semanticContext
+        )
+
+        module.printScope(
+            path = "${basePath}scope_$moduleName.txt"
         )
     }
 }

@@ -79,9 +79,9 @@ class Lexer(
     } else Symbols.RADIX_DEC
 
     private fun getIntTypeByPostfix(): TokenType {
-        val isUnsigned = cur.toLowerCase() == Symbols.U
+        val isUnsigned = cur.lowercaseChar() == Symbols.U
         if (isUnsigned) advance()
-        val isLong = cur.toLowerCase() == Symbols.L
+        val isLong = cur.lowercaseChar() == Symbols.L
         if (isLong) advance()
 
         val tokenType = when {
@@ -100,7 +100,7 @@ class Lexer(
 
         val numberChars = radixMap[radix] ?: return null
 
-        while (cur.toLowerCase() in numberChars) advance()
+        while (cur.lowercaseChar() in numberChars) advance()
 
         if (start == index) return null
         val end = index
@@ -133,7 +133,7 @@ class Lexer(
             while (cur in DIGITS_10) advance()
         }
 
-        if (cur.toLowerCase() == 'e') {
+        if (cur.lowercaseChar() == 'e') {
             expFound = true
             advance()
             if (cur == '+' || cur == '-') advance()
@@ -141,7 +141,7 @@ class Lexer(
             while (cur in DIGITS_10) advance()
         }
 
-        val isFloat = cur.toLowerCase() == 'f'
+        val isFloat = cur.lowercaseChar() == 'f'
         if (isFloat) advance()
 
         val tokenType = when {
@@ -174,10 +174,10 @@ class Lexer(
         if (!dotFound && hasSingleDot()) {
             dotFound = true; lookahead++
         }
-        if (at(lookahead).toLowerCase() == Symbols.E) {
+        if (at(lookahead).lowercaseChar() == Symbols.E) {
             expFound = true
         }
-        val isFloat = at(lookahead).toLowerCase() == Symbols.F
+        val isFloat = at(lookahead).lowercaseChar() == Symbols.F
         val numberToken = when {
             isFloat || dotFound || expFound -> matchFloat()
             else -> matchInt()

@@ -18,7 +18,6 @@ fun main() {
             entry("./main.i") { _, ts ->
                 tokens = ts.getTokens()
             }
-
         }.toList().map { it.second }
 
         val semanticContext = if (msgHandler.hasErrors) null else analise()

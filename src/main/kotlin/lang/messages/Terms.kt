@@ -29,13 +29,13 @@ object Terms {
     }
 
     fun String.plural(count: Int = 2): String =
-        if (count == 1) toLowerCase()
-        else toLowerCase() + "s"
+        if (count == 1) lowercase()
+        else lowercase() + "s"
 
     val primaryVowelLetters = listOf('a', 'e', 'i', 'o', 'u')
 
     fun String.withIndefiniteArticle(): String {
-        val word = toLowerCase()
+        val word = lowercase()
         return if (word[0] in primaryVowelLetters) "an $word" else "a $word"
     }
 

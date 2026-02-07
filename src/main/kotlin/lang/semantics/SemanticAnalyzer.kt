@@ -82,7 +82,7 @@ class SemanticAnalyzer(
         }
     }
 
-    private fun checkModuleErrors(module: Module?) : String? {
+    private fun checkModuleErrors(module: Module?): String? {
         return when {
             module == null -> Msg.MODULE_NOT_DEFINED
             module == currentModule -> Msg.MODULE_CANNOT_IMPORT_ITSELF
@@ -127,8 +127,6 @@ class SemanticAnalyzer(
                 allExports.map {
                     IdentifierNode(it.key, node.range)
                 }
-
-            else -> emptyList()
         }.forEach { id ->
             val sym = allExports[id.value]
 
