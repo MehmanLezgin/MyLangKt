@@ -1,6 +1,7 @@
 package lang.semantics.types
 
 import lang.messages.Msg
+import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.symbols.TypeSymbol
 import lang.semantics.builtin.PrimitivesScope.void
 import lang.semantics.builtin.PrimitivesScope.voidPtr
@@ -83,6 +84,7 @@ abstract class Type(
     fun canCastTo(to: Type): Boolean {
         val from = this
         if (from == to) return true
+        if (from == void || to == void) return false
         if (!from.isConst && to.isConst) return false
 
         if (from.isVoidPtr()) {
