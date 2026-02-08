@@ -35,7 +35,6 @@ import lang.nodes.OperNode
 import lang.nodes.ReturnStmtNode
 import lang.nodes.ScopedDatatypeNode
 import lang.nodes.TryCatchStmtNode
-import lang.nodes.TypedefStmtNode
 import lang.nodes.UnaryOpNode
 import lang.nodes.UnknownNode
 import lang.nodes.UsingDirectiveNode
@@ -274,11 +273,6 @@ object AstSerializer {
             is LambdaNode -> mapOf(
                 "body" to expr.body,
                 "params" to expr.params
-            )
-
-            is TypedefStmtNode -> mapOf(
-                "identifier" to expr.name,
-                "dataType" to expr.dataType
             )
 
             is DotAccessNode -> mapOf(

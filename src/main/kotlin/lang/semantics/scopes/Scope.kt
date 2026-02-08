@@ -28,7 +28,7 @@ open class Scope(
     fun Symbol.ok() = ScopeResult.Success(sym = this)
     fun ScopeError.err() = ScopeResult.Error(error = this)
 
-    fun <T : Symbol> define(sym: T): ScopeResult {
+    fun <T : Symbol> define(sym: T, visibility: Visibility = Visibility.PUBLIC): ScopeResult {
         val name = sym.name
         val definedSym = symbols[name]
 
@@ -45,6 +45,8 @@ open class Scope(
 
     fun resolve(name: String, asMember: Boolean = false): ScopeResult {
         var sym = symbols[name]
+
+        if (sym is UsingSymbol) sym = sym.sym
 
         if (sym == null) {
             if (asMember || parent == null)
@@ -409,12 +411,11 @@ open class Scope(
         return define(sym)
     }
 
-    fun defineTypedef(node: TypedefStmtNode, type: Type): ScopeResult {
-        val name = node.name
-
-        val sym = TypedefSymbol(
-            name = name.value,
-            type = type
+    fun defineUsing(name: String, sym: Symbol, visibility: Visibility): ScopeResult {
+        val sym = UsingSymbol(
+            name = name,
+            sym = sym,
+            visibility = visibility
         )
 
         return define(sym)

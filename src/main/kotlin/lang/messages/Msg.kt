@@ -7,6 +7,13 @@ interface FormattableMsg
 object Msg {
     const val INVALID_CONST_VALUE = "Invalid const value"
     const val CANNOT_EXPORT = "Cannot export"
+
+
+    object SYMBOL_IS_INACCESSIBLE : FormattableMsg {
+        fun format(symName: String) =
+            "a symbol '$symName' is inaccessible"
+    }
+
     object EXPECTED_X_NAME : FormattableMsg {
         fun format(itemKind: String) =
             "Expected $itemKind name"
@@ -174,7 +181,7 @@ object Msg {
     const val EXPECTED_VARIABLE_ACTUAL_TYPE_NAME = "Expected a variable, actual: a type name"
     const val ASSIGNMENT_TO_IMMUTABLE_VARIABLE = "Assignment to immutable variable"
     const val ASSIGNMENT_TO_CONSTANT_VARIABLE = "Assignment to constant variable"
-    const val ERROR_TYPE = "[Error]"
+    const val ERROR_TYPE = "[Error type]"
     const val CONST = "const"
     const val EXPECTED_CONST_VALUE = "Expected const value"
     const val CONSTRUCTOR_OUTSIDE_CLASS_ERROR = "Constructor outside class body is not allowed"

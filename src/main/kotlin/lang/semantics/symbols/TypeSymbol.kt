@@ -1,12 +1,10 @@
 package lang.semantics.symbols
 
-import lang.compiler.Module
 import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.ClassScope
 import lang.semantics.scopes.EnumScope
 import lang.semantics.scopes.InterfaceScope
 import lang.semantics.scopes.ModuleExportScope
-import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.NamespaceScope
 import lang.semantics.types.PrimitiveType
 import lang.semantics.types.Type
@@ -78,22 +76,26 @@ data class EnumSymbol(
 
 open class NamespaceSymbol(
     override val name: String,
-    open val scope: NamespaceScope
+    open val scope: NamespaceScope,
+    override val modifiers: Modifiers = Modifiers()
 ) : TypeSymbol(
     name = name,
     staticScope = scope,
-    modifiers = Modifiers()
+    modifiers = modifiers
 )
 
 data class ModuleSymbol(
     override val name: String,
-    override val scope: ModuleExportScope
+    override val scope: ModuleExportScope,
+    override val modifiers: Modifiers = Modifiers()
 ) : NamespaceSymbol(
     name = name,
-    scope = scope
+    scope = scope,
+    modifiers = modifiers
 )
 
-data class TypedefSymbol(
+data class UsingSymbol(
     override val name: String,
-    val type: Type
+    val visibility: Visibility,
+    val sym: Symbol,
 ) : Symbol(name)

@@ -12,6 +12,7 @@ import lang.semantics.types.ErrorType
 import lang.semantics.types.OverloadedFuncType
 import lang.semantics.types.Type
 import lang.core.SourceRange
+import lang.parser.ParserUtils.toDatatype
 import lang.semantics.types.PointerType
 
 class DeclarationResolver(
@@ -26,8 +27,8 @@ class DeclarationResolver(
             is InterfaceDeclStmtNode -> resolve(target)
             is ClassDeclStmtNode -> resolve(target)
             is EnumDeclStmtNode -> resolve(target)
-            is TypedefStmtNode -> resolve(target)
             is NamespaceStmtNode -> resolve(target)
+            is UsingDirectiveNode -> resolve(target)
         }
     }
 
@@ -43,6 +44,67 @@ class DeclarationResolver(
         return this
     }
 
+    private fun resolve(node: UsingDirectiveNode) {
+        val value = node.value.let {
+            if (it is IdentifierNode) it.toDatatype() else it
+        }
+
+        val name = node.name
+
+        fun getNamespaceSym(node: BaseDatatypeNode): TypeSymbol? {
+            val type = analyzer.typeResolver.resolve(node, isNamespaceCtx = true)
+            val decl = type.declaration
+            if (type == ErrorType || decl !is TypeSymbol) return null
+            return decl
+        }
+
+        val modifiers = analyzer.modResolver.resolveUsingModifiers(node.modifiers)
+        val visibility = modifiers.visibility
+
+        fun defineUsingSymbol(name: String?, sym: Symbol) {
+            scope.defineUsing(name ?: sym.name, sym, visibility)
+                .handle(value.range) {}
+        }
+
+        fun defineUsingNamespace(namespaceScope: BaseTypeScope) {
+            namespaceScope.symbols.forEach { (_, memberSym) ->
+                scope.define(memberSym, visibility)
+                    .handle(value.range) {}
+            }
+        }
+
+
+        when (value) {
+            is DatatypeNode -> {
+                val namespaceSym = getNamespaceSym(value) ?: return
+                defineUsingNamespace(namespaceScope = namespaceSym.staticScope)
+            }
+
+            is ScopedDatatypeNode -> {
+                val namespaceSym = getNamespaceSym(value.base) ?: return
+                val targetScope = namespaceSym.staticScope
+                val memberName = value.member.identifier
+
+                val type = analyzer.withScope(targetScope) {
+                    analyzer.typeResolver
+                        .resolve(memberName, asMember = true, isNamespace = true)
+                }
+
+                if (type == ErrorType) return
+
+                targetScope.resolve(memberName.value).handle(value.range) {
+                    if (sym is TypeSymbol)
+                        defineUsingNamespace(sym.staticScope)
+                    else
+                        defineUsingSymbol(name?.value, sym)
+
+                }
+            }
+
+            else -> node.error(Msg.EXPECTED_NAMESPACE_NAME)
+        }
+    }
+
     private fun resolve(node: NamespaceStmtNode) {
         val modifiers = analyzer.modResolver.resolveNamespaceModifiers(node.modifiers)
 
@@ -55,17 +117,19 @@ class DeclarationResolver(
         }
     }
 
-    private fun resolve(node: TypedefStmtNode) {
-        val modifiers = analyzer.modResolver.resolveTypedefModifiers(node.modifiers)
+    /*
+        private fun resolve(node: TypedefStmtNode) {
+            val modifiers = analyzer.modResolver.resolveTypedefModifiers(node.modifiers)
 
-        val type = analyzer.typeResolver.resolve(node.dataType)
-        node attach type
-        if (type is ErrorType) return
-        val result = scope.defineTypedef(node, type)
-        result.handle(node.range) {
-            sym.bindAndExport(node, modifiers.isExport)
+            val type = analyzer.typeResolver.resolve(node.dataType)
+            node attach type
+            if (type is ErrorType) return
+            val result = scope.defineTypedef(node, type)
+            result.handle(node.range) {
+                sym.bindAndExport(node, modifiers.isExport)
+            }
         }
-    }
+    */
 
     private fun resolveAutoVarType(node: VarDeclStmtNode): Type {
         if (node.initializer == null) {
@@ -235,10 +299,6 @@ class DeclarationResolver(
                 null
             }
         }
-    }
-
-    private fun checkInfix() {
-
     }
 
     private fun resolve(node: FuncDeclStmtNode) {

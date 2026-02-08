@@ -44,7 +44,6 @@ import lang.nodes.ScopedDatatypeNode
 import lang.nodes.StmtNode
 import lang.nodes.TryCatchStmtNode
 import lang.nodes.TypeNameListNode
-import lang.nodes.TypedefStmtNode
 import lang.nodes.UsingDirectiveNode
 import lang.nodes.UsingStmtNode
 import lang.nodes.VarDeclStmtNode
@@ -136,7 +135,6 @@ class StmtParser(
             KeywordType.FOR -> ::parseForLoopStmt
             KeywordType.TRY -> ::parseTryCatchStmt
             KeywordType.NAMESPACE -> ::parseNamespaceStmt
-            KeywordType.TYPE -> ::parseTypedefStmt
             KeywordType.USING -> ::parseUsingStmt
             KeywordType.OPERATOR -> errorStmt(Msg.EXPECTED_FUNC_DECL)
             KeywordType.MODULE -> errorStmt(Msg.MODULE_IS_NOT_AT_START)
@@ -151,7 +149,7 @@ class StmtParser(
         return ts.captureRange {
             ts.next()
 
-            val expr = parser.parseExpr(ctx = ParsingContext.Condition)
+            var expr = parser.parseExpr(ctx = ParsingContext.Condition)
 
             if (ts.match(Token.LBrace::class)) {
                 val body = parseBlock()
@@ -161,6 +159,11 @@ class StmtParser(
                     range = resultRange
                 )
             }
+
+            expr = parser.analiseAsDatatype(
+                expr = expr,
+                allowAsExpression = true
+            ) ?: return@captureRange null
 
             return@captureRange when (expr) {
                 is BinOpNode -> {
@@ -192,6 +195,7 @@ class StmtParser(
         }
     }
 
+/*
     private fun parseTypedefStmt(): TypedefStmtNode? {
         return ts.captureRange {
             ts.next()
@@ -219,6 +223,7 @@ class StmtParser(
             )
         }
     }
+*/
 
     override fun parseBlock(): BlockNode {
         if (ts.matchOperator(OperatorType.COLON))

@@ -23,8 +23,8 @@ class TypeResolver(
                 isExprType = true
             )
 
-            is BaseDatatypeNode -> resolve(target)
             is IdentifierNode -> resolve(target)
+            is BaseDatatypeNode -> resolve(target)
             is BinOpNode -> resolve(target)
             is UnaryOpNode -> resolve(target)
             is FuncCallNode -> resolve(target)
@@ -105,13 +105,16 @@ class TypeResolver(
 
     private fun pickSingleFuncSym(
         name: String,
+        argTypes: List<Type>,
         funcReceiverExpr: ExprNode,
-        overloads: List<FuncSymbol>?
+        overloads: List<FuncSymbol>?,
     ): FuncSymbol? {
         if (overloads.isNullOrEmpty())
             funcReceiverExpr.error(
-                Msg.SymbolNotDefinedIn.format(
-                    Terms.FUNCTION, name, scope.absoluteScopePath
+                Msg.NoFuncOverload.format(
+                    name,
+                    argTypes.joinToString(", "),
+                    scope.absoluteScopePath
                 )
             )
         else if (overloads.size > 1)
@@ -134,6 +137,12 @@ class TypeResolver(
         var paramTypes: List<Type> = listOf()
         var returnType: Type = ErrorType
 
+        if (argTypes.any { it == ErrorType }) {
+            return returnType.setFlags(
+                isExprType = true,
+            ).also { target attach it }
+        }
+
         val sym = when (receiverType) {
             is FuncType -> {
                 val decl = receiverType.funcDeclaration
@@ -147,6 +156,7 @@ class TypeResolver(
                 val costOverloads = scope.resolveBestOverloads(receiverType.overloads, argTypes)
                 val sym = pickSingleFuncSym(
                     name = receiverType.name,
+                    argTypes = argTypes,
                     funcReceiverExpr = receiver,
                     overloads = costOverloads
                 )
@@ -398,11 +408,11 @@ class TypeResolver(
         }
     */
 
-    private fun resolve(target: IdentifierNode, asMember: Boolean = false): Type {
+    fun resolve(target: IdentifierNode, asMember: Boolean = false, isNamespace: Boolean = false): Type {
         val result = scope.resolve(name = target.value, asMember = asMember)
 
         return result.handle(target.range) {
-            resolveIdentifierWithSym(target, sym)
+            resolveIdentifierWithSym(target, sym, isNamespace)
         }
     }
 

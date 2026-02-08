@@ -24,7 +24,7 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         ModifierNode.Static::class,
     )
 
-    private val typedefAllowedModifiers = namespaceAllowedModifiers
+    private val usingAllowedModifiers = namespaceAllowedModifiers
 
     private val classAllowedModifiers = setOf(
         ModifierNode.Private::class,
@@ -89,11 +89,11 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         )
     }
 
-    fun resolveTypedefModifiers(node: ModifierSetNode?): Modifiers {
+    fun resolveUsingModifiers(node: ModifierSetNode?): Modifiers {
         return resolveModifiers(
             node = node,
-            allowedModifiers = typedefAllowedModifiers,
-            declKindName = Terms.CLASS
+            allowedModifiers = usingAllowedModifiers,
+            declKindName = Terms.USING
         )
     }
 
@@ -259,7 +259,7 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         ) { isExport = false }
 
         checkModifier(
-            isStatic && (scope !is NamespaceScope || scope !is BaseTypeScope),
+            isStatic && (scope !is NamespaceScope && scope !is BaseTypeScope),
             node.get(ModifierNode.Static::class)?.range,
             Msg.STATIC_IS_NOT_ALLOWED_IN_THIS_SCOPE
         ) { isStatic = false }

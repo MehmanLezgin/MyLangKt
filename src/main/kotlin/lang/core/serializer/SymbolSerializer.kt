@@ -49,14 +49,14 @@ object SymbolSerializer {
 
             is TypeSymbol -> mapOf(
                 "name" to sym.name,
-                "staticScope" to sym.staticScope,
+                "staticScope" to sym.staticScope.symbols,
                 "modifiers" to sym.modifiers,
                 "superType" to sym.superType
             )
 
-            is TypedefSymbol -> mapOf(
+            is UsingSymbol -> mapOf(
                 "name" to sym.name,
-                "type" to sym.type,
+                "type" to sym.sym,
             )
 
             is VarSymbol -> mapOf(

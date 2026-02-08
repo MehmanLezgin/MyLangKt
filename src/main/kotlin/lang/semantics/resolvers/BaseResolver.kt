@@ -71,6 +71,4 @@ abstract class BaseResolver<T, TResult>(
 
     fun ExprNode.getResolvedType(): Type? =
         analyzer.semanticContext.types[this]
-
-
 }

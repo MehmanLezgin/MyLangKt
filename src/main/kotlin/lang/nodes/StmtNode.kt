@@ -390,6 +390,7 @@ data class UsingStmtNode(
 }
 
 
+/*
 data class TypedefStmtNode(
     override val name: IdentifierNode,
     override val range: SourceRange,
@@ -407,3 +408,4 @@ data class TypedefStmtNode(
         return mapper(newNode)
     }
 }
+*/

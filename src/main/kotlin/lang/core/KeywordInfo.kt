@@ -43,7 +43,6 @@ enum class KeywordType(val value: String) {
     DESTRUCTOR("destructor"),
     NAMESPACE("namespace"),
     USING("using"),
-    TYPE("type"),
     OPERATOR("operator");
 }
 
