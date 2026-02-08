@@ -357,6 +357,39 @@ data class NamespaceStmtNode(
     }
 }
 
+data class UsingDirectiveNode(
+    override val name: IdentifierNode?,
+    val value: ExprNode,
+    override val range: SourceRange,
+) : DeclStmtNode<IdentifierNode>(
+    modifiers = null,
+    name = name,
+    range = range
+) {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = copy(
+            name = name?.mapRecursive(mapper) as? IdentifierNode ?: name,
+            value = value.mapRecursive(mapper)
+        )
+        return mapper(newNode)
+    }
+}
+
+data class UsingStmtNode(
+    val scopedExpr: ExprNode,
+    val body: BlockNode,
+    override val range: SourceRange,
+) : StmtNode {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = copy(
+            scopedExpr = scopedExpr.mapRecursive(mapper)
+        )
+
+        return mapper(newNode)
+    }
+}
+
+
 data class TypedefStmtNode(
     override val name: IdentifierNode,
     override val range: SourceRange,

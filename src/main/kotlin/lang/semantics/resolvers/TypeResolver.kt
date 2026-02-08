@@ -214,7 +214,9 @@ class TypeResolver(
         }
 
         target bind sym
-        return returnType.also { target attach it }
+        return returnType.setFlags(
+            isExprType = true,
+        ).also { target attach it }
     }
 
     fun resolve(target: BaseDatatypeNode, isNamespaceCtx: Boolean = false): Type {
@@ -640,7 +642,7 @@ class TypeResolver(
     ): Type {
         handleVarChange(target.left, leftType)
             ?.let { return it }
-        
+
         if (!rightType.canCastTo(leftType)) {
             target.error(
                 Msg.MismatchExpectedActual.format(

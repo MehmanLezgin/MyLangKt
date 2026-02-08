@@ -38,6 +38,8 @@ import lang.nodes.TryCatchStmtNode
 import lang.nodes.TypedefStmtNode
 import lang.nodes.UnaryOpNode
 import lang.nodes.UnknownNode
+import lang.nodes.UsingDirectiveNode
+import lang.nodes.UsingStmtNode
 import lang.nodes.VarDeclStmtNode
 import lang.nodes.WhileStmtNode
 import lang.semantics.SemanticContext
@@ -286,6 +288,16 @@ object AstSerializer {
 
             is ModifierSetNode -> mapOf(
                 "nodes" to expr.nodes.toList()
+            )
+
+            is UsingDirectiveNode -> mapOf(
+                "name" to expr.name,
+                "value" to expr.value
+            )
+
+            is UsingStmtNode -> mapOf(
+                "scopedExpr" to expr.scopedExpr,
+                "body" to expr.body
             )
 
             else -> emptyMap()

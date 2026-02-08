@@ -38,17 +38,20 @@ import lang.nodes.MatchStmtNode
 import lang.nodes.ModifierNode
 import lang.nodes.ModifierSetNode
 import lang.nodes.NamespaceStmtNode
+import lang.nodes.QualifiedDatatypeNode
 import lang.nodes.ReturnStmtNode
 import lang.nodes.ScopedDatatypeNode
+import lang.nodes.StmtNode
 import lang.nodes.TryCatchStmtNode
 import lang.nodes.TypeNameListNode
 import lang.nodes.TypedefStmtNode
+import lang.nodes.UsingDirectiveNode
+import lang.nodes.UsingStmtNode
 import lang.nodes.VarDeclStmtNode
 import lang.nodes.VoidDatatypeNode
 import lang.nodes.VoidNode
 import lang.nodes.WhileStmtNode
 import lang.parser.ParserUtils.isKeyword
-import lang.parser.ParserUtils.isNotKeyword
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.range
 import lang.parser.ParserUtils.toDatatype
@@ -134,7 +137,7 @@ class StmtParser(
             KeywordType.TRY -> ::parseTryCatchStmt
             KeywordType.NAMESPACE -> ::parseNamespaceStmt
             KeywordType.TYPE -> ::parseTypedefStmt
-            KeywordType.USING -> errorStmt(Msg.USING_NOT_IMPL)
+            KeywordType.USING -> ::parseUsingStmt
             KeywordType.OPERATOR -> errorStmt(Msg.EXPECTED_FUNC_DECL)
             KeywordType.MODULE -> errorStmt(Msg.MODULE_IS_NOT_AT_START)
             KeywordType.IMPORT -> ::parseImportStmt
@@ -142,6 +145,51 @@ class StmtParser(
         }
 
         return parserFunc() ?: VoidNode
+    }
+
+    private fun parseUsingStmt(): StmtNode? {
+        return ts.captureRange {
+            ts.next()
+
+            val expr = parser.parseExpr(ctx = ParsingContext.Condition)
+
+            if (ts.match(Token.LBrace::class)) {
+                val body = parseBlock()
+                return@captureRange UsingStmtNode(
+                    scopedExpr = expr,
+                    body = body,
+                    range = resultRange
+                )
+            }
+
+            return@captureRange when (expr) {
+                is BinOpNode -> {
+                    val left = expr.left
+                    if (expr.operator != BinOpType.ASSIGN || left !is IdentifierNode) {
+                        syntaxError(Msg.EXPECTED_IDENTIFIER, expr.range)
+                        return@captureRange null
+                    }
+
+                    UsingDirectiveNode(
+                        name = left,
+                        value = expr.right,
+                        range = resultRange
+                    )
+                }
+
+                is QualifiedDatatypeNode,
+                is IdentifierNode -> UsingDirectiveNode(
+                    name = null,
+                    value = expr,
+                    range = resultRange
+                )
+
+                else -> {
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, expr.range)
+                    null
+                }
+            }
+        }
     }
 
     private fun parseTypedefStmt(): TypedefStmtNode? {
