@@ -1,61 +1,24 @@
 package lang.parser
 
-import lang.core.SourceRange
 import lang.core.KeywordType
-import lang.messages.Msg
+import lang.core.SourceRange
 import lang.core.operators.OperatorType
-import lang.tokens.ITokenStream
-import lang.tokens.Token
 import lang.mappers.ModifierMapper
+import lang.messages.Msg
 import lang.messages.Terms
 import lang.messages.Terms.plural
-import lang.nodes.AutoDatatypeNode
-import lang.nodes.BaseDatatypeNode
-import lang.nodes.BinOpNode
-import lang.nodes.BinOpType
-import lang.nodes.BlockNode
-import lang.nodes.BreakStmtNode
-import lang.nodes.ClassDeclStmtNode
-import lang.nodes.ConstructorDeclStmtNode
-import lang.nodes.ContinueStmtNode
-import lang.nodes.DatatypeNode
-import lang.nodes.DeclStmtNode
-import lang.nodes.DestructorDeclStmtNode
-import lang.nodes.DoWhileStmtNode
-import lang.nodes.DotAccessNode
-import lang.nodes.ElseEntryNode
-import lang.nodes.EnumDeclStmtNode
-import lang.nodes.ExprNode
-import lang.nodes.ForLoopStmtNode
-import lang.nodes.FuncCallNode
-import lang.nodes.FuncDeclStmtNode
-import lang.nodes.IdentifierNode
-import lang.nodes.IfElseStmtNode
-import lang.nodes.ImportKind
-import lang.nodes.ImportStmtNode
-import lang.nodes.InterfaceDeclStmtNode
-import lang.nodes.MatchStmtNode
-import lang.nodes.ModifierNode
-import lang.nodes.ModifierSetNode
-import lang.nodes.NamespaceStmtNode
-import lang.nodes.QualifiedDatatypeNode
-import lang.nodes.ReturnStmtNode
-import lang.nodes.ScopedDatatypeNode
-import lang.nodes.StmtNode
-import lang.nodes.TryCatchStmtNode
-import lang.nodes.TypeNameListNode
-import lang.nodes.UsingDirectiveNode
-import lang.nodes.UsingStmtNode
-import lang.nodes.VarDeclStmtNode
-import lang.nodes.VoidDatatypeNode
-import lang.nodes.VoidNode
-import lang.nodes.WhileStmtNode
+import lang.nodes.*
+import lang.parser.ParserUtils.flattenCommaNode
+import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isKeyword
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.range
+import lang.parser.ParserUtils.toBlockNode
 import lang.parser.ParserUtils.toDatatype
 import lang.parser.ParserUtils.toIdentifierNode
 import lang.parser.ParserUtils.wrapToBody
+import lang.tokens.ITokenStream
+import lang.tokens.Token
 
 class StmtParser(
     private val ts: ITokenStream,
@@ -145,7 +108,7 @@ class StmtParser(
         return parserFunc() ?: VoidNode
     }
 
-    private fun parseUsingStmt(): StmtNode? {
+    private fun parseUsingStmt(): ExprNode? {
         return ts.captureRange {
             ts.next()
 
@@ -165,65 +128,61 @@ class StmtParser(
                 allowAsExpression = true
             ) ?: return@captureRange null
 
-            return@captureRange when (expr) {
-                is BinOpNode -> {
-                    val left = expr.left
-                    if (expr.operator != BinOpType.ASSIGN || left !is IdentifierNode) {
-                        syntaxError(Msg.EXPECTED_IDENTIFIER, expr.range)
-                        return@captureRange null
-                    }
 
-                    UsingDirectiveNode(
-                        name = left,
-                        value = expr.right,
-                        range = resultRange
+            if (expr isBinOperator BinOpType.COMMA) {
+                val allUsingNodes = expr.flattenCommaNode().mapNotNull { usingNode ->
+                    buildUsingDirective(
+                        expr = usingNode,
+                        resultRange = usingNode.range
                     )
                 }
 
-                is QualifiedDatatypeNode,
-                is IdentifierNode -> UsingDirectiveNode(
-                    name = null,
-                    value = expr,
-                    range = resultRange
-                )
+                val block = allUsingNodes.toBlockNode(resultRange)
+                return@captureRange block
 
-                else -> {
-                    syntaxError(Msg.EXPECTED_IDENTIFIER, expr.range)
-                    null
-                }
-            }
-        }
-    }
-
-/*
-    private fun parseTypedefStmt(): TypedefStmtNode? {
-        return ts.captureRange {
-            ts.next()
-
-            if (!ts.expect(Token.Identifier::class, Msg.EXPECTED_IDENTIFIER))
-                return@captureRange null
-
-            val identifier = (ts.next() as Token.Identifier).toIdentifierNode()
-
-            if (ts.peek() isNotOperator OperatorType.ASSIGN) {
-                syntaxError(Msg.EXPECTED_ASSIGN, ts.range)
-                return@captureRange null
             }
 
-            ts.next()
-            val datatypeNode = parser.analiseAsDatatype(
-                expr = parser.parseExpr(ctx = ParsingContext.TypeArg),
-                allowAsExpression = false
-            ) as? BaseDatatypeNode? ?: return@captureRange null
-
-            TypedefStmtNode(
-                name = identifier,
-                dataType = datatypeNode,
-                range = resultRange
+            return@captureRange buildUsingDirective(
+                expr = expr,
+                resultRange = resultRange
             )
         }
     }
-*/
+
+
+    private fun buildUsingDirective(
+        expr: ExprNode,
+        resultRange: SourceRange
+    ): UsingDirectiveNode? {
+        return when (expr) {
+            is BinOpNode -> {
+                val left = expr.left
+                if (expr.operator != BinOpType.ASSIGN || left !is IdentifierNode) {
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, expr.range)
+                    return null
+                }
+
+                UsingDirectiveNode(
+                    name = left,
+                    value = expr.right,
+                    range = resultRange
+                )
+            }
+
+            is QualifiedDatatypeNode,
+            is IdentifierNode -> UsingDirectiveNode(
+                name = null,
+                value = expr,
+                range = resultRange
+            )
+
+            else -> {
+                syntaxError(Msg.EXPECTED_IDENTIFIER, expr.range)
+                null
+            }
+        }
+    }
+
 
     override fun parseBlock(): BlockNode {
         if (ts.matchOperator(OperatorType.COLON))

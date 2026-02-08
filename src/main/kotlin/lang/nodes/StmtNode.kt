@@ -388,24 +388,3 @@ data class UsingStmtNode(
         return mapper(newNode)
     }
 }
-
-
-/*
-data class TypedefStmtNode(
-    override val name: IdentifierNode,
-    override val range: SourceRange,
-    val dataType: BaseDatatypeNode
-) : DeclStmtNode<IdentifierNode>(
-    modifiers = null,
-    name = name,
-    range = range
-) {
-    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
-        val newNode = copy(
-            name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
-            dataType = dataType.mapRecursive(mapper) as? BaseDatatypeNode ?: dataType,
-        )
-        return mapper(newNode)
-    }
-}
-*/

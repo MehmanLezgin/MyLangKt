@@ -54,9 +54,9 @@ object SymbolSerializer {
                 "superType" to sym.superType
             )
 
-            is UsingSymbol -> mapOf(
+            is AliasSymbol -> mapOf(
                 "name" to sym.name,
-                "type" to sym.sym,
+                "sym" to sym.sym,
             )
 
             is VarSymbol -> mapOf(

@@ -53,8 +53,12 @@ class DeclarationResolver(
 
         fun getNamespaceSym(node: BaseDatatypeNode): TypeSymbol? {
             val type = analyzer.typeResolver.resolve(node, isNamespaceCtx = true)
+            if (type == ErrorType) return null
             val decl = type.declaration
-            if (type == ErrorType || decl !is TypeSymbol) return null
+            if (decl !is TypeSymbol) {
+                node.error(Msg.EXPECTED_NAMESPACE_NAME)
+                return null
+            }
             return decl
         }
 
@@ -467,7 +471,7 @@ class DeclarationResolver(
         }
     }
 
-    fun Scope.isTypeScope() = scope is BaseTypeScope && scope !is NamespaceScope
+    fun Scope.isTypeScope() = this is BaseTypeScope && this !is NamespaceScope
 
 //    fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Unit) =
 //        this.handle(null, onSuccess)

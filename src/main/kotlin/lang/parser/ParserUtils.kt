@@ -54,6 +54,9 @@ object ParserUtils {
         return list
     }
 
+    fun List<ExprNode>.toBlockNode(range: SourceRange) =
+        BlockNode(nodes = this, range = range)
+
     fun IdentifierNode.toDatatype(): BaseDatatypeNode {
         return when (value) {
             AutoDatatypeNode.NAME -> AutoDatatypeNode(range = range)
@@ -106,7 +109,7 @@ object ParserUtils {
 
     fun OperatorType.isSimpleUnaryOp() = this in simpleUnaryOps
 
-    fun <T: ExprNode> List<T>.range(defaultEmpty: SourceRange) : SourceRange {
+    fun <T : ExprNode> List<T>.range(defaultEmpty: SourceRange): SourceRange {
         return when (size) {
             0 -> defaultEmpty
             1 -> get(0).range

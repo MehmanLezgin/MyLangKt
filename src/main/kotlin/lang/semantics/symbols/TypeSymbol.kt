@@ -94,7 +94,7 @@ data class ModuleSymbol(
     modifiers = modifiers
 )
 
-data class UsingSymbol(
+data class AliasSymbol(
     override val name: String,
     val visibility: Visibility,
     val sym: Symbol,
