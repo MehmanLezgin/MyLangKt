@@ -13,18 +13,18 @@ fun main() {
         val moduleList = modules {
             extension("i")
 
-//            root("modules")
+            //root("modules")
 
             entry("./main.i") { _, ts ->
                 tokens = ts.getTokens()
             }
-        }.toList().map { it.second }
+        }.values.toList()
 
-        val semanticContext = if (msgHandler.hasErrors) null else analise()
+        val semContext = analiseIfNoError()
 
         moduleList.print(
             basePath = basePath,
-            semanticContext = semanticContext
+            semanticContext = semContext
         )
 
         File(LEXER_RESULT_PATH).printWriter().use { out ->

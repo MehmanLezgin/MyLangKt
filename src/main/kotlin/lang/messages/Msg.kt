@@ -170,6 +170,8 @@ object Msg {
     const val EXPECTED_NAMESPACE_NAME = "Expected a namespace name"
     const val AMBIGUOUS_OVERLOADED_FUNCTION = "Ambiguous overloaded function"
     const val EXPECTED_VARIABLE_ACTUAL_VALUE = "Expected a variable, actual: a value"
+    const val EXPECTED_A_POINTER_VALUE = "Expected a pointer value"
+    const val EXPECTED_VARIABLE_ACTUAL_TYPE_NAME = "Expected a variable, actual: a type name"
     const val ASSIGNMENT_TO_IMMUTABLE_VARIABLE = "Assignment to immutable variable"
     const val ASSIGNMENT_TO_CONSTANT_VARIABLE = "Assignment to constant variable"
     const val ERROR_TYPE = "[Error]"

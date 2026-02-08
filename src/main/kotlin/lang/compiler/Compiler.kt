@@ -169,6 +169,11 @@ fun program(
     return Program(path).apply(block)
 }
 
+fun Program.analiseIfNoError(): SemanticContext? {
+    if (msgHandler.hasErrors) return null
+    return analise()
+}
+
 fun Program.analise(): SemanticContext? {
     moduleManager.entryModule?.ast ?: return null
 

@@ -15,13 +15,14 @@ object ScopeSerializer {
         return serialize(root, indent, isLast, Scope::class) { sym, currIndent, _ ->
             val map = getScopeChildren(sym).toMutableMap()
 
-            map.forEach { child ->
+            map.toMap().forEach { child ->
                 when (val value = child.value) {
                     is MutableMap<*, *> -> {
                         value.forEach {
-                            map["sym[${it.key}]"] = it.value
+                            map["sym[\"${it.key}\"]"] = it.value
                         }
                     }
+
                     else -> {}
                 }
             }
@@ -31,26 +32,21 @@ object ScopeSerializer {
     }
 
     fun getScopeChildren(scope: Scope): ChildrenMapRaw {
+        val defaultField = mapOf(
+            "scopeName" to scope.scopeName,
+            "symbols" to scope.symbols
+        )
+
         return when (scope) {
-            is BaseTypeScope -> mapOf(
-                "parent" to scope.parent,
-                "scopeName" to scope.scopeName,
+            is BaseTypeScope -> defaultField + mapOf(
                 "superTypeScope" to scope.superTypeScope,
-                "symbols" to scope.symbols
             )
 
-            is FuncParamsScope -> mapOf(
-                "parent" to scope.parent,
-                "symbols" to scope.symbols
-            )
-
-            is FuncScope -> mapOf(
-                "parent" to scope.parent,
+            is FuncScope -> defaultField + mapOf(
                 "funcSymbol" to scope.funcSymbol,
-                "symbols" to scope.symbols
             )
 
-            else -> emptyMap()
+            else -> defaultField
         }
     }
 }

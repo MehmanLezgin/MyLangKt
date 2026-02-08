@@ -84,14 +84,15 @@ abstract class Type(
     fun canCastTo(to: Type): Boolean {
         val from = this
         if (from == to) return true
-        if (from == void || to == void) return false
-        if (!from.isConst && to.isConst) return false
-
         if (from.isVoidPtr()) {
             if (to is PointerType) return true
             if (to is FuncType) return true
             return false
         }
+
+        if (from == void || to == void) return false
+        if (!from.isConst && to.isConst) return false
+
 
         when (from) {
             is PrimitiveType -> {

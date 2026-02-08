@@ -6,10 +6,10 @@ import lang.messages.Msg
 import lang.core.ISourceCode
 import lang.core.Pos
 import lang.core.SourceRange
+import lang.core.toSourceRange
 import lang.tokens.Token
 import lang.tokens.TokenType
 import kotlin.text.iterator
-
 
 
 open class BaseLexer(
@@ -34,7 +34,6 @@ open class BaseLexer(
 
 
     internal fun at(index: Int) = source.getOrNull(index) ?: Char.MIN_VALUE
-
 
 
     internal fun advance(count: Int = 1): Char? {
@@ -67,6 +66,8 @@ open class BaseLexer(
         savedStates.removeLast()
     }
 
+    internal var prevToken: Token? = null
+
     override fun tokenizeAll(): List<Token> {
         val tokens = mutableListOf<Token>()
         var token: Token? = null
@@ -76,6 +77,7 @@ open class BaseLexer(
 
             if (token != null) {
                 tokens.add(token)
+                prevToken = token
             }
         }
 
@@ -89,7 +91,7 @@ open class BaseLexer(
         src = src
     )
 
-//    internal fun closeRange(offset: Int = 0): SourceRange {
+    //    internal fun closeRange(offset: Int = 0): SourceRange {
 //        trackNewlines(offset)
 //        return state.closeRange(offset = offset, src = src)
 //    }
@@ -99,35 +101,56 @@ open class BaseLexer(
     }
 
     override fun nextToken(): Token? {
-        skipWhitespaces()
-        closeRange()
+        return matchToken()
 
-        if (state.index >= source.length)
-            return Token.EOF(closeRange())
-
-        val token = matchToken() ?: return null
-
-        if (token is Token.Comment)
-            return null
-
-        return token
+//        skipWhitespaces()
+//
+//        closeRange()
+//
+//        if (state.index >= source.length)
+//            return Token.EOF(closeRange())
+//
+//        val token = matchToken() ?: return null
+//
+//        return token
     }
 
     open fun matchToken(): Token? = null
 
-    internal fun skipWhitespaces() {
+    internal fun skipWhitespaces(): Boolean {
         val src = source
         val len = src.length
+        var lineSkipped = false
+
         closeRange()
+
         while (state.index < len && src[state.index].isWhitespace()) {
             if (src[state.index] == '\n') {
                 state.endLine++
                 state.endCol = 1
+                lineSkipped = true
             } else
                 state.endCol++
 
             state.index++
         }
+
+        return lineSkipped
+    }
+
+    internal fun semicolonIfNeeded(forced: Boolean = false): Token.Semicolon? {
+        if (!forced) when (prevToken) {
+            is Token.LParen,
+            is Token.LBracket,
+            is Token.LBrace,
+            is Token.Operator -> return null
+            else -> Unit
+        }
+
+        return Token.Semicolon(
+            LexSymbols.SEMICOLON_STR,
+            getPos().toSourceRange(src)
+        )
     }
 
     internal fun trackNewlines(rawValue: String?) {
@@ -155,19 +178,19 @@ open class BaseLexer(
     internal fun skipLine(): Boolean {
         var skipped = false
 
-        for (i in index .. source.length) {
+        for (i in index..source.length) {
             val c = at(i)
 
             if (c == '\n' || c == Char.MIN_VALUE) {
-                index = i
-                index++
+                index = i + 1
+                state.endLine++
+                state.endCol = 1
                 skipped = true
                 break
             }
         }
 
-        state.endLine++
-        state.endCol = 1
+        closeRange()
         return skipped
     }
 
@@ -188,7 +211,6 @@ open class BaseLexer(
 //            TokenType.DOT -> Token.Dot(value, range)
 
             TokenType.UNCLOSED_QUOTE -> Token.UnclosedQuote(value, range)
-            TokenType.COMMENT -> Token.Comment(value, range)
             TokenType.UNCLOSED_COMMENT -> Token.UnclosedComment(value, range)
 
             TokenType.QUOTES_STR -> Token.Str(value, value, range)
@@ -207,7 +229,7 @@ open class BaseLexer(
             TokenType.NULL -> Token.Null(value, range)
 
             TokenType.KEYWORD -> {
-                val keywordType = langSpec.keywords[value] ?.type ?: return Token.Unknown(raw = value, range = range)
+                val keywordType = langSpec.keywords[value]?.type ?: return Token.Unknown(raw = value, range = range)
                 Token.Keyword(keywordType, value, range)
             }
 

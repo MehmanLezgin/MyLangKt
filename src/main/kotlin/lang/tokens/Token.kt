@@ -20,9 +20,7 @@ sealed class Token(
     data class RBrace(override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class UnclosedQuote(override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class UnclosedComment(override val raw: String, override val range: SourceRange) : Token(raw, range)
-    data class Comment(override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Semicolon(override val raw: String, override val range: SourceRange) : Token(raw, range)
-
 
     data class Int32(val value: Int, override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Int64(val value: Long, override val raw: String, override val range: SourceRange) : Token(raw, range)

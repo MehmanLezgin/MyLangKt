@@ -19,42 +19,6 @@ class Lexer(
     private companion object {
         const val DIGITS_10 = "0123456789"
 
-        object Symbols {
-            const val INT = "int" // for preventing conflict with 'in' oper: op(in) + id(t)
-            const val TRUE = "true"
-            const val FALSE = "false"
-            const val NULL = "null"
-            const val DOT = '.'
-            const val LPAREN = '('
-            const val RPAREN = ')'
-            const val LBRACKET = '['
-            const val RBRACKET = ']'
-            const val LBRACE = '{'
-            const val RBRACE = '}'
-            const val COLON = ':'
-            const val SEMICOLON = ';'
-            const val B = 'b'
-            const val E = 'f'
-            const val F = 'f'
-            const val L = 'l'
-            const val U = 'u'
-            const val X = 'x'
-            const val ZERO = '0'
-            const val RADIX_BIN = 2
-            const val RADIX_DEC = 10
-            const val RADIX_HEX = 16
-            const val QUOTE_CHAR = '\''
-            const val QUOTE_STRING = '"'
-            const val COMMENT = "//"
-            const val MULTILINE_COMMENT_OPEN = "/*"
-            const val MULTILINE_COMMENT_CLOSE = "*/"
-
-            const val NEW_LINE = '\n'
-            const val BACK_SLASH = '\\'
-            const val LINE_CONTINUATION = "\\\r\n"
-            const val DOUBLE_BACK_SLASH = "\\\\"
-        }
-
         private val radixMap = mapOf(
             2 to '0'..'1', 10 to '0'..'9', 16 to ('0'..'9') + ('a'..'f')
         )
@@ -62,26 +26,27 @@ class Lexer(
         private val identifierChars = ('a'..'z') + ('0'..'9') + '_'
     }
 
-    private fun getRadix() = if (cur == Symbols.ZERO) {
+
+    private fun getRadix() = if (cur == LexSymbols.ZERO) {
         val radix = when (at(index + 1)) {
-            Symbols.X -> {
-                advance(2); Symbols.RADIX_HEX
+            LexSymbols.X -> {
+                advance(2); LexSymbols.RADIX_HEX
             }
 
-            Symbols.B -> {
-                advance(2); Symbols.RADIX_BIN
+            LexSymbols.B -> {
+                advance(2); LexSymbols.RADIX_BIN
             }
 
-            else -> Symbols.RADIX_DEC
+            else -> LexSymbols.RADIX_DEC
         }
 
         radix
-    } else Symbols.RADIX_DEC
+    } else LexSymbols.RADIX_DEC
 
     private fun getIntTypeByPostfix(): TokenType {
-        val isUnsigned = cur.lowercaseChar() == Symbols.U
+        val isUnsigned = cur.lowercaseChar() == LexSymbols.U
         if (isUnsigned) advance()
-        val isLong = cur.lowercaseChar() == Symbols.L
+        val isLong = cur.lowercaseChar() == LexSymbols.L
         if (isLong) advance()
 
         val tokenType = when {
@@ -119,7 +84,7 @@ class Lexer(
         var dotFound = false
         var expFound = false
 
-        if (cur == Symbols.DOT) {
+        if (cur == LexSymbols.DOT) {
             dotFound = true
             advance()
 //            if (cur !in DIGITS_10) { }
@@ -127,7 +92,7 @@ class Lexer(
 
         while (cur in DIGITS_10) advance()
 
-        if (cur == Symbols.DOT && !dotFound) {
+        if (cur == LexSymbols.DOT && !dotFound) {
             dotFound = true
             advance()
             while (cur in DIGITS_10) advance()
@@ -159,13 +124,13 @@ class Lexer(
         val startChar = at(index)
         val pos = getPos()
 
-        if (!startChar.isDigit() && startChar != Symbols.DOT) return matchInt()
+        if (!startChar.isDigit() && startChar != LexSymbols.DOT) return matchInt()
 
         var lookahead = index
         var dotFound = false
         var expFound = false
 
-        fun hasSingleDot() = at(lookahead) == Symbols.DOT && at(lookahead + 1) != Symbols.DOT
+        fun hasSingleDot() = at(lookahead) == LexSymbols.DOT && at(lookahead + 1) != LexSymbols.DOT
 
         if (hasSingleDot()) {
             dotFound = true; lookahead++
@@ -174,10 +139,10 @@ class Lexer(
         if (!dotFound && hasSingleDot()) {
             dotFound = true; lookahead++
         }
-        if (at(lookahead).lowercaseChar() == Symbols.E) {
+        if (at(lookahead).lowercaseChar() == LexSymbols.E) {
             expFound = true
         }
-        val isFloat = at(lookahead).lowercaseChar() == Symbols.F
+        val isFloat = at(lookahead).lowercaseChar() == LexSymbols.F
         val numberToken = when {
             isFloat || dotFound || expFound -> matchFloat()
             else -> matchInt()
@@ -206,10 +171,10 @@ class Lexer(
             langSpec.getOperatorInfo(value) != null -> TokenType.OPER
 
             else -> when (value) {
-                Symbols.INT -> TokenType.IDENTIFIER
-                Symbols.TRUE -> TokenType.TRUE
-                Symbols.FALSE -> TokenType.FALSE
-                Symbols.NULL -> TokenType.NULL
+                LexSymbols.INT -> TokenType.IDENTIFIER
+                LexSymbols.TRUE -> TokenType.TRUE
+                LexSymbols.FALSE -> TokenType.FALSE
+                LexSymbols.NULL -> TokenType.NULL
                 else -> TokenType.IDENTIFIER
             }
         }
@@ -231,15 +196,15 @@ class Lexer(
         advance()
 
         val tokenType = when (c) {
-            Symbols.LPAREN -> TokenType.LPAREN
-            Symbols.RPAREN -> TokenType.RPAREN
-            Symbols.LBRACKET -> TokenType.LBRACKET
-            Symbols.RBRACKET -> TokenType.RBRACKET
-            Symbols.LBRACE -> TokenType.LBRACE
-            Symbols.RBRACE -> TokenType.RBRACE
-            Symbols.COLON -> TokenType.COLON
-            Symbols.SEMICOLON -> TokenType.SEMICOLON
-            Symbols.DOT -> TokenType.DOT
+            LexSymbols.LPAREN -> TokenType.LPAREN
+            LexSymbols.RPAREN -> TokenType.RPAREN
+            LexSymbols.LBRACKET -> TokenType.LBRACKET
+            LexSymbols.RBRACKET -> TokenType.RBRACKET
+            LexSymbols.LBRACE -> TokenType.LBRACE
+            LexSymbols.RBRACE -> TokenType.RBRACE
+            LexSymbols.COLON -> TokenType.COLON
+            LexSymbols.SEMICOLON -> TokenType.SEMICOLON
+            LexSymbols.DOT -> TokenType.DOT
             else -> null
         } ?: return null
 
@@ -265,19 +230,19 @@ class Lexer(
                 continue
             }
 
-            if (scanFor(Symbols.DOUBLE_BACK_SLASH)) {
-                advance(Symbols.DOUBLE_BACK_SLASH.length)
+            if (scanFor(LexSymbols.DOUBLE_BACK_SLASH)) {
+                advance(LexSymbols.DOUBLE_BACK_SLASH.length)
                 continue
             }
 
-            if (scanFor(Symbols.LINE_CONTINUATION)) {
-                advance(Symbols.LINE_CONTINUATION.length)
+            if (scanFor(LexSymbols.LINE_CONTINUATION)) {
+                advance(LexSymbols.LINE_CONTINUATION.length)
                 continue
             }
 
             when (cur) {
-                Symbols.NEW_LINE -> {
-                    if (at(index - 1) != Symbols.BACK_SLASH) {
+                LexSymbols.NEW_LINE -> {
+                    if (at(index - 1) != LexSymbols.BACK_SLASH) {
                         lexicalError(Msg.EXPECTED_QUOTE, getPos())
                         return null
                     }
@@ -304,42 +269,13 @@ class Lexer(
         val value = unescapeString(rawValue, pos)
 
         return when {
-            quote == Symbols.QUOTE_CHAR && value.length == 1 -> Token.Character(value[0], rawValue, range)
+            quote == LexSymbols.QUOTE_CHAR && value.length == 1 -> Token.Character(value[0], rawValue, range)
 
             else -> Token.Str(value, rawValue, range)
         }
     }
 
-    private fun skipComments() {
-        when {
-            scanFor(Symbols.COMMENT) -> {
-                while (scanFor(Symbols.COMMENT)) {
-                    skipLine()
-                    skipWhitespaces()
-                }
-            }
-
-            scanFor(Symbols.MULTILINE_COMMENT_OPEN) -> {
-                val pos = getPos()
-                var endFound = false
-                advance(Symbols.MULTILINE_COMMENT_OPEN.length)
-
-                while (index < source.length) {
-                    endFound = scanFor(Symbols.MULTILINE_COMMENT_CLOSE)
-                    if (endFound) break
-                    advance()
-                }
-
-                if (endFound) {
-                    advance(Symbols.MULTILINE_COMMENT_CLOSE.length)
-                } else {
-                    lexicalError(Msg.EXPECTED_COMMENT_END, pos)
-                }
-            }
-        }
-    }
-
-    private fun Char.isQuote() = this == Symbols.QUOTE_STRING || this == Symbols.QUOTE_CHAR
+    private fun Char.isQuote() = this == LexSymbols.QUOTE_STRING || this == LexSymbols.QUOTE_CHAR
 
     private fun scanFor(str: String): Boolean {
         if (index >= source.length) return false
@@ -358,19 +294,64 @@ class Lexer(
     @OptIn(ExperimentalStdlibApi::class)
     private fun Char.isIdentifierChar() = this.lowercaseChar() in identifierChars
 
+    private fun skipWhitespacesAndComments(): Boolean {
+        skipWhitespaces()
+
+        when {
+            scanFor(LexSymbols.COMMENT) -> {
+                while (scanFor(LexSymbols.COMMENT)) {
+                    skipLine()
+                    return true
+                }
+            }
+
+            scanFor(LexSymbols.MULTILINE_COMMENT_OPEN) -> {
+                val pos = getPos()
+                var endFound = false
+                advance(LexSymbols.MULTILINE_COMMENT_OPEN.length)
+
+                while (index < source.length) {
+                    endFound = scanFor(LexSymbols.MULTILINE_COMMENT_CLOSE)
+                    if (endFound) break
+                    if (cur == LexSymbols.NEW_LINE)
+                        skipLine()
+                    else
+                        advance()
+                }
+
+                if (endFound) {
+                    advance(LexSymbols.MULTILINE_COMMENT_CLOSE.length)
+                    closeRange()
+                    return true
+                } else {
+                    lexicalError(Msg.EXPECTED_COMMENT_END, pos)
+                }
+            }
+        }
+
+        return skipWhitespaces()
+    }
+
     override fun matchToken(): Token? {
-        if (index >= source.length)
+        while (true) {
+            if (!skipWhitespacesAndComments()) break
+        }
+
+        if (state.index >= source.length)
             return Token.EOF(closeRange())
-
-        skipComments()
-
-//        state.beginRange()
+//        skipWhitespaces()
+//
+//        closeRange()
+//
+//        skipComments()?.let {
+//            return it
+//        }
 
         val c = cur
 
         val token = when {
             c == Char.MIN_VALUE -> null
-            c.isDigit() || c == Symbols.DOT && at(index + 1).isDigit() -> matchNumber() // d or .d
+            c.isDigit() || c == LexSymbols.DOT && at(index + 1).isDigit() -> matchNumber() // d or .d
             c.isIdentifierChar() -> matchId()                                  // id or kw
             c.isQuote() -> matchStringLiteral()                                         // str and char literals
             else -> {

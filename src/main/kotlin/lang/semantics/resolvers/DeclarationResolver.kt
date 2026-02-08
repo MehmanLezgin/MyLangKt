@@ -12,6 +12,7 @@ import lang.semantics.types.ErrorType
 import lang.semantics.types.OverloadedFuncType
 import lang.semantics.types.Type
 import lang.core.SourceRange
+import lang.semantics.types.PointerType
 
 class DeclarationResolver(
     override val analyzer: ISemanticAnalyzer
@@ -147,7 +148,7 @@ class DeclarationResolver(
             node.error(Msg.CONST_VAR_MUST_BE_STATIC)
         }
 
-        if (!isConst) {
+        if (!isConst || type is PointerType) {
             withEffectiveScope(modifiers.isStatic) {
                 val result = scope.defineVar(node, type, modifiers)
                 result.handle(node.range) {

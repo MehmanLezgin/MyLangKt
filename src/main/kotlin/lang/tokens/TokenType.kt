@@ -12,7 +12,6 @@ enum class TokenType {
     DOT,
     UNCLOSED_QUOTE,
     SEMICOLON,
-    COMMENT,
     UNCLOSED_COMMENT,
 
     INT32,

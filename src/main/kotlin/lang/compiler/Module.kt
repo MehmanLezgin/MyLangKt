@@ -6,6 +6,7 @@ import lang.core.ISourceCode
 import lang.core.serializer.ScopeSerializer
 import lang.nodes.ModuleNode
 import lang.semantics.SemanticContext
+import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.scopes.ModuleExportScope
 import lang.semantics.scopes.ModuleScope
 import lang.semantics.symbols.Symbol

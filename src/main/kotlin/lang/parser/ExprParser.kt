@@ -10,6 +10,7 @@ import lang.mappers.UnaryOpTypeMapper
 import lang.messages.Msg
 import lang.nodes.*
 import lang.parser.ParserUtils.flattenCommaNode
+import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isKeyword
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.isOperator
@@ -37,7 +38,7 @@ class ExprParser(
         val list: MutableList<ExprNode> = mutableListOf()
 
 //        if (startsWithLParen)
-            ts.next()
+        ts.next()
 
         if (!ts.match(Token.RParen::class)) {
             val expr = parse().flattenCommaNode()
@@ -45,8 +46,8 @@ class ExprParser(
         }
 
 //        if (startsWithLParen) {
-            ts.expect(Token.RParen::class, Msg.EXPECTED_RPAREN)
-            ts.next()
+        ts.expect(Token.RParen::class, Msg.EXPECTED_RPAREN)
+        ts.next()
 //        }
 
         if (ctx == ParsingContext.Default && ts.match(Token.LBrace::class)) {
@@ -767,7 +768,12 @@ class ExprParser(
     fun calcPtrLvl(): Int {
         ts.splitOperators(mapTag = OperatorType.MUL)
         var i = 0
-        while (ts.matchOperator(OperatorType.MUL)) {
+        while (true) {
+            val t = ts.peek()
+            if (t isNotOperator OperatorType.MUL ||
+                !ts.prev().areOnSameLine(t)
+            )
+                break
             i++; ts.next()
         }
         return i
@@ -875,7 +881,6 @@ class ExprParser(
                 if (t is Token.Identifier && canParseInfix(minPrec)) {
                     val receiver = t.toIdentifierNode()
                     ts.next()
-//                    val right = parseArgsList(ctx)
                     val right = parseBinaryExpr(prec + 1, stopToken, ctx)
 
                     left = InfixFuncCallNode(
@@ -897,6 +902,11 @@ class ExprParser(
                     (opType == OperatorType.LESS ||
                             opType == OperatorType.GREATER ||
                             OperatorMaps.triBracketsMap[opType] != null)
+                ) break
+
+                if (left isBinOperator BinOpType.COLON &&
+                    op.type != OperatorType.COMMA &&
+                    op.type != OperatorType.ASSIGN
                 ) break
 
                 ts.next()

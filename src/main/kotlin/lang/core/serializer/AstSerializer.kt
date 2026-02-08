@@ -65,7 +65,7 @@ object AstSerializer {
     }
 
     fun ChildrenMapRaw.mapWithSymbols(currIndent: String): ChildrenMapRaw {
-        return this.map {
+        return this.toMap().map {
             when (val value = it.value) {
                 is Symbol ->
                     it.key to SymbolSerializer.serialize(value, currIndent)
@@ -291,6 +291,6 @@ object AstSerializer {
             else -> emptyMap()
         }
 
-        return map
+        return map + mapOf("range" to expr.range)
     }
 }

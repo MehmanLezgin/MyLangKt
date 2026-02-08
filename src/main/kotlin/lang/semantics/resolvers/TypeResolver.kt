@@ -19,7 +19,10 @@ class TypeResolver(
     override fun resolve(target: ExprNode): Type {
         return when (target) {
             is LiteralNode<*> -> resolve(target)
-            is NullLiteralNode -> PrimitivesScope.voidPtr
+            is NullLiteralNode -> PrimitivesScope.voidPtr.setFlags(
+                isExprType = true
+            )
+
             is BaseDatatypeNode -> resolve(target)
             is IdentifierNode -> resolve(target)
             is BinOpNode -> resolve(target)
@@ -192,7 +195,7 @@ class TypeResolver(
                 val msg = if (paramName != null)
                     Msg.NoValuePassedForParameter.format(paramName = paramName, paramTypeStr)
                 else
-                    Msg.NoValuePassedForParameter.format(paramIndex = i+1, paramTypeStr)
+                    Msg.NoValuePassedForParameter.format(paramIndex = i + 1, paramTypeStr)
 
                 receiver.error(msg)
                 continue
@@ -422,6 +425,66 @@ class TypeResolver(
         } else null
     }
 
+    private fun resolve(target: UnaryOpNode): Type {
+        target.constFoldAndBind()?.let {
+            return it.type
+        }
+
+        val operand = target.operand
+        val operandType = resolve(operand)
+
+        if (operandType != ErrorType && !operandType.isExprType) {
+            operand.error(Msg.EXPECTED_VALUE_OR_REF)
+            return ErrorType
+        }
+
+        when (target.operator) {
+            UnaryOpType.INCREMENT,
+            UnaryOpType.DECREMENT -> {
+                handleVarChange(operand, operandType)
+
+                target bind operand.getResolvedSymbol()
+
+                return operandType.setFlags(
+                    isExprType = true,
+                    isLvalue = false
+                ).also { target attach it }
+            }
+
+            UnaryOpType.NEW -> {}
+            UnaryOpType.DELETE -> {}
+            UnaryOpType.ADDRESS_OF -> {
+                if (!operandType.isLvalue)
+                    return operand.error(Msg.EXPECTED_VARIABLE_ACTUAL_VALUE)
+
+                if (!operandType.isExprType)
+                    return operand.error(Msg.EXPECTED_VARIABLE_ACTUAL_TYPE_NAME)
+
+                return operandType.createPtr()
+                    .also { target attach it }
+            }
+
+            UnaryOpType.INDIRECTION -> {
+                if (!operandType.isExprType || operandType !is PointerType)
+                    return operand.error(Msg.EXPECTED_A_POINTER_VALUE)
+
+                return operandType.createDeRef()
+                    .also { target attach it }
+            }
+
+            UnaryOpType.BITWISE_NOT -> {}
+            UnaryOpType.SIZEOF -> {}
+            UnaryOpType.IS -> {}
+            UnaryOpType.NON_NULL_ASSERT -> {}
+            else -> {}
+        }
+
+        val operator = target.tokenOperatorType
+        val argTypes = listOf(operandType)
+
+        return resolveOperFunc(target, argTypes, operator)
+    }
+
     private fun resolve(target: BinOpNode): Type {
         target.constFoldAndBind()?.let {
             return it.type
@@ -452,15 +515,17 @@ class TypeResolver(
 
         val operator = target.tokenOperatorType
 
-        return resolveOperFunc(target, leftType, rightType, operator)
+        val argTypes = listOf(leftType, rightType)
+        return resolveOperFunc(target, argTypes, operator)
     }
 
     private fun resolveOperFunc(
         target: ExprNode,
-        leftType: Type,
-        rightType: Type,
+        argTypes: List<Type>,
         operator: OperatorType,
     ): Type {
+        val leftType = argTypes.getOrNull(0) ?: return ErrorType
+
         val operScope = when (leftType) {
             is PrimitiveType,
             is UserType ->
@@ -473,7 +538,6 @@ class TypeResolver(
             return target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(leftType.toString()))
         }
 
-        val argTypes = listOf(leftType, rightType)
         val result = operScope.resolveOperFunc(operator = operator, argTypes = argTypes)
 
         return result.handle(target.range) {
@@ -553,21 +617,27 @@ class TypeResolver(
         )
     }
 
+    private fun handleVarChange(target: ExprNode, operandType: Type): ErrorType? {
+        return when {
+            !operandType.isLvalue ->
+                target.error(Msg.EXPECTED_VARIABLE_ACTUAL_VALUE)
+
+            operandType.isConst ->
+                target.error(Msg.ASSIGNMENT_TO_CONSTANT_VARIABLE)
+
+            !operandType.isMutable ->
+                target.error(Msg.ASSIGNMENT_TO_IMMUTABLE_VARIABLE)
+
+            else -> null
+        }
+    }
+
     private fun resolveAssign(
         target: BinOpNode,
         leftType: Type,
         rightType: Type
     ): Type {
-        when {
-            !leftType.isLvalue ->
-                target.left.error(Msg.EXPECTED_VARIABLE_ACTUAL_VALUE)
-
-            leftType.isConst ->
-                target.error(Msg.ASSIGNMENT_TO_CONSTANT_VARIABLE)
-
-            !leftType.isMutable ->
-                target.error(Msg.ASSIGNMENT_TO_IMMUTABLE_VARIABLE)
-        }
+        handleVarChange(target.left, leftType)
 
         if (!rightType.canCastTo(leftType)) {
             target.error(
@@ -583,9 +653,7 @@ class TypeResolver(
 
         return leftType.setFlags(
             isExprType = true,
-            isLvalue = true,
-            isConst = leftType.isConst,
-            isMutable = leftType.isMutable
+            isLvalue = true
         ).also { target attach it }
     }
 
@@ -595,39 +663,76 @@ class TypeResolver(
         isConst: Boolean,
         isReference: Boolean
     ): Type {
-        val type = if (pointerLevel > 0) PointerType(base = this) else this
-
-        return type.setFlags(
+        var type = this.setFlags(
             isConst = isConst,
             isLvalue = isReference,
             isExprType = false
         )
+
+        if (pointerLevel > 0)
+            type = PointerType(base = type, level = pointerLevel)
+
+        return type
     }
 
-/*
-    private fun resolveTemplateArgs(typeNames: List<ExprNode>?): List<TemplateArg> {
-        if (typeNames == null) return emptyList()
+    private fun Type.createPtr(): Type {
+        return when (this) {
+            is PointerType -> PointerType(
+                base = base,
+                level = level + 1,
+                flags = flags
+            )
 
-        return typeNames.map {
-            val type = resolve(target = it)
+            else -> PointerType(
+                base = this
+            )
+        }.setFlags(
+            isExprType = true,
+            isLvalue = false
+        )
+    }
 
-            if (type == ErrorType || it is BaseDatatypeNode)
-                return@map TemplateArg.ArgType(type = type)
+    private fun PointerType.createDeRef(): Type {
+        return when (level) {
+            1 -> base.setFlags(
+                isConst = base.isConst,
+                isExprType = true,
+                isLvalue = true,
+                isMutable = true
+            )
 
-            if (type.isExprType || type.isConst) {
-                val constValue = analyzer.constResolver.resolve(target = it)
-                return@map if (constValue != null)
-                    TemplateArg.ArgConstValue(value = constValue)
-                else {
-                    it.error(Msg.EXPECTED_CONST_VALUE)
-                    TemplateArg.ArgType(ErrorType)
-                }
-            }
-
-            return@map TemplateArg.ArgType(type = type)
+            else -> PointerType(
+                base = base,
+                level = level - 1,
+                flags = flags
+            )
         }
     }
-*/
+
+    /*
+        private fun resolveTemplateArgs(typeNames: List<ExprNode>?): List<TemplateArg> {
+            if (typeNames == null) return emptyList()
+
+            return typeNames.map {
+                val type = resolve(target = it)
+
+                if (type == ErrorType || it is BaseDatatypeNode)
+                    return@map TemplateArg.ArgType(type = type)
+
+                if (type.isExprType || type.isConst) {
+                    val constValue = analyzer.constResolver.resolve(target = it)
+                    return@map if (constValue != null)
+                        TemplateArg.ArgConstValue(value = constValue)
+                    else {
+                        it.error(Msg.EXPECTED_CONST_VALUE)
+                        TemplateArg.ArgType(ErrorType)
+                    }
+                }
+
+                return@map TemplateArg.ArgType(type = type)
+            }
+        }
+    */
 
 
     /*private fun resolve(target: UserTypeSymbol): Type {
@@ -636,10 +741,6 @@ class TypeResolver(
         }
     }*/
 
-
-    private fun resolve(target: UnaryOpNode): Type {
-        return ErrorType
-    }
 
     private fun resolve(target: LiteralNode<*>): Type {
         val type = when (target) {
@@ -719,8 +820,8 @@ class TypeResolver(
         }
     }
 
-/*
-    fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Type) =
-        this.handle(null, onSuccess)
-*/
+    /*
+        fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Type) =
+            this.handle(null, onSuccess)
+    */
 }
