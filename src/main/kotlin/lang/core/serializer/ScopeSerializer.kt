@@ -39,7 +39,7 @@ object ScopeSerializer {
 
         return when (scope) {
             is BaseTypeScope -> defaultField + mapOf(
-                "superTypeScope" to scope.superTypeScope,
+                "superTypeScope" to scope.superTypeScope.toString(),
             )
 
             is FuncScope -> defaultField + mapOf(

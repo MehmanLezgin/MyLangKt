@@ -106,9 +106,12 @@ class DeclarationResolver(
         if (node.initializer == null)
             return type
 
-        return analyzer.typeResolver
-            .resolveForType(node.initializer, type)
-            .also { node.initializer attach it }
+        analyzer.typeResolver.resolveForType(node.initializer, type)
+            .takeIf { it != ErrorType }
+            ?.let { type = it }
+
+        node.initializer attach type
+        return type
     }
 
     private fun resolveConstVar(node: VarDeclStmtNode, type: Type, modifiers: Modifiers) {

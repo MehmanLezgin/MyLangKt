@@ -100,22 +100,7 @@ open class BaseLexer(
         return state.closeRange(src = src)
     }
 
-    override fun nextToken(): Token? {
-        return matchToken()
-
-//        skipWhitespaces()
-//
-//        closeRange()
-//
-//        if (state.index >= source.length)
-//            return Token.EOF(closeRange())
-//
-//        val token = matchToken() ?: return null
-//
-//        return token
-    }
-
-    open fun matchToken(): Token? = null
+    override fun nextToken(): Token? = null
 
     internal fun skipWhitespaces(): Boolean {
         val src = source

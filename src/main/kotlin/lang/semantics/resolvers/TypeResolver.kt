@@ -442,6 +442,7 @@ class TypeResolver(
             UnaryOpType.INCREMENT,
             UnaryOpType.DECREMENT -> {
                 handleVarChange(operand, operandType)
+                    ?.let { return it }
 
                 target bind operand.getResolvedSymbol()
 
@@ -638,7 +639,8 @@ class TypeResolver(
         rightType: Type
     ): Type {
         handleVarChange(target.left, leftType)
-
+            ?.let { return it }
+        
         if (!rightType.canCastTo(leftType)) {
             target.error(
                 Msg.MismatchExpectedActual.format(

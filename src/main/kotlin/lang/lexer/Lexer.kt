@@ -341,7 +341,7 @@ class Lexer(
         return skipWhitespaces()
     }
 
-    override fun matchToken(): Token? {
+    override fun nextToken(): Token? {
         while (true) {
             if (!skipWhitespacesAndComments()) {
                 requiredSemicolon?.let {

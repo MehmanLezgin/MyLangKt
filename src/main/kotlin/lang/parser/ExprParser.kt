@@ -904,10 +904,18 @@ class ExprParser(
                             OperatorMaps.triBracketsMap[opType] != null)
                 ) break
 
-                if (left isBinOperator BinOpType.COLON &&
-                    op.type != OperatorType.COMMA &&
-                    op.type != OperatorType.ASSIGN
-                ) break
+                if (op.type == OperatorType.DOT) {
+                    return@captureRange parseDotChain(
+                        startChain = left,
+                        ctx = ctx
+                    )
+                }
+
+//                if (left isBinOperator BinOpType.COLON &&
+//                    op.type != OperatorType.COMMA &&
+//                    op.type != OperatorType.ASSIGN
+//                ) break
+
 
                 ts.next()
 
