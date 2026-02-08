@@ -294,13 +294,18 @@ class Lexer(
     @OptIn(ExperimentalStdlibApi::class)
     private fun Char.isIdentifierChar() = this.lowercaseChar() in identifierChars
 
+    private var requiredSemicolon: Token? = null
+
     private fun skipWhitespacesAndComments(): Boolean {
+        var preLine = state.endLine
+
         skipWhitespaces()
 
         when {
             scanFor(LexSymbols.COMMENT) -> {
                 while (scanFor(LexSymbols.COMMENT)) {
                     skipLine()
+                    requiredSemicolon = getSemicolonIfRequired()
                     return true
                 }
             }
@@ -322,6 +327,7 @@ class Lexer(
                 if (endFound) {
                     advance(LexSymbols.MULTILINE_COMMENT_CLOSE.length)
                     closeRange()
+                    requiredSemicolon = getSemicolonIfRequired()
                     return true
                 } else {
                     lexicalError(Msg.EXPECTED_COMMENT_END, pos)
@@ -329,23 +335,26 @@ class Lexer(
             }
         }
 
+        if (preLine != state.endLine)
+            requiredSemicolon = getSemicolonIfRequired()
+
         return skipWhitespaces()
     }
 
     override fun matchToken(): Token? {
         while (true) {
-            if (!skipWhitespacesAndComments()) break
+            if (!skipWhitespacesAndComments()) {
+                requiredSemicolon?.let {
+                    requiredSemicolon = null
+                    return it
+                }
+
+                break
+            }
         }
 
         if (state.index >= source.length)
             return Token.EOF(closeRange())
-//        skipWhitespaces()
-//
-//        closeRange()
-//
-//        skipComments()?.let {
-//            return it
-//        }
 
         val c = cur
 

@@ -138,11 +138,14 @@ open class BaseLexer(
         return lineSkipped
     }
 
-    internal fun semicolonIfNeeded(forced: Boolean = false): Token.Semicolon? {
-        if (!forced) when (prevToken) {
+    internal fun getSemicolonIfRequired(): Token.Semicolon? {
+        if (index == 0) return null
+        when (prevToken) {
+            is Token.EOF,
             is Token.LParen,
             is Token.LBracket,
             is Token.LBrace,
+            is Token.Semicolon,
             is Token.Operator -> return null
             else -> Unit
         }
