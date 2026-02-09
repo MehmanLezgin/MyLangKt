@@ -429,7 +429,7 @@ open class Scope(
         return name
     }
 
-    fun defineNamespace(node: NamespaceStmtNode): ScopeResult {
+    fun defineNamespace(node: ModuleStmtNode): ScopeResult {
         val name = node.name?.value ?: randNamespaceName()
 
         val sym = NamespaceSymbol(

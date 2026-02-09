@@ -5,7 +5,7 @@ import lang.nodes.*
 import lang.core.operators.OperatorType
 
 interface IParser {
-    fun parseModule(name: String) : ModuleNode
+    fun parseModule(name: IdentifierNode) : ModuleStmtNode
     fun parseExpr(ctx: ParsingContext = ParsingContext.Default) : ExprNode
     fun parseStmt(isSingleLine: Boolean = false): ExprNode
     fun parseTypenameList(): TypeNameListNode?

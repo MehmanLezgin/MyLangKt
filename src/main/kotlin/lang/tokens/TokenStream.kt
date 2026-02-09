@@ -64,14 +64,14 @@ class TokenStream(
     }
 
     override fun restore() {
-        super.save()
+        super.restore()
         if (savedIndices.isEmpty()) return
         index = savedIndices.removeLast()
     }
 
     override fun clearLastSave() {
         super.save()
-        savedIndices.removeLast()
+        savedIndices.removeLastOrNull()
     }
 
     private fun splitOperator(mapTag: OperatorType) {

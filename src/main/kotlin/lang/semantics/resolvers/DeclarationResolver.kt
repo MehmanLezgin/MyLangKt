@@ -27,7 +27,7 @@ class DeclarationResolver(
             is InterfaceDeclStmtNode -> resolve(target)
             is ClassDeclStmtNode -> resolve(target)
             is EnumDeclStmtNode -> resolve(target)
-            is NamespaceStmtNode -> resolve(target)
+            is ModuleStmtNode -> resolve(target)
             is UsingDirectiveNode -> resolve(target)
         }
     }
@@ -44,7 +44,7 @@ class DeclarationResolver(
             if (type == ErrorType) return null
             val decl = type.declaration
             if (decl !is TypeSymbol) {
-                node.error(Msg.EXPECTED_NAMESPACE_NAME)
+                node.error(Msg.EXPECTED_MODULE_NAME)
                 return null
             }
             return decl
@@ -93,11 +93,11 @@ class DeclarationResolver(
                 }
             }
 
-            else -> node.error(Msg.EXPECTED_NAMESPACE_NAME)
+            else -> node.error(Msg.EXPECTED_MODULE_NAME)
         }
     }
 
-    private fun resolve(node: NamespaceStmtNode) {
+    private fun resolve(node: ModuleStmtNode) {
         val modifiers = analyzer.modResolver.resolveNamespaceModifiers(node.modifiers)
 
         val result = scope.defineNamespace(node)

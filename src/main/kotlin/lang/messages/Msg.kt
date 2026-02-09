@@ -174,7 +174,7 @@ object Msg {
     const val INTERFACE_CAN_EXTEND_INTERFACE = "An interface can only extend another interface"
     const val CLASS_CAN_EXTEND_INTERFACE_OR_CLASS = "A class can only extend an interface or another class"
     const val EXPECTED_VALUE_OR_REF = "Expected a value or reference"
-    const val EXPECTED_NAMESPACE_NAME = "Expected a namespace name"
+    const val EXPECTED_MODULE_NAME = "Expected a module name"
     const val AMBIGUOUS_OVERLOADED_FUNCTION = "Ambiguous overloaded function"
     const val EXPECTED_VARIABLE_ACTUAL_VALUE = "Expected a variable, actual: a value"
     const val EXPECTED_A_POINTER_VALUE = "Expected a pointer value"

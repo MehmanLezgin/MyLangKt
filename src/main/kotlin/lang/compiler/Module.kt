@@ -4,7 +4,7 @@ import lang.core.ISourceCode
 import lang.core.LangSpec
 import lang.core.serializer.AstSerializer
 import lang.core.serializer.ScopeSerializer
-import lang.nodes.ModuleNode
+import lang.nodes.ModuleStmtNode
 import lang.semantics.SemanticContext
 import lang.semantics.scopes.ModuleScope
 import java.io.File
@@ -12,7 +12,7 @@ import java.io.File
 data class Module(
     val name: String?,
     val src: ISourceCode,
-    val ast: ModuleNode,
+    val ast: ModuleStmtNode,
     var scope: ModuleScope? = null
 ) {
     var isReady = false

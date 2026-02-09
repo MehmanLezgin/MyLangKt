@@ -1,6 +1,7 @@
 package lang.parser
 
 import lang.core.KeywordType
+import lang.core.LangSpec.moduleNameSeparator
 import lang.core.SourceRange
 import lang.core.operators.OperatorType
 import lang.mappers.ModifierMapper
@@ -16,7 +17,7 @@ import lang.parser.ParserUtils.range
 import lang.parser.ParserUtils.toBlockNode
 import lang.parser.ParserUtils.toDatatype
 import lang.parser.ParserUtils.toIdentifierNode
-import lang.parser.ParserUtils.wrapToBody
+import lang.parser.ParserUtils.wrapToBlock
 import lang.tokens.ITokenStream
 import lang.tokens.Token
 
@@ -97,10 +98,9 @@ class StmtParser(
 
             KeywordType.FOR -> ::parseForLoopStmt
             KeywordType.TRY -> ::parseTryCatchStmt
-            KeywordType.NAMESPACE -> ::parseNamespaceStmt
+            KeywordType.MODULE -> ::parseModuleStmt
             KeywordType.USING -> ::parseUsingStmt
             KeywordType.OPERATOR -> errorStmt(Msg.EXPECTED_FUNC_DECL)
-            KeywordType.MODULE -> errorStmt(Msg.MODULE_IS_NOT_AT_START)
             KeywordType.IMPORT -> ::parseImportStmt
             KeywordType.FROM -> ::parseFromImportStmt
         }
@@ -207,7 +207,7 @@ class StmtParser(
                 BlockNode(nodes = list, range = resultRange)
             }
         } else {
-            val expr = parse(isSingleLine = true).wrapToBody()
+            val expr = parse(isSingleLine = true).wrapToBlock()
             ts.skipTokens(Token.Semicolon::class)
             expr
         }
@@ -296,32 +296,33 @@ class StmtParser(
         }
     }
 
-    private fun parseNamespaceStmt(): NamespaceStmtNode? {
+    private fun parseModuleStmt(): ModuleStmtNode? {
         return ts.captureRange {
             ts.next()
 
-            val name = if (ts.peek() !is Token.LBrace) {
-                val t = ts.peek()
+            val list = parser.parseIdsWithSeparatorOper(separator = moduleNameSeparator)
+                ?.reversed()
 
-                if (t is Token.Identifier) {
-                    ts.next()
-                    t.toIdentifierNode()
-                } else {
-                    syntaxError(Msg.EXPECTED_IDENTIFIER, t.range)
-                    null
-                }
-            } else null
+            if (list.isNullOrEmpty()) return@captureRange null
 
             if (!ts.expect(Token.LBrace::class, Msg.EXPECTED_LBRACE))
                 return@captureRange null
 
             val body = parseBlock()
 
-            NamespaceStmtNode(
-                name = name,
-                body = body,
-                range = resultRange
-            )
+            var module: ModuleStmtNode? = null
+
+            list.forEachIndexed { i, id ->
+                val moduleBody = if (i == 0) body else module!!.wrapToBlock()
+
+                module = ModuleStmtNode(
+                    name = id,
+                    body = moduleBody,
+                    range = resultRange
+                )
+            }
+
+            return@captureRange module
         }
     }
 
@@ -482,7 +483,7 @@ class StmtParser(
             params = params ?: emptyList(),
             typeNames = typeNames,
             returnType = finalReturnType,
-            body = initializerBody?.wrapToBody() ?: body,
+            body = initializerBody?.wrapToBlock() ?: body,
             range = range
         )
     }
@@ -521,7 +522,7 @@ class StmtParser(
             primaryConstrParams = primaryConstrParams,
             typeNames = typeNames,
             superClass = superClass ?: VoidDatatypeNode(range),
-            body = initializerBody?.wrapToBody() ?: body,
+            body = initializerBody?.wrapToBlock() ?: body,
             range = range
         )
     }
@@ -560,7 +561,7 @@ class StmtParser(
             name = name ?: return null,
             typeNames = typeNames,
             superInterface = superInterface ?: VoidDatatypeNode(range),
-            body = initializerBody?.wrapToBody() ?: body,
+            body = initializerBody?.wrapToBlock() ?: body,
             range = range
         )
     }
@@ -933,7 +934,7 @@ class StmtParser(
                     }
 
                     t isKeyword KeywordType.ELIF -> {
-                        parseIfElseStmt().wrapToBody()
+                        parseIfElseStmt().wrapToBlock()
                     }
 
                     else -> null

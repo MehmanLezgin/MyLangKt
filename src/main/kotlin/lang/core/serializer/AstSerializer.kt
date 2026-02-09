@@ -28,8 +28,7 @@ import lang.nodes.MatchStmtNode
 import lang.nodes.DotAccessNode
 import lang.nodes.ImportKind
 import lang.nodes.ModifierSetNode
-import lang.nodes.ModuleNode
-import lang.nodes.NamespaceStmtNode
+import lang.nodes.ModuleStmtNode
 import lang.nodes.NullLiteralNode
 import lang.nodes.OperNode
 import lang.nodes.ReturnStmtNode
@@ -96,7 +95,7 @@ object AstSerializer {
 
             is NullLiteralNode -> emptyMap()
 
-            is ModuleNode -> mapOf("name" to expr.name) + expr.nodes
+            is ModuleStmtNode -> mapOf("name" to expr.name) + expr.body.nodes
                 .mapIndexed { i, expr -> "[$i]" to expr }
                 .toMap()
 
@@ -265,7 +264,7 @@ object AstSerializer {
                 }
             )
 
-            is NamespaceStmtNode -> mapOf(
+            is ModuleStmtNode -> mapOf(
                 "name" to expr.name,
                 "body" to expr.body
             )

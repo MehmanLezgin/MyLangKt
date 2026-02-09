@@ -339,7 +339,7 @@ data class TryCatchStmtNode(
     }
 }
 
-data class NamespaceStmtNode(
+data class ModuleStmtNode(
     override val name: IdentifierNode?,
     val body: BlockNode,
     override val range: SourceRange

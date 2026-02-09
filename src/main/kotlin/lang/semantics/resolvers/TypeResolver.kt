@@ -79,7 +79,7 @@ class TypeResolver(
         val targetScope = type.declaration?.staticScope
 
         if (type.isExprType || targetScope == null) {
-            target.error(Msg.EXPECTED_NAMESPACE_NAME)
+            target.error(Msg.EXPECTED_MODULE_NAME)
             return ErrorType
         }
 

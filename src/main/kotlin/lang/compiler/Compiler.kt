@@ -101,7 +101,7 @@ class ModuleManager(
         )
 
         var moduleNameId = parser.parseModuleName()
-        var moduleName = moduleNameId?.value ?: ""
+        var moduleName = moduleNameId?.value ?: "Anonymous"
 
         if (moduleNameId == null) {
             moduleNameId = randModuleName(file.path, src)
@@ -120,7 +120,7 @@ class ModuleManager(
             }
         }
 
-        val ast = parser.parseModule(moduleName)
+        val ast = parser.parseModule(moduleNameId)
 
         val module = Module(
             name = moduleName,

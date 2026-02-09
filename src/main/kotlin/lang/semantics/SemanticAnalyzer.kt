@@ -55,7 +55,7 @@ class SemanticAnalyzer(
             module.scope = moduleScope
 
             withScope(moduleScope) {
-                resolve(node = ast as BlockNode)
+                resolve(node = ast.body)
             }
 
             isAnalysing = false

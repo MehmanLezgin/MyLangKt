@@ -20,7 +20,7 @@ import lang.tokens.Token
 import kotlin.reflect.KClass
 
 object ParserUtils {
-    fun ExprNode.wrapToBody(check: Boolean = true): BlockNode {
+    fun ExprNode.wrapToBlock(check: Boolean = true): BlockNode {
         if (check && this is BlockNode) return this
         return BlockNode(nodes = listOf(this), range = range)
     }
