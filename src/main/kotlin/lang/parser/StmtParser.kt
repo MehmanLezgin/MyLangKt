@@ -101,7 +101,7 @@ class StmtParser(
             KeywordType.MODULE -> ::parseModuleStmt
             KeywordType.USING -> ::parseUsingStmt
             KeywordType.OPERATOR -> errorStmt(Msg.EXPECTED_FUNC_DECL)
-            KeywordType.IMPORT -> ::parseImportStmt
+            KeywordType.IMPORT -> ::parseImportModuleStmt
             KeywordType.FROM -> ::parseFromImportStmt
         }
 
@@ -197,7 +197,9 @@ class StmtParser(
                 ts.next()
 
                 while (!ts.match(Token.RBrace::class, Token.EOF::class)) {
-                    list.add(parse())
+                    val expr = parse()
+                    if (expr != VoidNode)
+                        list.add(expr)
                     ts.skipTokens(Token.Semicolon::class)
                 }
 
@@ -248,11 +250,16 @@ class StmtParser(
         }
     }
 
-    private fun parseImportStmt(): ImportModulesStmtNode? {
+    private fun parseImportModuleStmt(): ImportModulesStmtNode {
         return ts.captureRange {
             ts.next()
 
-            null
+            val clause = parser.parseNameClause()
+
+            ImportModulesStmtNode(
+                items = clause,
+                range = resultRange
+            )
         }
     }
 
@@ -261,7 +268,21 @@ class StmtParser(
         return ts.captureRange {
             ts.next()
 
-            null
+            val sourceName = parser.parseNameSpecifier()
+                ?: return@captureRange null
+
+            if (!ts.expectKeyword(KeywordType.IMPORT, Msg.EXPECTED_IMPORT))
+                return@captureRange null
+
+            ts.next()
+
+            val clause = parser.parseNameClause()
+
+            ImportFromStmtNode(
+                sourceName = sourceName,
+                items = clause,
+                range = resultRange
+            )
         }
     }
 
@@ -274,25 +295,45 @@ class StmtParser(
 
             if (list.isNullOrEmpty()) return@captureRange null
 
-            if (!ts.expect(Token.LBrace::class, Msg.EXPECTED_LBRACE))
-                return@captureRange null
+            if (ts.match(Token.LBrace::class)) {
+                val body = parseBlock()
 
-            val body = parseBlock()
-
-            var module: ModuleStmtNode? = null
-
-            list.forEachIndexed { i, id ->
-                val moduleBody = if (i == 0) body else module!!.wrapToBlock()
-
-                module = ModuleStmtNode(
-                    name = id,
-                    body = moduleBody,
+                val module = buildModuleHierarchy(
+                    list = list,
+                    body = body,
                     range = resultRange
                 )
-            }
 
-            return@captureRange module
+                return@captureRange module
+            } else {
+                if (parser.moduleName != null) {
+                    syntaxError(Msg.SRC_CAN_CONTAIN_ONE_FILE_MODULE_DECL, resultRange)
+                } else
+                    parser.moduleName = QualifiedName(list)
+
+                null
+            }
         }
+    }
+
+    override fun buildModuleHierarchy(
+        list: List<IdentifierNode>,
+        body: BlockNode,
+        range: SourceRange
+    ): ModuleStmtNode? {
+        var module: ModuleStmtNode? = null
+
+        list.forEachIndexed { i, id ->
+            val moduleBody = if (i == 0) body else module!!.wrapToBlock()
+
+            module = ModuleStmtNode(
+                name = id,
+                body = moduleBody,
+                range = range
+            )
+        }
+
+        return module
     }
 
     private fun parseConstructorStmt(): ConstructorDeclStmtNode {

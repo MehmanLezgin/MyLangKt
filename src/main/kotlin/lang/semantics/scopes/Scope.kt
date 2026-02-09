@@ -7,7 +7,6 @@ import lang.semantics.types.ConstValue
 import lang.semantics.types.ErrorType.castCost
 import lang.semantics.types.Type
 import lang.core.operators.OperatorType
-import kotlin.random.Random
 
 open class Scope(
     open val parent: Scope?,
@@ -421,18 +420,15 @@ open class Scope(
         return define(sym)
     }
 
-    fun randNamespaceName(): String {
-        var name: String
-        do {
-            name = "\$namespace${Random.nextInt()}"
-        } while (symbols[name] != null)
-        return name
-    }
+    fun defineModuleIfNotExists(node: ModuleStmtNode): ScopeResult {
+        val name = node.name.value
 
-    fun defineNamespace(node: ModuleStmtNode): ScopeResult {
-        val name = node.name?.value ?: randNamespaceName()
+        symbols[name]?.let {
+            if (it is ModuleSymbol)
+                return ScopeResult.Success(it)
+        }
 
-        val sym = NamespaceSymbol(
+        val sym = ModuleSymbol(
             name = name,
             scope = ModuleScope(
                 parent = this,

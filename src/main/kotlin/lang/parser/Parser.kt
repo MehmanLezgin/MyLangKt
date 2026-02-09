@@ -1,6 +1,5 @@
 package lang.parser
 
-import lang.core.KeywordType
 import lang.core.LangSpec.moduleNameSeparator
 import lang.core.SourceRange
 import lang.core.operators.OperatorType
@@ -8,9 +7,9 @@ import lang.messages.CompileStage
 import lang.messages.Msg
 import lang.messages.MsgHandler
 import lang.nodes.*
-import lang.parser.ParserUtils.isNotKeyword
 import lang.parser.ParserUtils.isOperator
 import lang.parser.ParserUtils.toIdentifierNode
+import lang.parser.ParserUtils.wrapToBlock
 import lang.tokens.ITokenStream
 import lang.tokens.Token
 
@@ -28,41 +27,41 @@ class Parser(
         parser = this
     )
 
-    override fun parseModule(name: IdentifierNode): ModuleStmtNode {
+    override var moduleName: QualifiedName? = null
+
+    override fun parseSource(sourceId: String): BlockNode {
         val list = mutableListOf<ExprNode>()
 
         return ts.captureRangeToCur {
-            while (!ts.match(Token.EOF::class))
-                list.add(stmtParser.parse())
+            while (!ts.match(Token.EOF::class)) {
+                val expr = stmtParser.parse()
+                if (expr != VoidNode)
+                    list.add(expr)
+            }
 
-            ModuleStmtNode(
-                name = name,
-                body = BlockNode(
-                    nodes = list,
-                    range = resultRange
-                ),
+            val moduleName = this@Parser.moduleName
+            val body = BlockNode(
+                nodes = list,
                 range = resultRange
             )
+
+            if (moduleName != null) {
+                val module = stmtParser.buildModuleHierarchy(
+                    list = moduleName.parts,
+                    body = body,
+                    range = resultRange
+                )!!
+
+                return@captureRangeToCur module.wrapToBlock()
+            }
+
+            body
         }
     }
 
-    override fun parseExpr(ctx: ParsingContext) = exprParser.parse(ctx = ctx)
-
-    override fun parseStmt(isSingleLine: Boolean) = stmtParser.parse(isSingleLine = isSingleLine)
-    override fun parseTypenameList() = exprParser.parseTypenameList()
-    override fun parseArgsList(ctx: ParsingContext) = exprParser.parseArgsList(ctx = ctx)
-    override fun analiseParams(exprList: List<ExprNode>) = stmtParser.analiseParams(exprList)
-    override fun analiseDatatypeList(exprList: List<ExprNode>?) = stmtParser.analiseDatatypeList(exprList)
-    override fun parseBlock() = stmtParser.parseBlock()
-    override fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean) =
-        exprParser.analiseAsDatatype(expr, allowAsExpression)
-
-    override fun analiseTemplateList(exprList: List<ExprNode>?) =
-        exprParser.analiseTemplateList(exprList)
-
-
-    override fun parseModuleName(withModuleKeyword: Boolean): NameSpecifier? {
+    /*override fun parseModuleName(withModuleKeyword: Boolean): NameSpecifier? {
         ts.save()
+        var restored = false
 
         val result = run {
             if (withModuleKeyword && ts.peek() isNotKeyword KeywordType.MODULE)
@@ -77,6 +76,7 @@ class Parser(
 
                 if (ts.match(Token.LBrace::class)) {
                     ts.restore()
+                    restored = true
                 } else if (withModuleKeyword)
                     ts.expectSemicolonOrLinebreak(Msg.EXPECTED_SEMICOLON)
 
@@ -84,9 +84,25 @@ class Parser(
             }
         }
 
-        ts.clearLastSave()
+        if (!restored)
+            ts.clearLastSave()
+
         return result
-    }
+    }*/
+
+    override fun parseExpr(ctx: ParsingContext) = exprParser.parse(ctx = ctx)
+
+    override fun parseStmt(isSingleLine: Boolean) = stmtParser.parse(isSingleLine = isSingleLine)
+    override fun parseTypenameList() = exprParser.parseTypenameList()
+    override fun parseArgsList(ctx: ParsingContext) = exprParser.parseArgsList(ctx = ctx)
+    override fun analiseParams(exprList: List<ExprNode>) = stmtParser.analiseParams(exprList)
+    override fun analiseDatatypeList(exprList: List<ExprNode>?) = stmtParser.analiseDatatypeList(exprList)
+    override fun parseBlock() = stmtParser.parseBlock()
+    override fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean) =
+        exprParser.analiseAsDatatype(expr, allowAsExpression)
+
+    override fun analiseTemplateList(exprList: List<ExprNode>?) =
+        exprParser.analiseTemplateList(exprList)
 
     override fun parseIdsWithSeparatorOper(separator: OperatorType): List<IdentifierNode>? {
         fun checkSeparator(): Boolean {

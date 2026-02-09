@@ -25,7 +25,7 @@ sealed class NameClause {
 }
 
 data class ImportFromStmtNode(
-    val sourceName: QualifiedName,
+    val sourceName: NameSpecifier,
     val items: NameClause,
     override val range: SourceRange
 ) : StmtNode {

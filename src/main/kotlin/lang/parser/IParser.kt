@@ -5,7 +5,7 @@ import lang.nodes.*
 import lang.core.operators.OperatorType
 
 interface IParser {
-    fun parseModule(name: IdentifierNode) : ModuleStmtNode
+    fun parseSource(sourceId: String) : BlockNode
     fun parseExpr(ctx: ParsingContext = ParsingContext.Default) : ExprNode
     fun parseStmt(isSingleLine: Boolean = false): ExprNode
     fun parseTypenameList(): TypeNameListNode?
@@ -15,10 +15,10 @@ interface IParser {
     fun warning(msg: String, range: SourceRange)
     fun analiseDatatypeList(exprList: List<ExprNode>?): List<BaseDatatypeNode>?
     fun parseBlock(): BlockNode
-    fun parseModuleName(withModuleKeyword: Boolean = true): NameSpecifier?
     fun parseIdsWithSeparatorOper(separator: OperatorType): List<IdentifierNode>?
     fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean = false): ExprNode?
     fun analiseTemplateList(exprList: List<ExprNode>?): TypeNameListNode?
     fun parseNameClause(): NameClause
     fun parseNameSpecifier(): NameSpecifier?
+    var moduleName: QualifiedName?
 }

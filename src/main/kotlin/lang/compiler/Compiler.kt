@@ -3,15 +3,11 @@ package lang.compiler
 import lang.core.FileSourceCode
 import lang.core.ISourceCode
 import lang.core.LangSpec
-import lang.core.Pos
-import lang.core.SourceRange
 import lang.lexer.ILexer
 import lang.lexer.Lexer
 import lang.messages.Msg
 import lang.messages.MsgHandler
-import lang.nodes.IdentifierNode
-import lang.nodes.NameSpecifier
-import lang.nodes.QualifiedName
+import lang.nodes.ModuleStmtNode
 import lang.parser.IParser
 import lang.parser.Parser
 import lang.semantics.SemanticAnalyzer
@@ -26,25 +22,28 @@ import java.nio.file.Path
 class Program(val path: String) {
     var msgHandler: MsgHandler = MsgHandler()
 
-    var moduleManager: ModuleManager = ModuleManager(
+    var sourceManager = SourceManager(
         msgHandler = msgHandler,
         path = path
     )
-
-
 }
 
-typealias ModuleCallback = (m: Module, ts: ITokenStream) -> Unit
+typealias SourceCallback = (m: SourceUnit, ts: ITokenStream) -> Unit
 
-class ModuleManager(
+class SourceManager(
     val msgHandler: MsgHandler,
     path: String
 ) {
     private val basePath = Path.of(path)
     internal var fileExtension = "i"
 
-    val modules = mutableMapOf<String, Module>()
-    var entryModule: Module? = null
+    val sources = mutableListOf<SourceUnit>()
+    var entrySourceUnit: SourceUnit? = null
+
+    val allModules: List<ModuleStmtNode>
+        get() = sources.flatMap {
+            it.ast.nodes.filterIsInstance<ModuleStmtNode>()
+        }
 
     private fun String.absolute() =
         basePath.resolve(this)
@@ -52,7 +51,7 @@ class ModuleManager(
             .toAbsolutePath()
             .toFile()
 
-    fun addFromRoot(path: String = "", callback: ModuleCallback?): List<Module>? {
+    fun addSourcesFromRoot(path: String = "", callback: SourceCallback?): List<SourceUnit>? {
         val dir = path.absolute()
 
         val errorMsg = when {
@@ -75,11 +74,11 @@ class ModuleManager(
             } ?: return null
 
         return files.mapNotNull { file ->
-            addFromFile(path = file.path, callback)
+            addSourceFromFile(path = file.path, callback)
         }
     }
 
-    fun addFromFile(path: String, callback: ModuleCallback?): Module? {
+    fun addSourceFromFile(path: String, callback: SourceCallback?): SourceUnit? {
         val file = path.absolute()
 
         val src = readSourceFile(file, msgHandler) ?: return null
@@ -102,48 +101,31 @@ class ModuleManager(
             msgHandler = msgHandler
         )
 
-        val moduleNameSpec = parser.parseModuleName() ?: randModuleName(file.path, src)
-        val moduleNameId = moduleNameSpec.target.parts.first()
-        val moduleName = moduleNameId.value
+        val id = path.hashCode().toString()
+        val ast = parser.parseSource(sourceId = id)
 
-        val existingModule = modules[moduleName]
-
-        if (existingModule != null) {
-            msgHandler.sourceReadingError(
-                path = file.path,
-                msg = Msg.MODULE_ALREADY_EXISTS_IN.format(
-                    moduleName,
-                    existingModule.src.path,
-                )
-            )
-        }
-
-        val ast = parser.parseModule(moduleNameId)
-
-        val module = Module(
-            name = moduleName,
+        val sourceUnit = SourceUnit(
+            id = id,
             src = src,
             ast = ast
         )
 
-        modules[moduleName] = module
+        sources.add(sourceUnit)
 
-        callback?.invoke(module, tokenStream)
-        return module
+        callback?.invoke(sourceUnit, tokenStream)
+        return sourceUnit
     }
 
-    private fun randModuleName(path: String, src: ISourceCode) =
-        NameSpecifier.Direct(
-            target = QualifiedName(
-                parts = listOf(
-                    IdentifierNode(
-                        value = $$"$Module$${path.hashCode()}",
-                        range = SourceRange(src = src)
-                    )
+    /*private fun createModuleName(id: String, list: List<ExprNode>): QualifiedName {
+        return QualifiedName(
+            parts = listOf(
+                IdentifierNode(
+                    value = $$"$anonymous_module_$$id",
+                    range = SourceRange(src = ts.peek().range.src)
                 )
             )
         )
-
+    }*/
 
     private fun readSourceFile(file: File, msgHandler: MsgHandler): ISourceCode? {
         var src: ISourceCode? = null
@@ -180,52 +162,56 @@ fun Program.analiseIfNoError(): SemanticContext? {
 }
 
 fun Program.analise(): SemanticContext? {
-    moduleManager.entryModule?.ast ?: return null
+    sourceManager.entrySourceUnit?.ast ?: return null
 
     val analyzer = SemanticAnalyzer(
         msgHandler = msgHandler,
-        moduleMgr = moduleManager
+        moduleMgr = sourceManager
     )
 
-    val entryModule = moduleManager.entryModule
-    if (entryModule == null) {
+    analyzer.registerModules(sourceManager.allModules)
+
+    val entrySourceUnit = sourceManager.entrySourceUnit
+
+    if (entrySourceUnit == null) {
         msgHandler.sourceReadingError(path, Msg.ENTRY_SOURCE_NOT_DEFINED)
         return null
     }
 
-    analyzer.resolve(module = entryModule)
+    analyzer.resolve(sourceUnit = entrySourceUnit)
+
     return analyzer.semanticContext
 }
 
-fun Program.modules(block: ModuleManager.() -> Unit): MutableMap<String, Module> {
-    return moduleManager.apply(block).modules
+fun Program.sources(block: SourceManager.() -> Unit): List<SourceUnit> {
+    return sourceManager.apply(block).sources
 }
 
 fun Program.printErrors() {
     msgHandler.printAll()
 }
 
-fun ModuleManager.root(
+fun SourceManager.root(
     path: String = "",
-    callback: ModuleCallback? = null
+    callback: SourceCallback? = null
 ) =
-    addFromRoot(path, callback)
+    addSourcesFromRoot(path, callback)
 
-fun ModuleManager.file(
+fun SourceManager.file(
     path: String,
-    callback: ModuleCallback? = null
+    callback: SourceCallback? = null
 ) =
-    addFromFile(path, callback)
+    addSourceFromFile(path, callback)
 
-fun ModuleManager.entry(
+fun SourceManager.entry(
     path: String,
-    callback: ModuleCallback? = null
+    callback: SourceCallback? = null
 ) {
-    val module = addFromFile(path, callback)
-    this.entryModule = module
+    val module = addSourceFromFile(path, callback)
+    this.entrySourceUnit = module
 }
 
-fun ModuleManager.extension(
+fun SourceManager.extension(
     value: String
 ) {
     this.fileExtension = value

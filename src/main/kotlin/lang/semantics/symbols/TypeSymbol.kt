@@ -69,23 +69,13 @@ data class EnumSymbol(
     modifiers = modifiers
 )
 
-open class NamespaceSymbol(
+open class ModuleSymbol(
     override val name: String,
     open val scope: ModuleScope,
     override val modifiers: Modifiers = Modifiers()
 ) : TypeSymbol(
     name = name,
     staticScope = scope,
-    modifiers = modifiers
-)
-
-data class ModuleSymbol(
-    override val name: String,
-    override val scope: ModuleScope,
-    override val modifiers: Modifiers = Modifiers()
-) : NamespaceSymbol(
-    name = name,
-    scope = scope,
     modifiers = modifiers
 )
 

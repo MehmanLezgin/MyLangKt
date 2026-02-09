@@ -1,7 +1,7 @@
 package lang.semantics
 
-import lang.compiler.Module
-import lang.compiler.ModuleManager
+import lang.compiler.SourceUnit
+import lang.compiler.SourceManager
 import lang.core.SourceRange
 import lang.mappers.ScopeErrorMapper
 import lang.messages.CompileStage
@@ -10,23 +10,24 @@ import lang.messages.MsgHandler
 import lang.nodes.BlockNode
 import lang.nodes.DeclStmtNode
 import lang.nodes.ExprNode
-import lang.nodes.ImportModulesStmtNode
+import lang.nodes.ModuleStmtNode
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
 import lang.semantics.resolvers.TypeResolver
-import lang.semantics.scopes.ModuleScope
+import lang.semantics.scopes.FileScope
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
 import lang.semantics.scopes.ScopeResult
+import lang.semantics.symbols.ModuleSymbol
 import lang.semantics.symbols.Symbol
 
 class SemanticAnalyzer(
     override val msgHandler: MsgHandler,
-    val moduleMgr: ModuleManager
+    val moduleMgr: SourceManager
 ) : ISemanticAnalyzer {
     override var scope: Scope = Scope(parent = null)
-    private var currentModule: Module? = null
+    private var currentSourceUnit: SourceUnit? = null
 
     override val declResolver = DeclarationResolver(analyzer = this)
     override val constResolver = ConstResolver(analyzer = this)
@@ -45,17 +46,17 @@ class SemanticAnalyzer(
         scopeError(error = result.error, range = range)
     }
 
-    override fun resolve(module: Module) {
-        if (module.isReady || module.isAnalysing) return
+    override fun resolve(sourceUnit: SourceUnit) {
+        if (sourceUnit.isReady || sourceUnit.isAnalysing) return
 
-        withModule(module) {
+        withModule(sourceUnit) {
             isAnalysing = true
 
-            val moduleScope = ModuleScope(parent = null, scopeName = module.name)
-            module.scope = moduleScope
+            val fileScope = FileScope(parent = null, scopeName = sourceUnit.id)
+            sourceUnit.scope = fileScope
 
-            withScope(moduleScope) {
-                resolve(node = ast.body)
+            withScope(fileScope) {
+                resolve(node = ast)
             }
 
             isAnalysing = false
@@ -63,16 +64,14 @@ class SemanticAnalyzer(
         }
     }
 
-    private fun checkModuleErrors(module: Module?): String? {
+    private fun checkModuleErrors(sourceUnit: SourceUnit?): String? {
         return when {
-            module == null -> Msg.MODULE_NOT_DEFINED
-            module == currentModule -> Msg.MODULE_CANNOT_IMPORT_ITSELF
-            module.isAnalysing -> Msg.IMPORT_CYCLE_NOT_ALLOWED
+            sourceUnit == null -> Msg.MODULE_NOT_DEFINED
+            sourceUnit == currentSourceUnit -> Msg.MODULE_CANNOT_IMPORT_ITSELF
+            sourceUnit.isAnalysing -> Msg.IMPORT_CYCLE_NOT_ALLOWED
             else -> null
         }
     }
-
-    fun getModule(name: String) = moduleMgr.modules[name]
 
     fun resolve(node: BlockNode) {
         node.nodes.forEach { childNode -> resolve(childNode) }
@@ -86,13 +85,30 @@ class SemanticAnalyzer(
         }
     }
 
-    override fun exitScope() {
-        val parent = scope.parent ?: return
-        scope = parent
+    override fun registerModules(modules: List<ModuleStmtNode>) {
+        modules.forEach(::registerModule)
     }
 
-    override fun enterScope(newScope: Scope) {
-        scope = newScope
+    fun registerModule(module: ModuleStmtNode) {
+        val name = module.name
+        val moduleSym = when (
+            val result = scope.defineModuleIfNotExists(module)
+        ) {
+            is ScopeResult.Error -> {
+                semanticError(Msg.CannotRegisterModule.format(name.value), module.name.range)
+                return
+            }
+
+            is ScopeResult.Success<*> -> result.sym as ModuleSymbol
+        }
+
+        val nestedModules = module.nestedModules
+        if (nestedModules.isEmpty()) return
+        val moduleScope = moduleSym.scope
+
+        withScope(moduleScope) {
+            registerModules(nestedModules)
+        }
     }
 
     override fun <T> withScope(
@@ -109,15 +125,15 @@ class SemanticAnalyzer(
     }
 
     fun withModule(
-        targetModule: Module,
-        block: Module.() -> Unit
+        targetSourceUnit: SourceUnit,
+        block: SourceUnit.() -> Unit
     ) {
-        val prev = currentModule
-        currentModule = targetModule
+        val prev = currentSourceUnit
+        currentSourceUnit = targetSourceUnit
         try {
-            targetModule.apply(block)
+            targetSourceUnit.apply(block)
         } finally {
-            currentModule = prev
+            currentSourceUnit = prev
         }
     }
 

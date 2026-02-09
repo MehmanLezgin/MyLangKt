@@ -263,7 +263,7 @@ class TypeResolver(
             is VarSymbol -> type.setFlags(isMutable = isMutable, isExprType = true, isLvalue = true)
             is ConstValueSymbol -> type.setFlags(isExprType = true, isLvalue = true)
             is PrimitiveTypeSymbol -> type.setFlags(isExprType = false)
-            is NamespaceSymbol -> if (isNamespaceCtx) {
+            is ModuleSymbol -> if (isNamespaceCtx) {
                 NamespaceType(name = name, declaration = this)
             } else {
                 target.error(Msg.F_SYM_NOT_ALLOWED_HERE.format(name))

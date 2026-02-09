@@ -26,6 +26,7 @@ import lang.nodes.LiteralNode
 import lang.nodes.MatchStmtNode
 import lang.nodes.DotAccessNode
 import lang.nodes.ImportFromStmtNode
+import lang.nodes.ImportModulesStmtNode
 import lang.nodes.ModifierSetNode
 import lang.nodes.ModuleStmtNode
 import lang.nodes.NameClause
@@ -78,8 +79,6 @@ object AstSerializer {
 
     private fun getNodeChildren(expr: ExprNode): ChildrenMapRaw {
         val map = when (expr) {
-            is UnknownNode -> emptyMap()
-
             is OperNode -> mapOf(
                 "type" to expr.operatorType,
                 "value" to expr.value
@@ -94,11 +93,10 @@ object AstSerializer {
                 "type" to expr.value::class.simpleName.toString()
             )
 
-            is NullLiteralNode -> emptyMap()
-
-            is ModuleStmtNode -> mapOf("name" to expr.name) + expr.body.nodes
-                .mapIndexed { i, expr -> "[$i]" to expr }
-                .toMap()
+            is ModuleStmtNode -> mapOf(
+                "name" to expr.name,
+                "body" to expr.body
+            )
 
             is BlockNode -> expr.nodes
                 .mapIndexed { i, expr -> "[$i]" to expr }
@@ -257,6 +255,11 @@ object AstSerializer {
 
             is ImportFromStmtNode -> mapOf(
                 "moduleName" to expr.sourceName,
+                "items" to expr.items
+            )
+
+            is ImportModulesStmtNode -> mapOf(
+                "items" to expr.items,
             )
 
             is LambdaNode -> mapOf(

@@ -59,31 +59,6 @@ object ParserUtils {
     fun List<ExprNode>.toBlockNode(range: SourceRange) =
         BlockNode(nodes = this, range = range)
 
-/*
-    fun List<IdentifierNode>.toQualifiedDatatype(range: SourceRange): QualifiedDatatypeNode? {
-        if (isEmpty()) return null
-
-        fun toDataType(id: IdentifierNode) = DatatypeNode(identifier = id, range = id.range)
-        val first = toDataType(first())
-
-        if (size == 1) return first
-
-        var datatypeNode: QualifiedDatatypeNode = first
-
-        for (i in 1 until size) {
-            val member = toDataType(get(i))
-
-            datatypeNode = ScopedDatatypeNode(
-                base = datatypeNode,
-                member = member,
-                range = datatypeNode.range.untilEndOf(member.range)
-            )
-        }
-
-        return datatypeNode
-    }
-*/
-
     fun IdentifierNode.toDatatype(): BaseDatatypeNode {
         return when (value) {
             AutoDatatypeNode.NAME -> AutoDatatypeNode(range = range)

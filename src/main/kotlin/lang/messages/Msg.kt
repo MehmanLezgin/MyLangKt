@@ -1,10 +1,14 @@
 package lang.messages
 
+import lang.core.SourceRange
 import lang.messages.Terms.ordinal
 
 interface FormattableMsg
 
 object Msg {
+    const val SRC_CAN_CONTAIN_ONE_FILE_MODULE_DECL =
+        "Source file can only contain one file-scoped module decl"
+
     const val INVALID_CONST_VALUE = "Invalid const value"
     const val CANNOT_EXPORT = "Cannot export"
 
@@ -112,6 +116,11 @@ object Msg {
 
     interface NoBaseOperOverload : FormattableMsg {
         fun format(funcName: String, paramsStr: String, scopeName: String?): String
+    }
+
+    object CannotRegisterModule {
+        fun format(moduleName: String) =
+            "cannot register a module '$moduleName'"
     }
 
 

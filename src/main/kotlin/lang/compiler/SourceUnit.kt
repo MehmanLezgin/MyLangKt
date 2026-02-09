@@ -1,19 +1,18 @@
 package lang.compiler
 
 import lang.core.ISourceCode
-import lang.core.LangSpec
 import lang.core.serializer.AstSerializer
 import lang.core.serializer.ScopeSerializer
-import lang.nodes.ModuleStmtNode
+import lang.nodes.BlockNode
 import lang.semantics.SemanticContext
-import lang.semantics.scopes.ModuleScope
+import lang.semantics.scopes.FileScope
 import java.io.File
 
-data class Module(
-    val name: String,
+data class SourceUnit(
+    val id: String,
     val src: ISourceCode,
-    val ast: ModuleStmtNode,
-    var scope: ModuleScope? = null
+    val ast: BlockNode,
+    var scope: FileScope? = null
 ) {
     var isReady = false
     var isAnalysing = false
@@ -40,17 +39,16 @@ data class Module(
     }
 }
 
-fun List<Module>.print(basePath: String, semanticContext: SemanticContext?) {
-    this.forEach { module ->
-        val moduleName = module.name
-            ?.replace(LangSpec.moduleNameSeparator.raw, ".")
+fun List<SourceUnit>.print(basePath: String, semanticContext: SemanticContext?) {
+    this.forEach { unit ->
+        val moduleName = unit.id
 
-        module.printAST(
+        unit.printAST(
             path = "${basePath}ast/ast_$moduleName.txt",
             semanticContext = semanticContext
         )
 
-        module.printScope(
+        unit.printScope(
             path = "${basePath}scope_$moduleName.txt"
         )
     }

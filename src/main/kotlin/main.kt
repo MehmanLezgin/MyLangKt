@@ -10,15 +10,15 @@ fun main() {
     program(basePath) {
         var tokens: List<Token> = emptyList()
 
-        val moduleList = modules {
+        val moduleList = sources {
             extension("i")
 
-            root("modules")
+//            root("modules")
 
             entry("./main.i") { _, ts ->
                 tokens = ts.getTokens()
             }
-        }.values.toList()
+        }
 
         val semContext = analiseIfNoError()
 
