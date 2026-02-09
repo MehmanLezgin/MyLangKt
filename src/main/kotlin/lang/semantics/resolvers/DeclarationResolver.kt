@@ -98,14 +98,11 @@ class DeclarationResolver(
     }
 
     private fun resolve(node: ModuleStmtNode) {
-        val modifiers = analyzer.modResolver.resolveNamespaceModifiers(node.modifiers)
+        val moduleSym = analyzer.resolveModule(name = node.name.value)
 
-        val result = scope.defineModuleIfNotExists(node)
-
-        result.handle(node.range) {
-            node bind sym
-            if (sym !is ModuleSymbol) return@handle null
-            analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
+        if (moduleSym != null) {
+            node bind moduleSym
+            analyzer.withScopeResolveBody(targetScope = moduleSym.scope, body = node.body)
         }
     }
 

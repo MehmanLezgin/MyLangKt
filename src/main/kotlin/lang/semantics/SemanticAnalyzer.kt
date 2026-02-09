@@ -10,12 +10,17 @@ import lang.messages.MsgHandler
 import lang.nodes.BlockNode
 import lang.nodes.DeclStmtNode
 import lang.nodes.ExprNode
+import lang.nodes.IdentifierNode
+import lang.nodes.ImportFromStmtNode
+import lang.nodes.ImportModulesStmtNode
 import lang.nodes.ModuleStmtNode
+import lang.nodes.NameClause
+import lang.nodes.QualifiedName
+import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
 import lang.semantics.resolvers.TypeResolver
-import lang.semantics.scopes.FileScope
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
 import lang.semantics.scopes.ScopeResult
@@ -26,7 +31,7 @@ class SemanticAnalyzer(
     override val msgHandler: MsgHandler,
     val moduleMgr: SourceManager
 ) : ISemanticAnalyzer {
-    override var scope: Scope = Scope(parent = null)
+    override var scope: Scope = Scope(parent = PrimitivesScope)
     private var currentSourceUnit: SourceUnit? = null
 
     override val declResolver = DeclarationResolver(analyzer = this)
@@ -52,12 +57,7 @@ class SemanticAnalyzer(
         withModule(sourceUnit) {
             isAnalysing = true
 
-            val fileScope = FileScope(parent = null, scopeName = sourceUnit.id)
-            sourceUnit.scope = fileScope
-
-            withScope(fileScope) {
-                resolve(node = ast)
-            }
+            resolve(node = ast)
 
             isAnalysing = false
             isReady = true
@@ -109,6 +109,41 @@ class SemanticAnalyzer(
         withScope(moduleScope) {
             registerModules(nestedModules)
         }
+    }
+
+    override fun registerImports(sourceUnit: SourceUnit) {
+        val imports = sourceUnit.imports
+        if (imports.isEmpty()) return
+
+        imports.forEach { importNode ->
+            when (importNode) {
+                is ImportModulesStmtNode -> {}
+                is ImportFromStmtNode -> {}
+            }
+        }
+    }
+
+    private fun registerModulesInSourceUnit(
+        clause: NameClause,
+        sourceUnit: SourceUnit
+    ) {
+
+    }
+
+    private fun registerModuleInSourceUnit(
+        name: QualifiedName,
+        alias: IdentifierNode,
+        sourceUnit: SourceUnit
+    ) {
+
+    }
+
+    override fun resolveModule(name: String): ModuleSymbol? {
+        val result = scope.resolveModule(name)
+        if (result is ScopeResult.Success<*>)
+            return result.sym as ModuleSymbol
+
+        return null
     }
 
     override fun <T> withScope(

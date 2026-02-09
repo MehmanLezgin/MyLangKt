@@ -438,4 +438,13 @@ open class Scope(
 
         return define(sym)
     }
+
+    fun resolveModule(name: String): ScopeResult {
+        symbols[name]?.let {
+            if (it is ModuleSymbol)
+                return ScopeResult.Success(it)
+        }
+
+        return ScopeResult.Error(ScopeError.NotDefined(name, scopeName))
+    }
 }

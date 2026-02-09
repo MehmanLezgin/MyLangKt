@@ -10,6 +10,7 @@ import lang.messages.MsgHandler
 import lang.nodes.ModuleStmtNode
 import lang.parser.IParser
 import lang.parser.Parser
+import lang.semantics.ISemanticAnalyzer
 import lang.semantics.SemanticAnalyzer
 import lang.semantics.SemanticContext
 import lang.tokens.ITokenStream
@@ -164,12 +165,17 @@ fun Program.analiseIfNoError(): SemanticContext? {
 fun Program.analise(): SemanticContext? {
     sourceManager.entrySourceUnit?.ast ?: return null
 
-    val analyzer = SemanticAnalyzer(
+    val analyzer: ISemanticAnalyzer = SemanticAnalyzer(
         msgHandler = msgHandler,
         moduleMgr = sourceManager
     )
 
     analyzer.registerModules(sourceManager.allModules)
+
+    sourceManager.sources.forEach { source ->
+        analyzer.registerImports(source)
+
+    }
 
     val entrySourceUnit = sourceManager.entrySourceUnit
 

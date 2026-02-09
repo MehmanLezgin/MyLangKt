@@ -11,6 +11,7 @@ import lang.semantics.resolvers.ModifierResolver
 import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
+import lang.semantics.symbols.ModuleSymbol
 
 interface ISemanticAnalyzer {
     val scope: Scope
@@ -24,11 +25,13 @@ interface ISemanticAnalyzer {
     val semanticContext: SemanticContext
 
     fun resolve(sourceUnit: SourceUnit)
-    fun <T> withScope(targetScope: Scope = Scope(parent = this.scope), block: () -> T) : T
+    fun <T> withScope(targetScope: Scope = Scope(parent = this.scope), block: () -> T): T
 
     fun withScopeResolveBody(targetScope: Scope, body: BlockNode?)
 
     fun scopeError(error: ScopeError, range: SourceRange?)
     fun warning(msg: String, range: SourceRange)
     fun registerModules(modules: List<ModuleStmtNode>)
+    fun resolveModule(name: String): ModuleSymbol?
+    fun registerImports(sourceUnit: SourceUnit)
 }

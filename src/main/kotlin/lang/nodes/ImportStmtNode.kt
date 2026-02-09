@@ -24,17 +24,21 @@ sealed class NameClause {
     data class Items(val items: List<NameSpecifier>) : NameClause()
 }
 
+sealed interface BaseImportStmtNode : StmtNode {
+    val items: NameClause
+}
+
 data class ImportFromStmtNode(
     val sourceName: NameSpecifier,
-    val items: NameClause,
+    override val items: NameClause,
     override val range: SourceRange
-) : StmtNode {
+) : BaseImportStmtNode {
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
 
 data class ImportModulesStmtNode(
-    val items: NameClause,
+    override val items: NameClause,
     override val range: SourceRange
-) : StmtNode {
+) : BaseImportStmtNode {
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
