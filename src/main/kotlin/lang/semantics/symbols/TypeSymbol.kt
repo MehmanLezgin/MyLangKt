@@ -71,7 +71,7 @@ data class EnumSymbol(
 
 open class NamespaceSymbol(
     override val name: String,
-    open val scope: NamespaceScope,
+    open val scope: ModuleScope,
     override val modifiers: Modifiers = Modifiers()
 ) : TypeSymbol(
     name = name,

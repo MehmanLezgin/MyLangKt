@@ -248,51 +248,20 @@ class StmtParser(
         }
     }
 
-    private fun parseImportStmt(): ImportStmtNode? {
+    private fun parseImportStmt(): ImportModulesStmtNode? {
         return ts.captureRange {
             ts.next()
 
-            val moduleName = parser.parseModuleName(withModuleKeyword = false)
-                ?: return@captureRange null
-
-            ImportStmtNode(
-                moduleName = moduleName,
-                kind = ImportKind.Module,
-                range = resultRange
-            )
+            null
         }
     }
 
 
-    private fun parseFromImportStmt(): ImportStmtNode? {
+    private fun parseFromImportStmt(): ImportFromStmtNode? {
         return ts.captureRange {
             ts.next()
 
-            val moduleName = parser.parseModuleName(withModuleKeyword = false)
-                ?: return@captureRange null
-
-            if (!ts.expectKeyword(KeywordType.IMPORT, Msg.EXPECTED_IMPORT))
-                return@captureRange null
-
-            ts.next()
-
-            if (ts.matchOperator(OperatorType.MUL)) {
-                ts.next()
-                return@captureRange ImportStmtNode(
-                    moduleName = moduleName,
-                    kind = ImportKind.Wildcard,
-                    range = resultRange
-                )
-            }
-
-            val identifiers = parser.parseIdsWithSeparatorOper(separator = OperatorType.COMMA)
-                ?: return@captureRange null
-
-            ImportStmtNode(
-                moduleName = moduleName,
-                kind = ImportKind.Named(symbols = identifiers),
-                range = resultRange
-            )
+            null
         }
     }
 

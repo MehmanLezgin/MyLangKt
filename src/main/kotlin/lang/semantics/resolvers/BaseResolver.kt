@@ -4,7 +4,6 @@ import lang.core.SourceRange
 import lang.messages.Msg
 import lang.messages.MsgHandler
 import lang.nodes.ExprNode
-import lang.nodes.IdentifierNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.Scope

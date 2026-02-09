@@ -15,8 +15,10 @@ interface IParser {
     fun warning(msg: String, range: SourceRange)
     fun analiseDatatypeList(exprList: List<ExprNode>?): List<BaseDatatypeNode>?
     fun parseBlock(): BlockNode
-    fun parseModuleName(withModuleKeyword: Boolean = true): IdentifierNode?
+    fun parseModuleName(withModuleKeyword: Boolean = true): NameSpecifier?
     fun parseIdsWithSeparatorOper(separator: OperatorType): List<IdentifierNode>?
     fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean = false): ExprNode?
     fun analiseTemplateList(exprList: List<ExprNode>?): TypeNameListNode?
+    fun parseNameClause(): NameClause
+    fun parseNameSpecifier(): NameSpecifier?
 }

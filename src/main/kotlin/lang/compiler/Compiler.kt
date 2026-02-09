@@ -10,6 +10,8 @@ import lang.lexer.Lexer
 import lang.messages.Msg
 import lang.messages.MsgHandler
 import lang.nodes.IdentifierNode
+import lang.nodes.NameSpecifier
+import lang.nodes.QualifiedName
 import lang.parser.IParser
 import lang.parser.Parser
 import lang.semantics.SemanticAnalyzer
@@ -100,24 +102,20 @@ class ModuleManager(
             msgHandler = msgHandler
         )
 
-        var moduleNameId = parser.parseModuleName()
-        var moduleName = moduleNameId?.value ?: "Anonymous"
+        val moduleNameSpec = parser.parseModuleName() ?: randModuleName(file.path, src)
+        val moduleNameId = moduleNameSpec.target.parts.first()
+        val moduleName = moduleNameId.value
 
-        if (moduleNameId == null) {
-            moduleNameId = randModuleName(file.path, src)
-            moduleName = moduleNameId.value
-        } else {
-            val existingModule = modules[moduleNameId.value]
+        val existingModule = modules[moduleName]
 
-            if (existingModule != null) {
-                msgHandler.sourceReadingError(
-                    path = file.path,
-                    msg = Msg.MODULE_ALREADY_EXISTS_IN.format(
-                        moduleName,
-                        existingModule.src.path,
-                    )
+        if (existingModule != null) {
+            msgHandler.sourceReadingError(
+                path = file.path,
+                msg = Msg.MODULE_ALREADY_EXISTS_IN.format(
+                    moduleName,
+                    existingModule.src.path,
                 )
-            }
+            )
         }
 
         val ast = parser.parseModule(moduleNameId)
@@ -135,10 +133,17 @@ class ModuleManager(
     }
 
     private fun randModuleName(path: String, src: ISourceCode) =
-        IdentifierNode(
-            value = "\$Module${path.hashCode()}",
-            range = SourceRange(src = src)
+        NameSpecifier.Direct(
+            target = QualifiedName(
+                parts = listOf(
+                    IdentifierNode(
+                        value = $$"$Module$${path.hashCode()}",
+                        range = SourceRange(src = src)
+                    )
+                )
+            )
         )
+
 
     private fun readSourceFile(file: File, msgHandler: MsgHandler): ISourceCode? {
         var src: ISourceCode? = null

@@ -1,9 +1,10 @@
 package lang.semantics.scopes
 
-import lang.semantics.builtin.PrimitivesScope
-
-class ModuleScope(
-) : NamespaceScope(
-    parent = PrimitivesScope,
-    scopeName = ""
+open class ModuleScope(
+    override val parent: Scope?,
+    override val scopeName: String,
+) : BaseTypeScope(
+    parent = parent,
+    scopeName = scopeName,
+    superTypeScope = null
 )

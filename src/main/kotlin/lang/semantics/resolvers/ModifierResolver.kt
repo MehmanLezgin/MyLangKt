@@ -9,7 +9,7 @@ import lang.nodes.ModifierSetNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.ClassScope
-import lang.semantics.scopes.NamespaceScope
+import lang.semantics.scopes.ModuleScope
 import lang.semantics.symbols.Modifiers
 import lang.semantics.symbols.Visibility
 import kotlin.collections.forEach
@@ -238,7 +238,7 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         }
 
 
-        var isStatic = scope is NamespaceScope || hasAllowed(ModifierNode.Static::class)
+        var isStatic = scope is ModuleScope || hasAllowed(ModifierNode.Static::class)
         val isAbstract = hasAllowed(ModifierNode.Abstract::class)
         val isOpen = hasAllowed(ModifierNode.Open::class)
         val isOverride = hasAllowed(ModifierNode.Override::class)
@@ -246,7 +246,7 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         val visibility = resolveVisibility(modifiers = node)
 
         checkModifier(
-            isStatic && (scope !is NamespaceScope && scope !is BaseTypeScope),
+            isStatic && (scope !is ModuleScope && scope !is BaseTypeScope),
             node.get(ModifierNode.Static::class)?.range,
             Msg.STATIC_IS_NOT_ALLOWED_IN_THIS_SCOPE
         ) { isStatic = false }

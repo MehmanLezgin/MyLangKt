@@ -1,20 +1,17 @@
 package lang.parser
 
+import lang.core.KeywordType
 import lang.core.LangSpec.moduleNameSeparator
 import lang.core.SourceRange
+import lang.core.operators.OperatorType
 import lang.messages.CompileStage
 import lang.messages.Msg
 import lang.messages.MsgHandler
-import lang.nodes.ExprNode
-import lang.nodes.IdentifierNode
-import lang.nodes.ModuleStmtNode
+import lang.nodes.*
 import lang.parser.ParserUtils.isNotKeyword
 import lang.parser.ParserUtils.isOperator
 import lang.parser.ParserUtils.toIdentifierNode
 import lang.tokens.ITokenStream
-import lang.core.KeywordType
-import lang.core.operators.OperatorType
-import lang.nodes.BlockNode
 import lang.tokens.Token
 
 class Parser(
@@ -64,7 +61,7 @@ class Parser(
         exprParser.analiseTemplateList(exprList)
 
 
-    override fun parseModuleName(withModuleKeyword: Boolean): IdentifierNode? {
+    override fun parseModuleName(withModuleKeyword: Boolean): NameSpecifier? {
         ts.save()
 
         val result = run {
@@ -75,21 +72,15 @@ class Parser(
                 ts.next()
 
             return@run ts.captureRange {
-                val list = parseIdsWithSeparatorOper(separator = moduleNameSeparator)
+                val name = parseNameSpecifier()
+                    ?: return@captureRange null
 
                 if (ts.match(Token.LBrace::class)) {
                     ts.restore()
                 } else if (withModuleKeyword)
                     ts.expectSemicolonOrLinebreak(Msg.EXPECTED_SEMICOLON)
 
-                val name = list?.joinToString(
-                    separator = moduleNameSeparator.raw
-                ) { it.value } ?: return@captureRange null
-
-                IdentifierNode(
-                    value = name,
-                    range = resultRange
-                )
+                return@captureRange name
             }
         }
 
@@ -120,6 +111,57 @@ class Parser(
         }
 
         return list
+    }
+
+    override fun parseNameClause(): NameClause {
+        val items = mutableListOf<NameSpecifier>()
+
+        if (ts.matchOperator(OperatorType.MUL)) {
+            ts.next()
+            return NameClause.Wildcard
+        }
+
+        while (true) {
+            val item = parseNameSpecifier() ?: continue
+            items.add(item)
+
+            if (!ts.matchOperator(OperatorType.COMMA))
+                break
+
+            ts.next()
+        }
+
+        return NameClause.Items(items = items)
+    }
+
+    override fun parseNameSpecifier(): NameSpecifier? {
+        val ids = parseIdsWithSeparatorOper(separator = moduleNameSeparator)
+            ?: return null
+
+        var alias: IdentifierNode? = null
+
+        if (ts.matchOperator(OperatorType.AS)) {
+            ts.next()
+            val id = ts.peek()
+            if (id !is Token.Identifier) {
+                syntaxError(Msg.EXPECTED_IDENTIFIER, id.range)
+                return null
+            }
+
+            alias = id.toIdentifierNode()
+            ts.next()
+        }
+
+        val target = QualifiedName(ids)
+
+        if (alias != null) return NameSpecifier.Alias(
+            target = target,
+            alias = alias
+        )
+
+        return NameSpecifier.Direct(
+            target = target
+        )
     }
 
     override fun syntaxError(msg: String, range: SourceRange) =

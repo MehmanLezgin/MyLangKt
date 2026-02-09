@@ -10,7 +10,7 @@ import lang.messages.MsgHandler
 import lang.nodes.BlockNode
 import lang.nodes.DeclStmtNode
 import lang.nodes.ExprNode
-import lang.nodes.ImportStmtNode
+import lang.nodes.ImportModulesStmtNode
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
@@ -51,7 +51,7 @@ class SemanticAnalyzer(
         withModule(module) {
             isAnalysing = true
 
-            val moduleScope = ModuleScope()
+            val moduleScope = ModuleScope(parent = null, scopeName = module.name)
             module.scope = moduleScope
 
             withScope(moduleScope) {
@@ -72,54 +72,6 @@ class SemanticAnalyzer(
         }
     }
 
-    fun resolve(node: ImportStmtNode) {
-        val name = node.moduleName
-        val module = getModule(name.value)
-
-        checkModuleErrors(module)?.let {
-            semanticError(it, name.range)
-            return
-        }
-
-        resolve(module = module!!)
-
-        /*val allExports = module.exportsScope.symbols
-        val moduleName = node.moduleName.value
-
-        if (node.kind == ImportKind.Module) {
-            val sameNameSym = allExports[moduleName]
-
-            val sym = when {
-                sameNameSym != null -> sameNameSym
-
-                else -> ModuleSymbol(
-                    name = moduleName,
-                    scope = module.exportsScope
-                )
-            }
-
-            importSymbol(sym, node.moduleName.range)
-            return
-        }
-
-        when (node.kind) {
-            is ImportKind.Named -> node.kind.symbols
-            ImportKind.Wildcard ->
-                allExports.map {
-                    IdentifierNode(it.key, node.range)
-                }
-        }.forEach { id ->
-            val sym = allExports[id.value]
-
-            if (sym == null) {
-                semanticError(Msg.F_MODULE_DOES_NOT_EXPORT_SYM.format(moduleName, id.value), id.range)
-                return@forEach
-            }
-
-            importSymbol(sym, id.range)
-        }*/
-    }
-
     fun getModule(name: String) = moduleMgr.modules[name]
 
     fun resolve(node: BlockNode) {
@@ -130,7 +82,6 @@ class SemanticAnalyzer(
         when (node) {
             is DeclStmtNode<*> -> declResolver.resolve(node)
             is BlockNode -> resolve(node = node)
-            is ImportStmtNode -> resolve(node = node)
             else -> typeResolver.resolve(target = node)
         }
     }

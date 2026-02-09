@@ -457,7 +457,7 @@ class DeclarationResolver(
         }
     }
 
-    fun Scope.isTypeScope() = this is BaseTypeScope && this !is NamespaceScope
+    fun Scope.isTypeScope() = this is BaseTypeScope && this !is ModuleScope
 
 //    fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Unit) =
 //        this.handle(null, onSuccess)

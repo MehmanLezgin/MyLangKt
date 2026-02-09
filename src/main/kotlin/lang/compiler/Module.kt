@@ -10,7 +10,7 @@ import lang.semantics.scopes.ModuleScope
 import java.io.File
 
 data class Module(
-    val name: String?,
+    val name: String,
     val src: ISourceCode,
     val ast: ModuleStmtNode,
     var scope: ModuleScope? = null

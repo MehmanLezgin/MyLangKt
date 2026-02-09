@@ -18,7 +18,6 @@ import lang.nodes.FuncDatatypeNode
 import lang.nodes.FuncDeclStmtNode
 import lang.nodes.IdentifierNode
 import lang.nodes.IfElseStmtNode
-import lang.nodes.ImportStmtNode
 import lang.nodes.IncrementNode
 import lang.nodes.IndexAccessNode
 import lang.nodes.InterfaceDeclStmtNode
@@ -26,9 +25,11 @@ import lang.nodes.LambdaNode
 import lang.nodes.LiteralNode
 import lang.nodes.MatchStmtNode
 import lang.nodes.DotAccessNode
-import lang.nodes.ImportKind
+import lang.nodes.ImportFromStmtNode
 import lang.nodes.ModifierSetNode
 import lang.nodes.ModuleStmtNode
+import lang.nodes.NameClause
+import lang.nodes.NameSpecifier
 import lang.nodes.NullLiteralNode
 import lang.nodes.OperNode
 import lang.nodes.ReturnStmtNode
@@ -254,19 +255,8 @@ object AstSerializer {
                 "finallyBody" to expr.finallyBody,
             )
 
-            is ImportStmtNode -> mapOf(
-                "moduleName" to expr.moduleName,
-                "kind" to when (expr.kind) {
-                    ImportKind.Module -> "Module"
-                    ImportKind.Wildcard -> "Wildcard"
-                    is ImportKind.Named ->
-                        "Named ${expr.kind.symbols.map { it.value }}"
-                }
-            )
-
-            is ModuleStmtNode -> mapOf(
-                "name" to expr.name,
-                "body" to expr.body
+            is ImportFromStmtNode -> mapOf(
+                "moduleName" to expr.sourceName,
             )
 
             is LambdaNode -> mapOf(

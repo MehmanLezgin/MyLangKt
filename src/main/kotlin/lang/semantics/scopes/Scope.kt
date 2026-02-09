@@ -434,7 +434,7 @@ open class Scope(
 
         val sym = NamespaceSymbol(
             name = name,
-            scope = NamespaceScope(
+            scope = ModuleScope(
                 parent = this,
                 scopeName = name
             )

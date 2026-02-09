@@ -13,6 +13,8 @@ import lang.nodes.BlockNode
 import lang.nodes.DatatypeNode
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
+import lang.nodes.QualifiedDatatypeNode
+import lang.nodes.ScopedDatatypeNode
 import lang.nodes.UnaryOpNode
 import lang.nodes.UnaryOpType
 import lang.nodes.VoidDatatypeNode
@@ -56,6 +58,31 @@ object ParserUtils {
 
     fun List<ExprNode>.toBlockNode(range: SourceRange) =
         BlockNode(nodes = this, range = range)
+
+/*
+    fun List<IdentifierNode>.toQualifiedDatatype(range: SourceRange): QualifiedDatatypeNode? {
+        if (isEmpty()) return null
+
+        fun toDataType(id: IdentifierNode) = DatatypeNode(identifier = id, range = id.range)
+        val first = toDataType(first())
+
+        if (size == 1) return first
+
+        var datatypeNode: QualifiedDatatypeNode = first
+
+        for (i in 1 until size) {
+            val member = toDataType(get(i))
+
+            datatypeNode = ScopedDatatypeNode(
+                base = datatypeNode,
+                member = member,
+                range = datatypeNode.range.untilEndOf(member.range)
+            )
+        }
+
+        return datatypeNode
+    }
+*/
 
     fun IdentifierNode.toDatatype(): BaseDatatypeNode {
         return when (value) {
