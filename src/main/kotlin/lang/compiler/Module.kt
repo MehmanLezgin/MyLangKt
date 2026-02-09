@@ -1,15 +1,12 @@
 package lang.compiler
 
+import lang.core.ISourceCode
 import lang.core.LangSpec
 import lang.core.serializer.AstSerializer
-import lang.core.ISourceCode
 import lang.core.serializer.ScopeSerializer
 import lang.nodes.ModuleNode
 import lang.semantics.SemanticContext
-import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.scopes.ModuleExportScope
 import lang.semantics.scopes.ModuleScope
-import lang.semantics.symbols.Symbol
 import java.io.File
 
 data class Module(
@@ -20,19 +17,6 @@ data class Module(
 ) {
     var isReady = false
     var isAnalysing = false
-
-    //    val imports = mutableMapOf<String, Symbol>()
-//    val exports = mutableMapOf<String, Symbol>()
-//    val importsScope by lazy { Scope(parent = null, errorHandler = scope?.errorHandler ?: ErrorHandler()) }
-    val exportsScope by lazy { ModuleExportScope() }
-
-//    fun import(symbol: Symbol) {
-//        importsScope.define(symbol, Pos(src = src))
-//    }
-
-    fun export(symbol: Symbol, namePath: List<String>) {
-        exportsScope.export(namePath, symbol)
-    }
 
     fun printAST(path: String, semanticContext: SemanticContext?) {
         File(path).printWriter().use { out ->

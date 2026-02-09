@@ -32,18 +32,6 @@ class DeclarationResolver(
         }
     }
 
-    private fun <T : Symbol> T.bindAndExport(node: ExprNode, isExport: Boolean): T {
-        node bind this
-        exportIfNeeded(isExport)
-        return this
-    }
-
-    private fun <T : Symbol> T.exportIfNeeded(isExport: Boolean): T {
-        if (isExport)
-            analyzer.exportSymbol(this)
-        return this
-    }
-
     private fun resolve(node: UsingDirectiveNode) {
         val value = node.value.let {
             if (it is IdentifierNode) it.toDatatype() else it
@@ -112,10 +100,10 @@ class DeclarationResolver(
     private fun resolve(node: NamespaceStmtNode) {
         val modifiers = analyzer.modResolver.resolveNamespaceModifiers(node.modifiers)
 
-        val result = scope.defineNamespace(node, isExport = modifiers.isExport)
+        val result = scope.defineNamespace(node)
 
         result.handle(node.range) {
-            sym.bindAndExport(node, modifiers.isExport)
+            node bind sym
             if (sym !is NamespaceSymbol) return@handle null
             analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
         }
@@ -130,7 +118,7 @@ class DeclarationResolver(
             if (type is ErrorType) return
             val result = scope.defineTypedef(node, type)
             result.handle(node.range) {
-                sym.bindAndExport(node, modifiers.isExport)
+                node bind sym
             }
         }
     */
@@ -198,11 +186,10 @@ class DeclarationResolver(
             }
         }
 
-//        if (constValue == null) return
         withEffectiveScope(modifiers.isStatic) {
             val result = scope.defineConstVar(node, type, constValue, modifiers)
             result.handle(node.range) {
-                sym.bindAndExport(node, modifiers.isExport)
+                node bind sym
             }
         }
     }
@@ -223,7 +210,7 @@ class DeclarationResolver(
             withEffectiveScope(modifiers.isStatic) {
                 val result = scope.defineVar(node, type, modifiers)
                 result.handle(node.range) {
-                    sym.bindAndExport(node, modifiers.isExport)
+                    node bind sym
                 }
             }
 
@@ -356,7 +343,6 @@ class DeclarationResolver(
         {
             val pair = scope.defineFunc(node, funcNameId, params, returnType, modifiers)
 
-            pair.second.exportIfNeeded(modifiers.isExport)
             val result = pair.first
 
             result.handle(node.range) {
@@ -404,7 +390,7 @@ class DeclarationResolver(
         val result = scope.defineInterface(node, modifiers, superType)
 
         result.handle(node.range) {
-            sym.bindAndExport(node, modifiers.isExport)
+            node bind sym
             if (sym !is InterfaceSymbol) return@handle null
             analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
         }
@@ -423,7 +409,7 @@ class DeclarationResolver(
 
         val result = scope.defineClass(node, modifiers, superType)
         result.handle(node.range) {
-            sym.bindAndExport(node, modifiers.isExport)
+            node bind sym
             if (sym !is ClassSymbol) return@handle null
             analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
         }
@@ -450,7 +436,7 @@ class DeclarationResolver(
         val modifiers = analyzer.modResolver.resolveEnumModifiers(node.modifiers)
         val result = scope.defineEnum(node, modifiers)
         result.handle(node.range) {
-            sym.bindAndExport(node, modifiers.isExport)
+            node bind sym
             if (sym !is EnumSymbol) return@handle null
             analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
         }

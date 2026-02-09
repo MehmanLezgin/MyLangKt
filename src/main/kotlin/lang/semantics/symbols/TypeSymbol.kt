@@ -1,11 +1,6 @@
 package lang.semantics.symbols
 
-import lang.semantics.scopes.BaseTypeScope
-import lang.semantics.scopes.ClassScope
-import lang.semantics.scopes.EnumScope
-import lang.semantics.scopes.InterfaceScope
-import lang.semantics.scopes.ModuleExportScope
-import lang.semantics.scopes.NamespaceScope
+import lang.semantics.scopes.*
 import lang.semantics.types.PrimitiveType
 import lang.semantics.types.Type
 
@@ -86,7 +81,7 @@ open class NamespaceSymbol(
 
 data class ModuleSymbol(
     override val name: String,
-    override val scope: ModuleExportScope,
+    override val scope: ModuleScope,
     override val modifiers: Modifiers = Modifiers()
 ) : NamespaceSymbol(
     name = name,

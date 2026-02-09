@@ -20,7 +20,6 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         ModifierNode.Private::class,
         ModifierNode.Public::class,
         ModifierNode.Protected::class,
-        ModifierNode.Export::class,
         ModifierNode.Static::class,
     )
 
@@ -30,7 +29,6 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         ModifierNode.Private::class,
         ModifierNode.Public::class,
         ModifierNode.Protected::class,
-        ModifierNode.Export::class,
         ModifierNode.Open::class,
         ModifierNode.Abstract::class,
     )
@@ -38,21 +36,18 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
     private val interfaceAllowedModifiers = setOf(
         ModifierNode.Public::class,
         ModifierNode.Protected::class,
-        ModifierNode.Export::class,
         ModifierNode.Abstract::class,
     )
 
     private val enumAllowedModifiers = setOf(
         ModifierNode.Public::class,
         ModifierNode.Protected::class,
-        ModifierNode.Export::class,
     )
 
     private val varAllowedModifiers = setOf(
         ModifierNode.Private::class,
         ModifierNode.Public::class,
         ModifierNode.Protected::class,
-        ModifierNode.Export::class,
         ModifierNode.Static::class,
     )
 
@@ -60,7 +55,6 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         ModifierNode.Private::class,
         ModifierNode.Public::class,
         ModifierNode.Protected::class,
-        ModifierNode.Export::class,
         ModifierNode.Static::class,
         ModifierNode.Override::class,
         ModifierNode.Open::class,
@@ -245,18 +239,11 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
 
 
         var isStatic = scope is NamespaceScope || hasAllowed(ModifierNode.Static::class)
-        var isExport = hasAllowed(ModifierNode.Export::class)
         val isAbstract = hasAllowed(ModifierNode.Abstract::class)
         val isOpen = hasAllowed(ModifierNode.Open::class)
         val isOverride = hasAllowed(ModifierNode.Override::class)
         val isInfix = hasAllowed(ModifierNode.Infix::class)
         val visibility = resolveVisibility(modifiers = node)
-
-        checkModifier(
-            isExport && (scope !is NamespaceScope || !(scope as NamespaceScope).isExport),
-            node.get(ModifierNode.Export::class)?.range,
-            Msg.EXPORT_IS_NOT_ALLOWED_IN_THIS_SCOPE
-        ) { isExport = false }
 
         checkModifier(
             isStatic && (scope !is NamespaceScope && scope !is BaseTypeScope),
@@ -271,7 +258,6 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
             isAbstract = isAbstract,
             isOpen = finalIsOpen,
             isOverride = isOverride,
-            isExport = isExport,
             isInfix = isInfix,
             visibility = visibility
         )

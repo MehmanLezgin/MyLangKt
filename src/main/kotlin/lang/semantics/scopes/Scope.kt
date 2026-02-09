@@ -429,15 +429,14 @@ open class Scope(
         return name
     }
 
-    fun defineNamespace(node: NamespaceStmtNode, isExport: Boolean): ScopeResult {
+    fun defineNamespace(node: NamespaceStmtNode): ScopeResult {
         val name = node.name?.value ?: randNamespaceName()
 
         val sym = NamespaceSymbol(
             name = name,
             scope = NamespaceScope(
                 parent = this,
-                scopeName = name,
-                isExport = isExport
+                scopeName = name
             )
         )
 

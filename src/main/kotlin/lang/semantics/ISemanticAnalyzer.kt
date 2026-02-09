@@ -25,8 +25,6 @@ interface ISemanticAnalyzer {
 
     fun resolve(module: Module)
 
-    fun exportSymbol(sym: Symbol)
-
     fun exitScope()
     fun enterScope(newScope: Scope)
     fun <T> withScope(targetScope: Scope = Scope(parent = this.scope), block: () -> T) : T

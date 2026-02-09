@@ -10,7 +10,6 @@ class ModifierMapper : IOneWayMapper<Token.Keyword, ModifierNode?> {
         KeywordType.PRIVATE     -> Private(a.range)
         KeywordType.PUBLIC      -> Public(a.range)
         KeywordType.PROTECTED   -> Protected(a.range)
-        KeywordType.EXPORT      -> Export(a.range)
         KeywordType.STATIC      -> Static(a.range)
         KeywordType.OPEN        -> Open(a.range)
         KeywordType.ABSTRACT    -> Abstract(a.range)

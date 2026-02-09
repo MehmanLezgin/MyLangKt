@@ -2,24 +2,24 @@ package lang.semantics
 
 import lang.compiler.Module
 import lang.compiler.ModuleManager
+import lang.core.SourceRange
 import lang.mappers.ScopeErrorMapper
 import lang.messages.CompileStage
-import lang.messages.MsgHandler
 import lang.messages.Msg
-import lang.nodes.*
+import lang.messages.MsgHandler
+import lang.nodes.BlockNode
+import lang.nodes.DeclStmtNode
+import lang.nodes.ExprNode
+import lang.nodes.ImportStmtNode
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
+import lang.semantics.resolvers.ModifierResolver
 import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.ModuleScope
-import lang.semantics.scopes.NamespaceScope
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
 import lang.semantics.scopes.ScopeResult
-import lang.semantics.symbols.ModuleSymbol
-import lang.semantics.symbols.NamespaceSymbol
 import lang.semantics.symbols.Symbol
-import lang.core.SourceRange
-import lang.semantics.resolvers.ModifierResolver
 
 class SemanticAnalyzer(
     override val msgHandler: MsgHandler,
@@ -43,25 +43,6 @@ class SemanticAnalyzer(
         val result = scope.define(sym)
         if (result !is ScopeResult.Error) return
         scopeError(error = result.error, range = range)
-    }
-
-    override fun exportSymbol(sym: Symbol) {
-        if (sym is NamespaceSymbol) return
-        val module = currentModule ?: return
-
-        val namePath = ArrayDeque<String>()
-        var cur: Scope? = scope
-
-        while (cur !is ModuleScope) {
-            if (cur !is NamespaceScope) {
-                semanticError("cannot export ${sym.name}", SourceRange())
-                return
-            }
-            namePath.addFirst(cur.scopeName) // сразу в правильном порядке
-            cur = cur.parent
-        }
-
-        module.export(sym, namePath)
     }
 
     override fun resolve(module: Module) {
@@ -102,7 +83,7 @@ class SemanticAnalyzer(
 
         resolve(module = module!!)
 
-        val allExports = module.exportsScope.symbols
+        /*val allExports = module.exportsScope.symbols
         val moduleName = node.moduleName.value
 
         if (node.kind == ImportKind.Module) {
@@ -136,7 +117,7 @@ class SemanticAnalyzer(
             }
 
             importSymbol(sym, id.range)
-        }
+        }*/
     }
 
     fun getModule(name: String) = moduleMgr.modules[name]
