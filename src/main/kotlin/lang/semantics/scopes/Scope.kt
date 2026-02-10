@@ -368,14 +368,12 @@ open class Scope(
     fun defineInterface(
         node: InterfaceDeclStmtNode,
         modifiers: Modifiers,
-        superType: Type?
     ): ScopeResult {
         val sym = InterfaceSymbol(
             name = node.name.value,
             scope = InterfaceScope(
                 parent = this,
                 scopeName = node.name.value,
-                superTypeScope = superType?.declaration?.staticScope
             ),
             modifiers = modifiers
         )
@@ -385,14 +383,12 @@ open class Scope(
     fun defineClass(
         node: ClassDeclStmtNode,
         modifiers: Modifiers,
-        superType: Type?
     ): ScopeResult {
         val sym = ClassSymbol(
             name = node.name.value,
             scope = ClassScope(
                 parent = this,
                 scopeName = node.name.value,
-                superTypeScope = superType?.declaration?.staticScope
             ),
             modifiers = modifiers
         )
@@ -410,10 +406,10 @@ open class Scope(
         return define(sym)
     }
 
-    fun defineUsing(name: String, sym: Symbol, visibility: Visibility): ScopeResult {
+    fun defineUsing(name: String, visibility: Visibility): ScopeResult {
         val sym = AliasSymbol(
             name = name,
-            sym = sym,
+            sym = null,
             visibility = visibility
         )
 
@@ -435,6 +431,15 @@ open class Scope(
                 scopeName = name
             )
         )
+
+        return define(sym)
+    }
+
+    fun defineModuleIfNotExists(sym: ModuleSymbol): ScopeResult {
+        symbols[sym.name]?.let {
+            if (it == sym)
+                return ScopeResult.Success(it)
+        }
 
         return define(sym)
     }

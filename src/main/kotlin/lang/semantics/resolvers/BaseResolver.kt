@@ -7,6 +7,7 @@ import lang.nodes.ExprNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.Scope
+import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.Symbol
 import lang.semantics.types.ErrorType
 import lang.semantics.types.Type
@@ -70,4 +71,18 @@ abstract class BaseResolver<T, TResult>(
 
     fun ExprNode.getResolvedType(): Type? =
         analyzer.semanticContext.types[this]
+
+    fun <T> ScopeResult.handle(range: SourceRange?, onSuccess: ScopeResult.Success<*>.() -> T?): T? {
+        return when (this) {
+            is ScopeResult.Error -> {
+                if (range != null)
+                    analyzer.scopeError(error, range)
+                null
+            }
+
+            is ScopeResult.Success<*> -> {
+                onSuccess()
+            }
+        }
+    }
 }

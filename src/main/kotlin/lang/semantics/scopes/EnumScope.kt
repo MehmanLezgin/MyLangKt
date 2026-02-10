@@ -5,6 +5,5 @@ data class EnumScope(
     override val scopeName: String
 ) : BaseTypeScope(
     parent = parent,
-    scopeName = scopeName,
-    superTypeScope = null
+    scopeName = scopeName
 )

@@ -1,37 +1,34 @@
 package lang.semantics
 
-import lang.compiler.SourceUnit
 import lang.compiler.SourceManager
+import lang.compiler.SourceUnit
 import lang.core.SourceRange
 import lang.mappers.ScopeErrorMapper
 import lang.messages.CompileStage
 import lang.messages.Msg
 import lang.messages.MsgHandler
-import lang.nodes.BlockNode
-import lang.nodes.DeclStmtNode
-import lang.nodes.ExprNode
-import lang.nodes.IdentifierNode
-import lang.nodes.ImportFromStmtNode
-import lang.nodes.ImportModulesStmtNode
-import lang.nodes.ModuleStmtNode
-import lang.nodes.NameClause
-import lang.nodes.QualifiedName
+import lang.nodes.*
 import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
 import lang.semantics.resolvers.TypeResolver
+import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.ModuleSymbol
 import lang.semantics.symbols.Symbol
+import lang.semantics.types.Type
 
 class SemanticAnalyzer(
     override val msgHandler: MsgHandler,
     val moduleMgr: SourceManager
 ) : ISemanticAnalyzer {
     override var scope: Scope = Scope(parent = PrimitivesScope)
+    private val rootModuleScope = ModuleScope(parent = scope, scopeName = "global")
+    private val rootModule = ModuleSymbol(name = rootModuleScope.scopeName, scope = rootModuleScope)
+
     private var currentSourceUnit: SourceUnit? = null
 
     override val declResolver = DeclarationResolver(analyzer = this)
@@ -40,6 +37,7 @@ class SemanticAnalyzer(
     override val modResolver = ModifierResolver(analyzer = this)
 
     override val semanticContext = SemanticContext()
+
 
     override fun scopeError(error: ScopeError, range: SourceRange?) {
         semanticError(msg = ScopeErrorMapper.toSecond(error), range = range)
@@ -85,14 +83,23 @@ class SemanticAnalyzer(
         }
     }
 
-    override fun registerModules(modules: List<ModuleStmtNode>) {
+    override fun resolveModule(name: String): ModuleSymbol? {
+        val result = rootModuleScope.resolveModule(name)
+        if (result is ScopeResult.Success<*>)
+            return result.sym as ModuleSymbol
+
+        return null
+    }
+
+    private fun registerModules(modules: List<ModuleStmtNode>) {
         modules.forEach(::registerModule)
     }
 
-    fun registerModule(module: ModuleStmtNode) {
+    private fun registerModule(module: ModuleStmtNode) {
         val name = module.name
+
         val moduleSym = when (
-            val result = scope.defineModuleIfNotExists(module)
+            val result = rootModuleScope.defineModuleIfNotExists(module)
         ) {
             is ScopeResult.Error -> {
                 semanticError(Msg.CannotRegisterModule.format(name.value), module.name.range)
@@ -101,6 +108,8 @@ class SemanticAnalyzer(
 
             is ScopeResult.Success<*> -> result.sym as ModuleSymbol
         }
+
+        module bind moduleSym
 
         val nestedModules = module.nestedModules
         if (nestedModules.isEmpty()) return
@@ -111,8 +120,14 @@ class SemanticAnalyzer(
         }
     }
 
-    override fun registerImports(sourceUnit: SourceUnit) {
-        val imports = sourceUnit.imports
+    override fun registerSources(sources: List<SourceUnit>) {
+        val allModules = sources.flatMap {
+            it.ast.nodes.filterIsInstance<ModuleStmtNode>()
+        }
+
+        registerModules(modules = allModules)
+
+        /*val imports = sourceUnit.imports
         if (imports.isEmpty()) return
 
         imports.forEach { importNode ->
@@ -120,7 +135,7 @@ class SemanticAnalyzer(
                 is ImportModulesStmtNode -> {}
                 is ImportFromStmtNode -> {}
             }
-        }
+        }*/
     }
 
     private fun registerModulesInSourceUnit(
@@ -136,14 +151,6 @@ class SemanticAnalyzer(
         sourceUnit: SourceUnit
     ) {
 
-    }
-
-    override fun resolveModule(name: String): ModuleSymbol? {
-        val result = scope.resolveModule(name)
-        if (result is ScopeResult.Success<*>)
-            return result.sym as ModuleSymbol
-
-        return null
     }
 
     override fun <T> withScope(
@@ -186,4 +193,14 @@ class SemanticAnalyzer(
 
     override fun warning(msg: String, range: SourceRange) =
         msgHandler.warn(msg = msg, range = range, stage = CompileStage.SEMANTIC_ANALYSIS)
+
+    infix fun ExprNode.attach(type: Type?) {
+        if (type == null) return
+        semanticContext.types[this] = type
+    }
+
+    infix fun ExprNode.bind(symbol: Symbol?) {
+        if (symbol == null) return
+        semanticContext.symbols[this] = symbol
+    }
 }

@@ -82,5 +82,5 @@ open class ModuleSymbol(
 data class AliasSymbol(
     override val name: String,
     val visibility: Visibility,
-    val sym: Symbol,
+    val sym: Symbol?,
 ) : Symbol(name)

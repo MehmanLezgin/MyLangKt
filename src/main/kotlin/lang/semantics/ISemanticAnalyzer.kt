@@ -4,7 +4,6 @@ import lang.compiler.SourceUnit
 import lang.core.SourceRange
 import lang.messages.MsgHandler
 import lang.nodes.BlockNode
-import lang.nodes.ModuleStmtNode
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
@@ -31,7 +30,6 @@ interface ISemanticAnalyzer {
 
     fun scopeError(error: ScopeError, range: SourceRange?)
     fun warning(msg: String, range: SourceRange)
-    fun registerModules(modules: List<ModuleStmtNode>)
     fun resolveModule(name: String): ModuleSymbol?
-    fun registerImports(sourceUnit: SourceUnit)
+    fun registerSources(sources: List<SourceUnit>)
 }

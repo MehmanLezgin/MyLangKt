@@ -7,11 +7,9 @@ import lang.semantics.symbols.Symbol
 data class ClassScope(
     override val parent: Scope?,
     override val scopeName: String,
-    override val superTypeScope: BaseTypeScope?,
 ) : BaseTypeScope(
     parent = parent,
     scopeName = scopeName,
-    superTypeScope = superTypeScope,
 ) {
     fun defineConstructor(node: ConstructorDeclStmtNode) : Symbol? {
         /*val type = scopeType

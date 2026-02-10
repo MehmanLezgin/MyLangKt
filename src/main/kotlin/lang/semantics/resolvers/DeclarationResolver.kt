@@ -54,7 +54,7 @@ class DeclarationResolver(
         val visibility = modifiers.visibility
 
         fun defineUsingSymbol(name: String?, sym: Symbol) {
-            scope.defineUsing(name ?: sym.name, sym, visibility)
+            scope.defineUsing(name ?: sym.name, visibility)
                 .handle(value.range) {}
         }
 
@@ -98,27 +98,17 @@ class DeclarationResolver(
     }
 
     private fun resolve(node: ModuleStmtNode) {
-        val moduleSym = analyzer.resolveModule(name = node.name.value)
+        val moduleSym = node.getResolvedSymbol() as? ModuleSymbol
+//        val moduleSym = analyzer.resolveModule(name = node.name.value)
 
         if (moduleSym != null) {
-            node bind moduleSym
-            analyzer.withScopeResolveBody(targetScope = moduleSym.scope, body = node.body)
-        }
-    }
-
-    /*
-        private fun resolve(node: TypedefStmtNode) {
-            val modifiers = analyzer.modResolver.resolveTypedefModifiers(node.modifiers)
-
-            val type = analyzer.typeResolver.resolve(node.dataType)
-            node attach type
-            if (type is ErrorType) return
-            val result = scope.defineTypedef(node, type)
+            val result = scope.defineModuleIfNotExists(sym = moduleSym)
             result.handle(node.range) {
-                node bind sym
+                node bind moduleSym
+                analyzer.withScopeResolveBody(targetScope = moduleSym.scope, body = node.body)
             }
         }
-    */
+    }
 
     private fun resolveAutoVarType(node: VarDeclStmtNode): Type {
         if (node.initializer == null) {
@@ -384,7 +374,7 @@ class DeclarationResolver(
             semanticError(Msg.INTERFACE_CAN_EXTEND_INTERFACE, node.superInterface?.range)
         }
 
-        val result = scope.defineInterface(node, modifiers, superType)
+        val result = scope.defineInterface(node, modifiers)
 
         result.handle(node.range) {
             node bind sym
@@ -404,7 +394,7 @@ class DeclarationResolver(
         )
             semanticError(Msg.CLASS_CAN_EXTEND_INTERFACE_OR_CLASS, node.superClass?.range)
 
-        val result = scope.defineClass(node, modifiers, superType)
+        val result = scope.defineClass(node, modifiers)
         result.handle(node.range) {
             node bind sym
             if (sym !is ClassSymbol) return@handle null
@@ -436,21 +426,6 @@ class DeclarationResolver(
             node bind sym
             if (sym !is EnumSymbol) return@handle null
             analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
-        }
-    }
-
-
-    fun <T> ScopeResult.handle(range: SourceRange?, onSuccess: ScopeResult.Success<*>.() -> T?): T? {
-        return when (this) {
-            is ScopeResult.Error -> {
-                if (range != null)
-                    analyzer.scopeError(error, range)
-                null
-            }
-
-            is ScopeResult.Success<*> -> {
-                onSuccess()
-            }
         }
     }
 

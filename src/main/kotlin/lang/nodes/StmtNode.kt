@@ -341,6 +341,7 @@ data class TryCatchStmtNode(
 
 data class UsingDirectiveNode(
     override val name: IdentifierNode?,
+    val isType: Boolean = false,
     val value: ExprNode,
     override val range: SourceRange,
 ) : DeclStmtNode<IdentifierNode>(

@@ -41,11 +41,6 @@ class SourceManager(
     val sources = mutableListOf<SourceUnit>()
     var entrySourceUnit: SourceUnit? = null
 
-    val allModules: List<ModuleStmtNode>
-        get() = sources.flatMap {
-            it.ast.nodes.filterIsInstance<ModuleStmtNode>()
-        }
-
     private fun String.absolute() =
         basePath.resolve(this)
             .normalize()
@@ -170,12 +165,7 @@ fun Program.analise(): SemanticContext? {
         moduleMgr = sourceManager
     )
 
-    analyzer.registerModules(sourceManager.allModules)
-
-    sourceManager.sources.forEach { source ->
-        analyzer.registerImports(source)
-
-    }
+    analyzer.registerSources(sourceManager.sources)
 
     val entrySourceUnit = sourceManager.entrySourceUnit
 
