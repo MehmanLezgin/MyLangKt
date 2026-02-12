@@ -79,7 +79,8 @@ class TypeResolver(
         val targetScope = type.declaration?.staticScope
 
         if (type.isExprType || targetScope == null) {
-            target.error(Msg.EXPECTED_MODULE_NAME)
+            if (type != ErrorType)
+                target.error(Msg.EXPECTED_MODULE_NAME)
             return ErrorType
         }
 

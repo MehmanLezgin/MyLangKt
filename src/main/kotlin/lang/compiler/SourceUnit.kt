@@ -4,8 +4,9 @@ import lang.core.ISourceCode
 import lang.core.serializer.AstSerializer
 import lang.nodes.BaseImportStmtNode
 import lang.nodes.BlockNode
-import lang.nodes.ModuleStmtNode
 import lang.semantics.SemanticContext
+import lang.semantics.scopes.FileScope
+import lang.semantics.scopes.ModuleScope
 import lang.semantics.symbols.ModuleSymbol
 import java.io.File
 
@@ -16,6 +17,7 @@ data class SourceUnit(
 ) {
     var isReady = false
     var isAnalysing = false
+    var scope: FileScope? = null
 
     val imports: List<BaseImportStmtNode>
         get() = ast.nodes.filterIsInstance<BaseImportStmtNode>()

@@ -13,6 +13,11 @@ object Msg {
     const val CANNOT_EXPORT = "Cannot export"
 
 
+    object SymbolIsNotRegistered : FormattableMsg {
+        fun format(symName: String) =
+            "a symbol '$symName' is not registered"
+    }
+
     object SYMBOL_IS_INACCESSIBLE : FormattableMsg {
         fun format(symName: String) =
             "a symbol '$symName' is inaccessible"
@@ -154,7 +159,7 @@ object Msg {
 
     object SymbolAlreadyDefinedIn : FormattableMsg {
         fun format(itemKind: String = Terms.SYMBOL, name: String, scopeName: String?) =
-            "$itemKind '$name' is already in ${scopeName ?: Terms.CURRENT_SCOPE}"
+            "$itemKind '$name' is already defined in ${scopeName ?: Terms.CURRENT_SCOPE}"
     }
 
     object RepeatedModifier : FormattableMsg {

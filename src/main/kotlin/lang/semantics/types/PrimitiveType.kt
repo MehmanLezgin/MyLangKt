@@ -35,7 +35,6 @@ open class PrimitiveType(
             scope = BaseTypeScope(
                 parent = scope,
                 scopeName = this.name,
-                superTypeScope = null
             )
         )
 

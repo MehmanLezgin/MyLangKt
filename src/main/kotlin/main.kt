@@ -13,7 +13,7 @@ fun main() {
         val moduleList = sources {
             extension("i")
 
-//            root("modules")
+            root("modules")
 
             entry("./main.i") { _, ts ->
                 tokens = ts.getTokens()

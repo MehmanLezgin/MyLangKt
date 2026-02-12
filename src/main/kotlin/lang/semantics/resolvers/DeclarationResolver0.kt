@@ -1,4 +1,5 @@
 package lang.semantics.resolvers
+/*
 
 import lang.messages.Msg
 import lang.messages.Terms
@@ -11,6 +12,7 @@ import lang.semantics.types.ConstValue
 import lang.semantics.types.ErrorType
 import lang.semantics.types.OverloadedFuncType
 import lang.semantics.types.Type
+import lang.core.SourceRange
 import lang.parser.ParserUtils.toDatatype
 import lang.semantics.types.PointerType
 
@@ -19,15 +21,14 @@ class DeclarationResolver(
 ) : BaseResolver<DeclStmtNode<*>, Unit>(analyzer = analyzer) {
     override fun resolve(target: DeclStmtNode<*>) {
         when (target) {
-            is ModuleStmtNode -> resolve(target)
-            is InterfaceDeclStmtNode -> resolve(target)
-            is EnumDeclStmtNode -> resolve(target)
-            is ClassDeclStmtNode -> resolve(target)
-
             is VarDeclStmtNode -> resolve(target)
             is ConstructorDeclStmtNode -> resolve(target)
             is DestructorDeclStmtNode -> resolve(target)
             is FuncDeclStmtNode -> resolve(target)
+            is InterfaceDeclStmtNode -> resolve(target)
+            is ClassDeclStmtNode -> resolve(target)
+            is EnumDeclStmtNode -> resolve(target)
+            is ModuleStmtNode -> resolve(target)
             is UsingDirectiveNode -> resolve(target)
         }
     }
@@ -65,6 +66,7 @@ class DeclarationResolver(
             }
         }
 
+
         when (value) {
             is DatatypeNode -> {
                 val namespaceSym = getNamespaceSym(value) ?: return
@@ -98,47 +100,15 @@ class DeclarationResolver(
 
     private fun resolve(node: ModuleStmtNode) {
         val moduleSym = node.getResolvedSymbol() as? ModuleSymbol
-            ?: return
+//        val moduleSym = analyzer.resolveModule(name = node.name.value)
 
-        analyzer.withScopeResolveBody(moduleSym.scope, node.body)
-    }
-
-    private fun resolve(node: InterfaceDeclStmtNode) {
-        val sym = node.getResolvedSymbol()
-
-        if (sym !is InterfaceSymbol) {
-            node.error(Msg.SymbolIsNotRegistered.format(node.name.value))
-            return
+        if (moduleSym != null) {
+            val result = scope.defineModuleIfNotExists(sym = moduleSym)
+            result.handle(node.range) {
+                node bind moduleSym
+                analyzer.withScopeResolveBody(targetScope = moduleSym.scope, body = node.body)
+            }
         }
-
-        analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
-    }
-
-    private fun resolve(node: ClassDeclStmtNode) {
-        val sym = node.getResolvedSymbol()
-
-        node bind sym
-
-        if (sym !is ClassSymbol) {
-            node.error(Msg.SymbolIsNotRegistered.format(node.name.value))
-            return
-        }
-
-        analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
-    }
-
-
-    private fun resolve(node: EnumDeclStmtNode) {
-        val sym = node.getResolvedSymbol()
-
-        node bind sym
-
-        if (sym !is EnumSymbol) {
-            node.error(Msg.SymbolIsNotRegistered.format(node.name.value))
-            return
-        }
-
-        analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
     }
 
     private fun resolveAutoVarType(node: VarDeclStmtNode): Type {
@@ -396,8 +366,72 @@ class DeclarationResolver(
         resolve(node as FuncDeclStmtNode)
     }
 
+    private fun resolve(node: InterfaceDeclStmtNode) {
+        val modifiers = analyzer.modResolver.resolveInterfaceModifiers(node.modifiers)
+
+        val superType = resolveSuperType(node.superInterface)
+
+        if (superType != null && superType.declaration !is InterfaceSymbol) {
+            semanticError(Msg.INTERFACE_CAN_EXTEND_INTERFACE, node.superInterface?.range)
+        }
+
+        val result = scope.defineInterface(node, modifiers)
+
+        result.handle(node.range) {
+            node bind sym
+            if (sym !is InterfaceSymbol) return@handle null
+            analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
+        }
+    }
+
+    private fun resolve(node: ClassDeclStmtNode) {
+        val modifiers = analyzer.modResolver.resolveClassModifiers(node.modifiers)
+
+        val superType = resolveSuperType(node.superClass)
+
+        if (superType != null &&
+            superType.declaration !is InterfaceSymbol &&
+            superType.declaration !is ClassSymbol
+        )
+            semanticError(Msg.CLASS_CAN_EXTEND_INTERFACE_OR_CLASS, node.superClass?.range)
+
+        val result = scope.defineClass(node, modifiers)
+        result.handle(node.range) {
+            node bind sym
+            if (sym !is ClassSymbol) return@handle null
+            analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
+        }
+
+    }
+
+    private fun resolveSuperType(
+        superType: BaseDatatypeNode?
+    ): Type? {
+        if (superType == null || superType is VoidDatatypeNode) return null
+        val type = analyzer.typeResolver.resolve(superType)
+
+        if (type.declaration?.modifiers?.isOpen == false)
+            semanticError(
+                Msg.F_MUST_BE_OPEN_TYPE.format(
+                    type.declaration?.name ?: Terms.SYMBOL
+                ), superType.range
+            )
+
+        return type
+    }
+
+    private fun resolve(node: EnumDeclStmtNode) {
+        val modifiers = analyzer.modResolver.resolveEnumModifiers(node.modifiers)
+        val result = scope.defineEnum(node, modifiers)
+        result.handle(node.range) {
+            node bind sym
+            if (sym !is EnumSymbol) return@handle null
+            analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
+        }
+    }
+
     fun Scope.isTypeScope() = this is BaseTypeScope && this !is ModuleScope
 
 //    fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Unit) =
 //        this.handle(null, onSuccess)
-}
+}*/

@@ -162,7 +162,6 @@ fun Program.analise(): SemanticContext? {
 
     val analyzer: ISemanticAnalyzer = SemanticAnalyzer(
         msgHandler = msgHandler,
-        moduleMgr = sourceManager
     )
 
     analyzer.registerSources(sourceManager.sources)

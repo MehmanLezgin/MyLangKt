@@ -7,27 +7,27 @@ import lang.mappers.ScopeErrorMapper
 import lang.messages.CompileStage
 import lang.messages.Msg
 import lang.messages.MsgHandler
-import lang.nodes.*
+import lang.nodes.BlockNode
+import lang.nodes.DeclStmtNode
+import lang.nodes.ExprNode
 import lang.semantics.builtin.PrimitivesScope
+import lang.semantics.passes.ModuleRegPass
+import lang.semantics.passes.TypeCollectionPass
+import lang.semantics.passes.TypeHierarchyPass
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
 import lang.semantics.resolvers.TypeResolver
-import lang.semantics.scopes.ModuleScope
+import lang.semantics.scopes.FileScope
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
 import lang.semantics.scopes.ScopeResult
-import lang.semantics.symbols.ModuleSymbol
 import lang.semantics.symbols.Symbol
-import lang.semantics.types.Type
 
 class SemanticAnalyzer(
     override val msgHandler: MsgHandler,
-    val moduleMgr: SourceManager
 ) : ISemanticAnalyzer {
     override var scope: Scope = Scope(parent = PrimitivesScope)
-    private val rootModuleScope = ModuleScope(parent = scope, scopeName = "global")
-    private val rootModule = ModuleSymbol(name = rootModuleScope.scopeName, scope = rootModuleScope)
 
     private var currentSourceUnit: SourceUnit? = null
 
@@ -36,8 +36,11 @@ class SemanticAnalyzer(
     override val typeResolver = TypeResolver(analyzer = this)
     override val modResolver = ModifierResolver(analyzer = this)
 
-    override val semanticContext = SemanticContext()
+    override val typeCollectionPass = TypeCollectionPass(analyzer = this)
+    override val typeHierarchyPass = TypeHierarchyPass(analyzer = this)
+    override val moduleRegPass = ModuleRegPass(analyzer = this)
 
+    override val semanticContext = SemanticContext()
 
     override fun scopeError(error: ScopeError, range: SourceRange?) {
         semanticError(msg = ScopeErrorMapper.toSecond(error), range = range)
@@ -52,8 +55,11 @@ class SemanticAnalyzer(
     override fun resolve(sourceUnit: SourceUnit) {
         if (sourceUnit.isReady || sourceUnit.isAnalysing) return
 
-        withModule(sourceUnit) {
+        withSourceUnit(targetSourceUnit = sourceUnit) {
             isAnalysing = true
+
+            typeCollectionPass.resolve(target = ast)
+            typeHierarchyPass.resolve(target = ast)
 
             resolve(node = ast)
 
@@ -71,7 +77,7 @@ class SemanticAnalyzer(
         }
     }
 
-    fun resolve(node: BlockNode) {
+    override fun resolve(node: BlockNode) {
         node.nodes.forEach { childNode -> resolve(childNode) }
     }
 
@@ -83,74 +89,15 @@ class SemanticAnalyzer(
         }
     }
 
-    override fun resolveModule(name: String): ModuleSymbol? {
-        val result = rootModuleScope.resolveModule(name)
-        if (result is ScopeResult.Success<*>)
-            return result.sym as ModuleSymbol
-
-        return null
-    }
-
-    private fun registerModules(modules: List<ModuleStmtNode>) {
-        modules.forEach(::registerModule)
-    }
-
-    private fun registerModule(module: ModuleStmtNode) {
-        val name = module.name
-
-        val moduleSym = when (
-            val result = rootModuleScope.defineModuleIfNotExists(module)
-        ) {
-            is ScopeResult.Error -> {
-                semanticError(Msg.CannotRegisterModule.format(name.value), module.name.range)
-                return
-            }
-
-            is ScopeResult.Success<*> -> result.sym as ModuleSymbol
-        }
-
-        module bind moduleSym
-
-        val nestedModules = module.nestedModules
-        if (nestedModules.isEmpty()) return
-        val moduleScope = moduleSym.scope
-
-        withScope(moduleScope) {
-            registerModules(nestedModules)
-        }
-    }
+//    override fun getModule(name: String): ModuleSymbol? {
+//        return moduleRegPass.getModule(name)
+//    }
 
     override fun registerSources(sources: List<SourceUnit>) {
-        val allModules = sources.flatMap {
-            it.ast.nodes.filterIsInstance<ModuleStmtNode>()
+        sources.forEach { sourceUnit ->
+            val fileScope = moduleRegPass.resolveForSource(sourceUnit = sourceUnit)
+            sourceUnit.scope = fileScope
         }
-
-        registerModules(modules = allModules)
-
-        /*val imports = sourceUnit.imports
-        if (imports.isEmpty()) return
-
-        imports.forEach { importNode ->
-            when (importNode) {
-                is ImportModulesStmtNode -> {}
-                is ImportFromStmtNode -> {}
-            }
-        }*/
-    }
-
-    private fun registerModulesInSourceUnit(
-        clause: NameClause,
-        sourceUnit: SourceUnit
-    ) {
-
-    }
-
-    private fun registerModuleInSourceUnit(
-        name: QualifiedName,
-        alias: IdentifierNode,
-        sourceUnit: SourceUnit
-    ) {
-
     }
 
     override fun <T> withScope(
@@ -166,16 +113,21 @@ class SemanticAnalyzer(
         }
     }
 
-    fun withModule(
+    fun withSourceUnit(
         targetSourceUnit: SourceUnit,
         block: SourceUnit.() -> Unit
     ) {
-        val prev = currentSourceUnit
-        currentSourceUnit = targetSourceUnit
-        try {
-            targetSourceUnit.apply(block)
-        } finally {
-            currentSourceUnit = prev
+        val targetScope = targetSourceUnit.scope
+            ?: FileScope(parent = scope, scopeName = "")
+
+        withScope(targetScope) {
+            val prev = currentSourceUnit
+            currentSourceUnit = targetSourceUnit
+            try {
+                targetSourceUnit.apply(block)
+            } finally {
+                currentSourceUnit = prev
+            }
         }
     }
 
@@ -193,14 +145,4 @@ class SemanticAnalyzer(
 
     override fun warning(msg: String, range: SourceRange) =
         msgHandler.warn(msg = msg, range = range, stage = CompileStage.SEMANTIC_ANALYSIS)
-
-    infix fun ExprNode.attach(type: Type?) {
-        if (type == null) return
-        semanticContext.types[this] = type
-    }
-
-    infix fun ExprNode.bind(symbol: Symbol?) {
-        if (symbol == null) return
-        semanticContext.symbols[this] = symbol
-    }
 }

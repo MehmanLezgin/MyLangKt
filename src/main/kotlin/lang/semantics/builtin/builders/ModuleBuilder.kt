@@ -12,7 +12,6 @@ class ModuleBuilder(
     override var typeScope: BaseTypeScope = ClassScope(
         parent = parent,
         scopeName = name,
-        superTypeScope = null
     )
 
     override fun build(): ClassSymbol {

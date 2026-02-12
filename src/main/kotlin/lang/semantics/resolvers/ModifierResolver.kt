@@ -16,14 +16,14 @@ import kotlin.collections.forEach
 import kotlin.reflect.KClass
 
 class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNode?, Modifiers>(analyzer) {
-    private val namespaceAllowedModifiers = setOf(
+    private val moduleAllowedModifiers = setOf(
         ModifierNode.Private::class,
         ModifierNode.Public::class,
         ModifierNode.Protected::class,
         ModifierNode.Static::class,
     )
 
-    private val usingAllowedModifiers = namespaceAllowedModifiers
+    private val usingAllowedModifiers = moduleAllowedModifiers
 
     private val classAllowedModifiers = setOf(
         ModifierNode.Private::class,
@@ -75,10 +75,10 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         }
     }
 
-    fun resolveNamespaceModifiers(node: ModifierSetNode?): Modifiers {
+    fun resolveModuleModifiers(node: ModifierSetNode?): Modifiers {
         return resolveModifiers(
             node = node,
-            allowedModifiers = namespaceAllowedModifiers,
+            allowedModifiers = moduleAllowedModifiers,
             declKindName = Terms.NAMESPACE
         )
     }

@@ -7,9 +7,10 @@ import lang.semantics.types.Type
 open class TypeSymbol(
     override val name: String,
     val staticScope: BaseTypeScope,
-    open val superType: Type? = null,
     override val modifiers: Modifiers// = Modifiers()
 ) : Symbol(name = name, modifiers = modifiers) {
+    var superType: Type? = null
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
