@@ -56,11 +56,10 @@ class ModuleRegPass(
                 name = name,
                 scope = ModuleScope(
                     parent = curScope,
-                    scopeName = name
+                    scopeName = name,
+                    sharedSymbols = existingSym.scope.symbols
                 )
             )
-
-            sym.scope.putAll(existingSym.scope)
             return sym
         }
 

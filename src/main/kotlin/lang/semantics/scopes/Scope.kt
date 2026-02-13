@@ -21,15 +21,10 @@ open class Scope(
             ?: parent?.absoluteScopePath
     }
 
-
-    internal val symbols = mutableMapOf<String, Symbol>()
+    open val symbols = mutableMapOf<String, Symbol>()
 
     fun Symbol.ok() = ScopeResult.Success(sym = this)
     fun ScopeError.err() = ScopeResult.Error(error = this)
-
-    fun putAll(other: Scope) {
-        symbols.putAll(other.symbols)
-    }
 
     fun <T : Symbol> define(sym: T, visibility: Visibility = Visibility.PUBLIC): ScopeResult {
         val name = sym.name

@@ -58,9 +58,6 @@ class SemanticAnalyzer(
         withSourceUnit(targetSourceUnit = sourceUnit) {
             isAnalysing = true
 
-            typeCollectionPass.resolve(target = ast)
-            typeHierarchyPass.resolve(target = ast)
-
             resolve(node = ast)
 
             isAnalysing = false
@@ -97,6 +94,8 @@ class SemanticAnalyzer(
         sources.forEach { sourceUnit ->
             val fileScope = moduleRegPass.resolveForSource(sourceUnit = sourceUnit)
             sourceUnit.scope = fileScope
+            typeCollectionPass.resolve(target = sourceUnit.ast)
+            typeHierarchyPass.resolve(target = sourceUnit.ast)
         }
     }
 

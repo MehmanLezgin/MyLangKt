@@ -173,7 +173,9 @@ fun Program.analise(): SemanticContext? {
         return null
     }
 
-    analyzer.resolve(sourceUnit = entrySourceUnit)
+    sourceManager.sources.forEach {
+        analyzer.resolve(sourceUnit = it)
+    }
 
     return analyzer.semanticContext
 }
