@@ -4,6 +4,7 @@ import lang.compiler.SourceUnit
 import lang.messages.Msg
 import lang.nodes.ModuleStmtNode
 import lang.semantics.ISemanticAnalyzer
+import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.resolvers.BaseResolver
 import lang.semantics.scopes.FileScope
 import lang.semantics.scopes.ModuleScope
@@ -23,7 +24,7 @@ class ModuleRegPass(
 
     fun resolveForSource(sourceUnit: SourceUnit): FileScope {
         val modules = sourceUnit.ast.nodes.filterIsInstance<ModuleStmtNode>()
-        val fileScope = FileScope(parent = null, scopeName = null)
+        val fileScope = FileScope(parent = PrimitivesScope, scopeName = null)
 
         withParent(fileScope) {
             resolve(modules)
@@ -32,26 +33,38 @@ class ModuleRegPass(
         return fileScope
     }
 
-    private fun getModule(name: String): ModuleSymbol? {
-        return modules[name]
-    }
-
     private fun getModule(node: ModuleStmtNode): ModuleSymbol {
         val name = node.name.value
 
         val existingSym = modules[name]
-        if (existingSym != null) return existingSym
 
-        val sym = ModuleSymbol(
-            name = name,
-            scope = ModuleScope(
-                parent = curScope,
-                scopeName = name
+        if (existingSym == null) {
+            val sym = ModuleSymbol(
+                name = name,
+                scope = ModuleScope(
+                    parent = curScope,
+                    scopeName = name
+                )
             )
-        )
 
-        modules[name] = sym
-        return sym
+            modules[name] = sym
+            return sym
+        }
+
+        if (curScope is FileScope) {
+            val sym = ModuleSymbol(
+                name = name,
+                scope = ModuleScope(
+                    parent = curScope,
+                    scopeName = name
+                )
+            )
+
+            sym.scope.putAll(existingSym.scope)
+            return sym
+        }
+
+        return existingSym
     }
 
     private fun defineModuleIfNotExists(node: ModuleStmtNode): ModuleSymbol {
