@@ -1,4 +1,4 @@
-package lang.semantics.passes
+package lang.semantics.pipeline
 
 import lang.messages.Msg
 import lang.nodes.BlockNode
@@ -39,7 +39,7 @@ class TypeCollectionPass(
         }
     }
 
-    private fun resolve(target: ModuleStmtNode) {
+    fun resolve(target: ModuleStmtNode) {
         val modifiers = analyzer.modResolver.resolveModuleModifiers(target.modifiers)
 
         val moduleSym = target.getResolvedSymbol() as? ModuleSymbol
@@ -54,7 +54,7 @@ class TypeCollectionPass(
         }
     }
 
-    private fun resolve(target: InterfaceDeclStmtNode) {
+    fun resolve(target: InterfaceDeclStmtNode) {
         val modifiers = modResolver.resolveInterfaceModifiers(target.modifiers)
         
         scope.defineInterface(target, modifiers = modifiers)
@@ -66,7 +66,7 @@ class TypeCollectionPass(
             }
     }
 
-    private fun resolve(target: ClassDeclStmtNode) {
+    fun resolve(target: ClassDeclStmtNode) {
         val modifiers = modResolver.resolveClassModifiers(target.modifiers)
         scope.defineClass(target, modifiers = modifiers)
             .handle(target.name.range) {
@@ -77,7 +77,7 @@ class TypeCollectionPass(
             }
     }
 
-    private fun resolve(target: EnumDeclStmtNode) {
+    fun resolve(target: EnumDeclStmtNode) {
         val modifiers = modResolver.resolveEnumModifiers(target.modifiers)
         scope.defineEnum(target, modifiers = modifiers)
             .handle(target.name.range) {
@@ -88,7 +88,7 @@ class TypeCollectionPass(
             }
     }
 
-    private fun resolve(target: UsingDirectiveNode) {
+    fun resolve(target: UsingDirectiveNode) {
         if (!target.isType) return
         val name = target.name ?: return
         val modifiers = modResolver.resolveUsingModifiers(target.modifiers)

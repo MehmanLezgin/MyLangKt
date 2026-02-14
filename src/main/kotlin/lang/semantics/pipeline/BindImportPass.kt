@@ -1,4 +1,4 @@
-package lang.semantics.passes
+package lang.semantics.pipeline
 
 import lang.core.SourceRange
 import lang.messages.Msg

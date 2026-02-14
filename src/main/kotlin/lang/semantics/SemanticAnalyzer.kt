@@ -10,10 +10,10 @@ import lang.nodes.BlockNode
 import lang.nodes.DeclStmtNode
 import lang.nodes.ExprNode
 import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.passes.BindImportPass
-import lang.semantics.passes.ModuleRegPass
-import lang.semantics.passes.TypeCollectionPass
-import lang.semantics.passes.TypeHierarchyPass
+import lang.semantics.pipeline.BindImportPass
+import lang.semantics.pipeline.ModuleRegPass
+import lang.semantics.pipeline.TypeCollectionPass
+import lang.semantics.pipeline.TypeHierarchyPass
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver

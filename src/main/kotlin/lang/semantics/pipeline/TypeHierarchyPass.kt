@@ -1,4 +1,4 @@
-package lang.semantics.passes
+package lang.semantics.pipeline
 
 import lang.messages.Msg
 import lang.messages.Terms
@@ -8,7 +8,6 @@ import lang.nodes.ClassDeclStmtNode
 import lang.nodes.EnumDeclStmtNode
 import lang.nodes.InterfaceDeclStmtNode
 import lang.nodes.ModuleStmtNode
-import lang.nodes.UsingDirectiveNode
 import lang.nodes.VoidDatatypeNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.resolvers.BaseResolver
@@ -17,7 +16,6 @@ import lang.semantics.symbols.ClassSymbol
 import lang.semantics.symbols.EnumSymbol
 import lang.semantics.symbols.InterfaceSymbol
 import lang.semantics.symbols.ModuleSymbol
-import lang.semantics.symbols.TypeSymbol
 import lang.semantics.types.Type
 
 class TypeHierarchyPass(
@@ -26,32 +24,26 @@ class TypeHierarchyPass(
     override fun resolve(target: BlockNode?) {
         target?.nodes?.forEach { node ->
             when (node) {
-                is ClassDeclStmtNode -> resolveClass(target = node)
-                is InterfaceDeclStmtNode -> resolveInterface(target = node)
-                is EnumDeclStmtNode -> resolveEnum(target = node)
-                is ModuleStmtNode ->  resolveModule(target = node)
+                is ClassDeclStmtNode -> resolve(target = node)
+                is InterfaceDeclStmtNode -> resolve(target = node)
+                is EnumDeclStmtNode -> resolve(target = node)
+                is ModuleStmtNode ->  resolve(target = node)
                 else -> Unit
             }
         }
     }
 
-    private fun withScopeResolve(targetScope: Scope, body: BlockNode?) {
-        analyzer.withScope(targetScope) {
-            resolve(body)
-        }
-    }
-
-    private fun resolveEnum(target: EnumDeclStmtNode) {
+    fun resolve(target: EnumDeclStmtNode) {
         val sym = target.getResolvedSymbol() as? EnumSymbol ?: return
         withScopeResolve(sym.scope, target.body)
     }
 
-    private fun resolveModule(target: ModuleStmtNode) {
+    fun resolve(target: ModuleStmtNode) {
         val sym = target.getResolvedSymbol() as? ModuleSymbol ?: return
         withScopeResolve(sym.scope, target.body)
     }
 
-    private fun resolveInterface(target: InterfaceDeclStmtNode) {
+    fun resolve(target: InterfaceDeclStmtNode) {
         val sym = target.getResolvedSymbol() as? InterfaceSymbol ?: return
 
         val superType = resolveSuperType(target.superInterface)
@@ -65,7 +57,7 @@ class TypeHierarchyPass(
         withScopeResolve(sym.scope, target.body)
     }
 
-    private fun resolveClass(target: ClassDeclStmtNode) {
+    fun resolve(target: ClassDeclStmtNode) {
         val sym = target.getResolvedSymbol() as? ClassSymbol ?: return
 
         val superType = resolveSuperType(target.superClass)
@@ -96,4 +88,9 @@ class TypeHierarchyPass(
         return type
     }
 
+    private fun withScopeResolve(targetScope: Scope, body: BlockNode?) {
+        analyzer.withScope(targetScope) {
+            resolve(body)
+        }
+    }
 }

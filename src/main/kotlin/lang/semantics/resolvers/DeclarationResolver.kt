@@ -96,6 +96,56 @@ class DeclarationResolver(
         }
     }
 
+    private fun Scope.defineDeclSym(node: DeclStmtNode<IdentifierNode>): Symbol? {
+        val modResolver = analyzer.modResolver
+        val modNode = node.modifiers
+
+        val result = when (node) {
+            is InterfaceDeclStmtNode -> {
+                val modifiers = modResolver.resolveInterfaceModifiers(modNode)
+                val sym = this.defineInterface(node, modifiers)
+                analyzer.typeHierarchyPass.resolve(node)
+                sym
+            }
+
+            is ClassDeclStmtNode -> {
+                val modifiers = modResolver.resolveClassModifiers(modNode)
+                val sym = this.defineClass(node, modifiers)
+                analyzer.typeHierarchyPass.resolve(node)
+                sym
+            }
+
+            is EnumDeclStmtNode -> {
+                val modifiers = modResolver.resolveEnumModifiers(modNode)
+                val sym = this.defineEnum(node, modifiers)
+                analyzer.typeHierarchyPass.resolve(node)
+                sym
+            }
+
+            else -> {
+                node.error(Msg.EXPECTED_A_DECLARATION)
+                null
+            }
+        }
+
+        val sym = result?.handle(node.range) { sym }
+
+        return sym
+    }
+
+    private fun Scope.ensureDeclared(node: DeclStmtNode<IdentifierNode>): Symbol? {
+        node.getResolvedSymbol()?.let { return it }
+
+        if (kind == ScopeKind.LOCAL)
+            node.error(Msg.SymbolIsNotRegistered.format(node.name?.value!!))
+
+        val sym = scope.defineDeclSym(node)
+
+        node bind sym
+
+        return sym
+    }
+
     private fun resolve(node: ModuleStmtNode) {
         val moduleSym = node.getResolvedSymbol() as? ModuleSymbol
             ?: return
@@ -104,40 +154,17 @@ class DeclarationResolver(
     }
 
     private fun resolve(node: InterfaceDeclStmtNode) {
-        val sym = node.getResolvedSymbol()
-
-        if (sym !is InterfaceSymbol) {
-            node.error(Msg.SymbolIsNotRegistered.format(node.name.value))
-            return
-        }
-
+        val sym = scope.ensureDeclared(node) as InterfaceSymbol
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
     }
 
     private fun resolve(node: ClassDeclStmtNode) {
-        val sym = node.getResolvedSymbol()
-
-        node bind sym
-
-        if (sym !is ClassSymbol) {
-            node.error(Msg.SymbolIsNotRegistered.format(node.name.value))
-            return
-        }
-
+        val sym = scope.ensureDeclared(node) as ClassSymbol
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
     }
 
-
     private fun resolve(node: EnumDeclStmtNode) {
-        val sym = node.getResolvedSymbol()
-
-        node bind sym
-
-        if (sym !is EnumSymbol) {
-            node.error(Msg.SymbolIsNotRegistered.format(node.name.value))
-            return
-        }
-
+        val sym = scope.ensureDeclared(node) as EnumSymbol
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
     }
 

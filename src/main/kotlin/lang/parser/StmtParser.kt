@@ -250,12 +250,27 @@ class StmtParser(
         }
     }
 
-    private fun parseImportModuleStmt(): ImportModulesStmtNode {
+    private fun parseImportModuleStmt(): BaseImportStmtNode? {
         return ts.captureRange {
             ts.next()
 
             val clause = parser.parseNameClause()
 
+            // example: import sym, ... from mod1::mod2
+            if (ts.peek() isKeyword KeywordType.FROM) {
+                ts.next()
+
+                val sourceName = parser.parseNameSpecifier()
+                    ?: return@captureRange null
+
+                return@captureRange ImportFromStmtNode(
+                    sourceName = sourceName,
+                    items = clause,
+                    range = resultRange
+                )
+            }
+
+            // example: import mod1, ...
             ImportModulesStmtNode(
                 items = clause,
                 range = resultRange

@@ -4,13 +4,13 @@ import lang.compiler.SourceUnit
 import lang.core.SourceRange
 import lang.messages.MsgHandler
 import lang.nodes.BlockNode
-import lang.semantics.passes.BindImportPass
-import lang.semantics.passes.ModuleRegPass
+import lang.semantics.pipeline.BindImportPass
+import lang.semantics.pipeline.ModuleRegPass
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
-import lang.semantics.passes.TypeCollectionPass
-import lang.semantics.passes.TypeHierarchyPass
+import lang.semantics.pipeline.TypeCollectionPass
+import lang.semantics.pipeline.TypeHierarchyPass
 import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
