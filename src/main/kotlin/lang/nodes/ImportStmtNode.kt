@@ -4,13 +4,23 @@ import lang.core.SourceRange
 
 data class QualifiedName(
     val parts: List<IdentifierNode>
-)
+) {
+    val range: SourceRange? by lazy {
+        if (parts.isEmpty()) return@lazy null
+        val first = parts.first().range
+        val last = parts.last().range
+        first.untilEndOf(last)
+    }
+}
+
+fun List<IdentifierNode>.toQualifiedName() = QualifiedName(this)
 
 sealed class NameSpecifier(open val target: QualifiedName, val range: SourceRange?) {
-    data class Direct(override val target: QualifiedName) : NameSpecifier(
-        target = target,
-        range = target.parts.firstOrNull()?.range
-    )
+    data class Direct(override val target: QualifiedName) :
+        NameSpecifier(
+            target = target,
+            range = target.parts.firstOrNull()?.range
+        )
 
     data class Alias(override val target: QualifiedName, val alias: IdentifierNode) :
         NameSpecifier(

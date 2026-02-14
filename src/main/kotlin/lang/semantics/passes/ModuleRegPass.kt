@@ -1,7 +1,7 @@
 package lang.semantics.passes
 
 import lang.compiler.SourceUnit
-import lang.messages.Msg
+import lang.nodes.IdentifierNode
 import lang.nodes.ModuleStmtNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
@@ -9,7 +9,9 @@ import lang.semantics.resolvers.BaseResolver
 import lang.semantics.scopes.FileScope
 import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.Scope
+import lang.semantics.scopes.SymbolMap
 import lang.semantics.symbols.ModuleSymbol
+import lang.semantics.symbols.Symbol
 
 class ModuleRegPass(
     override val analyzer: ISemanticAnalyzer
@@ -33,49 +35,48 @@ class ModuleRegPass(
         return fileScope
     }
 
-    private fun getModule(node: ModuleStmtNode): ModuleSymbol {
-        val name = node.name.value
+    val allModules
+        get() = modules.toMap()
 
-        val existingSym = modules[name]
+    val allModulesAsSymbols: Map<String, Symbol>
+        get() = modules.mapValues { it.value as Symbol }
 
-        if (existingSym == null) {
-            val sym = ModuleSymbol(
-                name = name,
-                scope = ModuleScope(
-                    parent = curScope,
-                    scopeName = name
-                )
-            )
+    fun getModule(nameNode: IdentifierNode): ModuleSymbol {
+        val name = nameNode.value
+        val existing = modules[name]
 
-            modules[name] = sym
-            return sym
-        }
-
-        if (curScope is FileScope) {
-            val sym = ModuleSymbol(
+        fun newModule(sharedSymbols: SymbolMap = mutableMapOf()) =
+            ModuleSymbol(
                 name = name,
                 scope = ModuleScope(
                     parent = curScope,
                     scopeName = name,
-                    sharedSymbols = existingSym.scope.symbols
+                    sharedSymbols = sharedSymbols
                 )
             )
-            return sym
-        }
 
-        return existingSym
+        if (existing == null)
+            return newModule().also {
+                modules[name] = it
+            }
+
+        if (curScope is FileScope)
+            return newModule(existing.scope.symbols)
+
+
+        return existing
     }
 
-    private fun defineModuleIfNotExists(node: ModuleStmtNode): ModuleSymbol {
-        val sym = getModule(node)
-        curScope?.define(sym)?.handle(node.range) {}
+    private fun defineModuleIfNotExists(name: IdentifierNode): ModuleSymbol {
+        val sym = getModule(name)
+        curScope?.define(sym)?.handle(name.range) {}
         return sym
     }
 
     private fun registerModule(node: ModuleStmtNode) {
         val name = node.name
 
-        val moduleSym = defineModuleIfNotExists(node)
+        val moduleSym = defineModuleIfNotExists(node.name)
 
 //        if (moduleSym == null) {
 //            semanticError(Msg.CannotRegisterModule.format(name.value), node.name.range)

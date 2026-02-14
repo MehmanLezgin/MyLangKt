@@ -8,6 +8,9 @@ import lang.semantics.types.ErrorType.castCost
 import lang.semantics.types.Type
 import lang.core.operators.OperatorType
 
+typealias SymbolMap = MutableMap<String, Symbol>
+typealias SymbolIMap = Map<String, Symbol>
+
 open class Scope(
     open val parent: Scope?,
     open val scopeName: String? = null
@@ -21,7 +24,7 @@ open class Scope(
             ?: parent?.absoluteScopePath
     }
 
-    open val symbols = mutableMapOf<String, Symbol>()
+    open val symbols: SymbolMap = mutableMapOf()
 
     fun Symbol.ok() = ScopeResult.Success(sym = this)
     fun ScopeError.err() = ScopeResult.Error(error = this)

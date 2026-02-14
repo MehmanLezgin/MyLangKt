@@ -1,6 +1,7 @@
 package lang.messages
 
 object Terms {
+    const val MODULE = "module"
     const val USING = "using"
     const val EXTENSION = "extension"
     const val UNKNOWN = "unknown"

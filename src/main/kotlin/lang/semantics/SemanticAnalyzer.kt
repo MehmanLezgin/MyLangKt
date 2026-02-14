@@ -1,6 +1,5 @@
 package lang.semantics
 
-import lang.compiler.SourceManager
 import lang.compiler.SourceUnit
 import lang.core.SourceRange
 import lang.mappers.ScopeErrorMapper
@@ -11,6 +10,7 @@ import lang.nodes.BlockNode
 import lang.nodes.DeclStmtNode
 import lang.nodes.ExprNode
 import lang.semantics.builtin.PrimitivesScope
+import lang.semantics.passes.BindImportPass
 import lang.semantics.passes.ModuleRegPass
 import lang.semantics.passes.TypeCollectionPass
 import lang.semantics.passes.TypeHierarchyPass
@@ -37,8 +37,9 @@ class SemanticAnalyzer(
     override val modResolver = ModifierResolver(analyzer = this)
 
     override val typeCollectionPass = TypeCollectionPass(analyzer = this)
-    override val typeHierarchyPass = TypeHierarchyPass(analyzer = this)
     override val moduleRegPass = ModuleRegPass(analyzer = this)
+    override val bindImportPass = BindImportPass(analyzer = this, moduleRegPass = moduleRegPass)
+    override val typeHierarchyPass = TypeHierarchyPass(analyzer = this)
 
     override val semanticContext = SemanticContext()
 
@@ -91,11 +92,26 @@ class SemanticAnalyzer(
 //    }
 
     override fun registerSources(sources: List<SourceUnit>) {
-        sources.forEach { sourceUnit ->
-            val fileScope = moduleRegPass.resolveForSource(sourceUnit = sourceUnit)
-            sourceUnit.scope = fileScope
-            typeCollectionPass.resolve(target = sourceUnit.ast)
-            typeHierarchyPass.resolve(target = sourceUnit.ast)
+        sources.forEach {
+            it.scope = moduleRegPass.resolveForSource(sourceUnit = it)
+        }
+
+        sources.forEach {
+            withScope(it.scope!!) {
+                typeCollectionPass.resolve(target = it.ast)
+            }
+        }
+
+        sources.forEach {
+            withScope(it.scope!!) {
+                bindImportPass.resolve(target = it.ast)
+            }
+        }
+
+        sources.forEach {
+            withScope(it.scope!!) {
+                typeHierarchyPass.resolve(target = it.ast)
+            }
         }
     }
 

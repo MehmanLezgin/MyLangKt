@@ -53,13 +53,13 @@ object AstSerializer {
     ): String {
         return serialize(root, ExprNode::class) { expr, _, nextIndent ->
             val children = getNodeChildren(expr).toMutableMap()
-            semanticContext?.types[expr]?.let {
-                children["type"] = it
-            }
-
-            semanticContext?.symbols[expr]?.let {
-                children["symbol"] = it
-            }
+//            semanticContext?.types[expr]?.let {
+//                children["type"] = it
+//            }
+//
+//            semanticContext?.symbols[expr]?.let {
+//                children["symbol"] = it
+//            }
 
 
             children.mapWithSymbols(nextIndent)

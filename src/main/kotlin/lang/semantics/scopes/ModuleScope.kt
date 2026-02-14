@@ -5,7 +5,7 @@ import lang.semantics.symbols.Symbol
 data class ModuleScope(
     override val parent: Scope?,
     override val scopeName: String,
-    private val sharedSymbols: MutableMap<String, Symbol> = mutableMapOf(),
+    private val sharedSymbols: SymbolMap = mutableMapOf(),
 ) : BaseTypeScope(
     parent = parent,
     scopeName = scopeName
