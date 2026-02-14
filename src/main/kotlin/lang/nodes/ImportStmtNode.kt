@@ -11,6 +11,14 @@ data class QualifiedName(
         val last = parts.last().range
         first.untilEndOf(last)
     }
+
+    override fun toString(): String = buildString {
+        val p = parts
+        for (i in 0 until p.size) {
+            if (i != 0) append("::")
+            append(p[i].value)
+        }
+    }
 }
 
 fun List<IdentifierNode>.toQualifiedName() = QualifiedName(this)
