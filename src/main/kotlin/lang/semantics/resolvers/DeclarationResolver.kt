@@ -16,8 +16,8 @@ import lang.semantics.types.PointerType
 
 class DeclarationResolver(
     override val analyzer: ISemanticAnalyzer
-) : BaseResolver<DeclStmtNode<*>, Unit>(analyzer = analyzer) {
-    override fun resolve(target: DeclStmtNode<*>) {
+) : BaseResolver<DeclStmtNode, Unit>(analyzer = analyzer) {
+    override fun resolve(target: DeclStmtNode) {
         when (target) {
             is ModuleStmtNode -> resolve(target)
             is InterfaceDeclStmtNode -> resolve(target)
@@ -96,7 +96,7 @@ class DeclarationResolver(
         }
     }
 
-    private fun Scope.defineDeclSym(node: DeclStmtNode<IdentifierNode>): Symbol? {
+    private fun Scope.defineDeclSym(node: DeclStmtNode): Symbol? {
         val modResolver = analyzer.modResolver
         val modNode = node.modifiers
 
@@ -133,10 +133,10 @@ class DeclarationResolver(
         return sym
     }
 
-    private fun Scope.ensureDeclared(node: DeclStmtNode<IdentifierNode>): Symbol? {
+    private fun Scope.ensureDeclared(node: DeclStmtNode): Symbol? {
         node.getResolvedSymbol()?.let { return it }
 
-        if (kind == ScopeKind.LOCAL)
+        if (kind == ScopeKind.CONTAINER)
             node.error(Msg.SymbolIsNotRegistered.format(node.name?.value!!))
 
         val sym = scope.defineDeclSym(node)
@@ -306,7 +306,8 @@ class DeclarationResolver(
             return type
         }
 
-        return when (val funcNameExpr = node.name) {
+        return FuncKind.Default(node.name)
+        /*return when (val funcNameExpr = node.name) {
             is IdentifierNode -> {
                 FuncKind.Default(funcNameExpr)
             }
@@ -334,7 +335,7 @@ class DeclarationResolver(
                 funcNameExpr.error(Msg.EXPECTED_X_NAME.format(Terms.FUNCTION))
                 null
             }
-        }
+        }*/
     }
 
     private fun resolve(node: FuncDeclStmtNode) {

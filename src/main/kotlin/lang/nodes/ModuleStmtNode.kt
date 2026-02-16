@@ -6,7 +6,7 @@ data class ModuleStmtNode(
     override val name: IdentifierNode,
     val body: BlockNode,
     override val range: SourceRange
-) : DeclStmtNode<IdentifierNode>(
+) : DeclStmtNode(
     modifiers = null,
     name = name,
     range = range
@@ -16,7 +16,7 @@ data class ModuleStmtNode(
 
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
-            name = name?.mapRecursive(mapper) as? IdentifierNode ?: name,
+            name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
             body = body.mapRecursive(mapper) as? BlockNode ?: body
         )
         return mapper(newNode)

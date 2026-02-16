@@ -81,7 +81,7 @@ class SemanticAnalyzer(
 
     fun resolve(node: ExprNode) {
         when (node) {
-            is DeclStmtNode<*> -> declResolver.resolve(node)
+            is DeclStmtNode -> declResolver.resolve(node)
             is BlockNode -> resolve(node = node)
             else -> typeResolver.resolve(target = node)
         }

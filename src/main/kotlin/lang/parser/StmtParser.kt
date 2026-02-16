@@ -475,7 +475,7 @@ class StmtParser(
         body: BlockNode?,
         range: SourceRange
     ): FuncDeclStmtNode? {
-        var name: ExprNode? = null
+        var name: IdentifierNode? = null
         var params: List<VarDeclStmtNode>? = null
         var returnType: BaseDatatypeNode? = null
         var initializerBody: ExprNode? = null
@@ -484,6 +484,11 @@ class StmtParser(
             header = header,
             errorMsg = Msg.EXPECTED_FUNC_DECL,
             handleName = {
+                if (it !is IdentifierNode) {
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, it.range)
+                    return@analiseHeader
+                }
+
                 name = it
             },
             handleTypeNames = {
@@ -874,14 +879,14 @@ class StmtParser(
 
     private fun parseBreakStmt() = BreakStmtNode(range = ts.next().range)
 
-    private fun parseDeclarationWithModifiers(): DeclStmtNode<*>? {
+    private fun parseDeclarationWithModifiers(): DeclStmtNode? {
         val modifiers = parseModifiers()
         val range = ts.range
 
         val stmt = parse()
 
         val stmtWithMod = when {
-            stmt is DeclStmtNode<*> -> {
+            stmt is DeclStmtNode -> {
                 stmt.modifiers = modifiers
                 stmt
             }

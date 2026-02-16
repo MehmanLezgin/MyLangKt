@@ -108,10 +108,10 @@ data class ReturnStmtNode(
     }
 }
 
-open class DeclStmtNode<T: ExprNode>(
+open class DeclStmtNode(
     open var modifiers: ModifierSetNode?,
     override val range: SourceRange,
-    open val name: T? = null,
+    open val name: IdentifierNode? = null,
 ) : StmtNode {
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
@@ -123,7 +123,7 @@ data class VarDeclStmtNode(
     val initializer: ExprNode?,
     override val range: SourceRange,
     val isMutable: Boolean
-) : DeclStmtNode<IdentifierNode>(modifiers, range, name) {
+) : DeclStmtNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -136,13 +136,13 @@ data class VarDeclStmtNode(
 
 open class FuncDeclStmtNode(
     override var modifiers: ModifierSetNode?,
-    override val name: ExprNode,
+    override val name: IdentifierNode,
     val typeNames: TypeNameListNode?,
     open val params: List<VarDeclStmtNode>,
     val returnType: BaseDatatypeNode,
     open val body: BlockNode?,
     override val range: SourceRange
-) : DeclStmtNode<ExprNode>(modifiers, range, name) {
+) : DeclStmtNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = FuncDeclStmtNode(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -249,7 +249,7 @@ data class InterfaceDeclStmtNode(
     val superInterface: BaseDatatypeNode?,
     val body: BlockNode?,
     override val range: SourceRange
-) : DeclStmtNode<IdentifierNode>(modifiers, range, name) {
+) : DeclStmtNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -269,7 +269,7 @@ data class ClassDeclStmtNode(
     val superClass: BaseDatatypeNode?,
     val body: BlockNode?,
     override val range: SourceRange
-) : DeclStmtNode<IdentifierNode>(modifiers, range, name) {
+) : DeclStmtNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -287,7 +287,7 @@ data class EnumDeclStmtNode(
     override val name: IdentifierNode,
     val body: BlockNode,
     override val range: SourceRange
-) : DeclStmtNode<IdentifierNode>(modifiers, range, name) {
+) : DeclStmtNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -344,7 +344,7 @@ data class UsingDirectiveNode(
     val isType: Boolean = false,
     val value: ExprNode,
     override val range: SourceRange,
-) : DeclStmtNode<IdentifierNode>(
+) : DeclStmtNode(
     modifiers = null,
     name = name,
     range = range
