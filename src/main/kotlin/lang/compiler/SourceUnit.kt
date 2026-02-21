@@ -19,11 +19,6 @@ data class SourceUnit(
     var isAnalysing = false
     var scope: FileScope? = null
 
-    val imports: List<BaseImportStmtNode>
-        get() = ast.nodes.filterIsInstance<BaseImportStmtNode>()
-
-    var importedModules = mutableMapOf<String, ModuleSymbol>()
-
     fun printAST(path: String, semanticContext: SemanticContext?) {
         File(path).printWriter().use { out ->
             out.println(

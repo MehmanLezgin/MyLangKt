@@ -11,9 +11,9 @@ import lang.nodes.DeclStmtNode
 import lang.nodes.ExprNode
 import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.pipeline.BindImportPass
+import lang.semantics.pipeline.DeclarationHeaderPass
 import lang.semantics.pipeline.ModuleRegPass
-import lang.semantics.pipeline.TypeCollectionPass
-import lang.semantics.pipeline.TypeHierarchyPass
+import lang.semantics.pipeline.NameCollectionPass
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
@@ -36,10 +36,10 @@ class SemanticAnalyzer(
     override val typeResolver = TypeResolver(analyzer = this)
     override val modResolver = ModifierResolver(analyzer = this)
 
-    override val typeCollectionPass = TypeCollectionPass(analyzer = this)
+    override val nameCollectionPass = NameCollectionPass(analyzer = this)
+    override val declarationHeaderPass = DeclarationHeaderPass(analyzer = this)
     override val moduleRegPass = ModuleRegPass(analyzer = this)
     override val bindImportPass = BindImportPass(analyzer = this, moduleRegPass = moduleRegPass)
-    override val typeHierarchyPass = TypeHierarchyPass(analyzer = this)
 
     override val semanticContext = SemanticContext()
 
@@ -98,7 +98,7 @@ class SemanticAnalyzer(
 
         sources.forEach {
             withScope(it.scope!!) {
-                typeCollectionPass.resolve(target = it.ast)
+                nameCollectionPass.resolve(target = it.ast)
             }
         }
 
@@ -110,7 +110,7 @@ class SemanticAnalyzer(
 
         sources.forEach {
             withScope(it.scope!!) {
-                typeHierarchyPass.resolve(target = it.ast)
+                declarationHeaderPass.resolve(target = it.ast)
             }
         }
     }

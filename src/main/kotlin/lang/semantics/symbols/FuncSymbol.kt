@@ -53,8 +53,7 @@ data class OverloadedFuncSymbol(
     override val name: String,
     val isOperator: Boolean,
     val overloads: MutableList<FuncSymbol> = mutableListOf(),
-    override val modifiers: Modifiers = Modifiers()
-) : Symbol(name = name, modifiers = modifiers) {
+) : Symbol(name = name, modifiers = Modifiers()) {
     fun hasOverload(funcSym: FuncSymbol?): Boolean {
         if (funcSym == null) return false
         return overloads.find { it == funcSym } != null

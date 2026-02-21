@@ -41,6 +41,9 @@ open class Scope(
     fun Symbol.ok() = ScopeResult.Success(sym = this)
     fun ScopeError.err() = ScopeResult.Error(error = this)
 
+    fun isTypeScope() = this is BaseTypeScope && this !is ModuleScope
+
+
     fun <T : Symbol> define(sym: T, visibility: Visibility = Visibility.PUBLIC): ScopeResult {
         val name = sym.name
         val definedSym = symbols[name]
@@ -54,6 +57,14 @@ open class Scope(
             symbols[name] = sym
 
         return sym.ok()
+    }
+
+    private fun defineIfNotExist(sym: Symbol): ScopeResult {
+        val existing = symbols[sym.name]
+        if (existing != null && existing.javaClass == sym.javaClass)
+            return existing.ok()
+
+        return define(sym)
     }
 
     fun resolve(name: String, asMember: Boolean = false): ScopeResult {
@@ -275,7 +286,7 @@ open class Scope(
         params: FuncParamListSymbol,
         returnType: Type,
         modifiers: Modifiers
-    ): Pair<ScopeResult, FuncSymbol> {
+    ): ScopeResult {
         val name = nameId.value
 
         val funcSym = if (nameId is OperNode) OperatorFuncSymbol(
@@ -307,7 +318,7 @@ open class Scope(
             }
         }
 
-        return defineFunc(funcSym) to funcSym
+        return defineFunc(funcSym)
     }
 
     private fun checkOperatorFunc(funcSym: FuncSymbol): ScopeError? {
@@ -359,7 +370,7 @@ open class Scope(
                 }
 
                 symbols[funcSym.name] = overloadedFunc
-                return overloadedFunc.ok()
+                return funcSym.ok()
             }
 
             is OverloadedFuncSymbol -> {
@@ -369,7 +380,7 @@ open class Scope(
 
                 // add anyway, for error: multiple declarations (on call)
                 existingSym.overloads.add(funcSym)
-                return existingSym.ok()
+                return funcSym.ok()
             }
 
             else -> return ScopeError.AlreadyDefined(
@@ -430,40 +441,27 @@ open class Scope(
         return define(sym)
     }
 
-    fun defineModuleIfNotExists(node: ModuleStmtNode): ScopeResult {
-        val name = node.name.value
-
-        symbols[name]?.let {
-            if (it is ModuleSymbol)
-                return ScopeResult.Success(it)
-        }
-
-        val sym = ModuleSymbol(
+    fun defineFuncNameIfNotExist(name: String, isOperator: Boolean) : ScopeResult {
+        val sym = OverloadedFuncSymbol(
             name = name,
-            scope = ModuleScope(
-                parent = this,
-                scopeName = name
-            )
+            isOperator = isOperator,
+            overloads = mutableListOf()
         )
 
-        return define(sym)
+        return defineIfNotExist(sym)
     }
 
-    fun defineModuleIfNotExists(sym: ModuleSymbol): ScopeResult {
-        symbols[sym.name]?.let {
-            if (it == sym)
-                return ScopeResult.Success(it)
-        }
+    fun defineVarName(
+        name: String,
+        isMutable: Boolean,
+        modifiers: Modifiers
+    ) : ScopeResult {
+        val sym = VarSymbol(
+            name = name,
+            isMutable = isMutable,
+            modifiers = modifiers
+        )
 
-        return define(sym)
-    }
-
-    fun resolveModule(name: String): ScopeResult {
-        symbols[name]?.let {
-            if (it is ModuleSymbol)
-                return ScopeResult.Success(it)
-        }
-
-        return ScopeResult.Error(ScopeError.NotDefined(name, scopeName))
+        return defineIfNotExist(sym)
     }
 }

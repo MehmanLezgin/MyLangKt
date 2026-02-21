@@ -2,6 +2,7 @@ package lang.semantics.symbols
 
 import lang.semantics.types.ConstValue
 import lang.semantics.types.Type
+import lang.semantics.types.UnresolvedType
 
 sealed class Symbol(
     open val name: String,
@@ -10,7 +11,7 @@ sealed class Symbol(
 
 data class VarSymbol(
     override val name: String,
-    val type: Type,
+    var type: Type = UnresolvedType,
     val isMutable: Boolean,
     val isParameter: Boolean = false,
     override val modifiers: Modifiers = Modifiers()

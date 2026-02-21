@@ -1,18 +1,12 @@
 package lang.semantics.resolvers
 
 import lang.messages.Msg
-import lang.messages.Terms
 import lang.nodes.*
+import lang.parser.ParserUtils.toDatatype
 import lang.semantics.ISemanticAnalyzer
-import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.scopes.*
 import lang.semantics.symbols.*
-import lang.semantics.types.ConstValue
-import lang.semantics.types.ErrorType
-import lang.semantics.types.OverloadedFuncType
-import lang.semantics.types.Type
-import lang.parser.ParserUtils.toDatatype
-import lang.semantics.types.PointerType
+import lang.semantics.types.*
 
 class DeclarationResolver(
     override val analyzer: ISemanticAnalyzer
@@ -104,21 +98,21 @@ class DeclarationResolver(
             is InterfaceDeclStmtNode -> {
                 val modifiers = modResolver.resolveInterfaceModifiers(modNode)
                 val sym = this.defineInterface(node, modifiers)
-                analyzer.typeHierarchyPass.resolve(node)
+                analyzer.declarationHeaderPass.resolve(node)
                 sym
             }
 
             is ClassDeclStmtNode -> {
                 val modifiers = modResolver.resolveClassModifiers(modNode)
                 val sym = this.defineClass(node, modifiers)
-                analyzer.typeHierarchyPass.resolve(node)
+                analyzer.declarationHeaderPass.resolve(node)
                 sym
             }
 
             is EnumDeclStmtNode -> {
                 val modifiers = modResolver.resolveEnumModifiers(modNode)
                 val sym = this.defineEnum(node, modifiers)
-                analyzer.typeHierarchyPass.resolve(node)
+                analyzer.declarationHeaderPass.resolve(node)
                 sym
             }
 
@@ -272,142 +266,17 @@ class DeclarationResolver(
             block()
     }
 
-    private fun resolveFuncParam(node: VarDeclStmtNode) {
-        val paramsScope = scope
-
-        if (paramsScope !is FuncParamsScope) {
-            semanticError(Msg.CANNOT_RESOLVE_PARAM_OUTSIDE_FUNC, node.range)
-            return
-        }
-
-        val type = analyzer.typeResolver.resolve(node.dataType)
-
-        val result = paramsScope.defineParam(node, type)
-        result.handle(node.range) {
-            sym.also { node bind it }
-        }
-
-        if (node.dataType is AutoDatatypeNode)
-            semanticError(Msg.EXPECTED_TYPE_NAME, node.name.range)
-        else if (type == PrimitivesScope.void)
-            semanticError(Msg.VOID_CANNOT_BE_PARAM_TYPE, node.name.range)
-
-        analyzer.typeResolver.resolve(node.dataType)
-    }
-
-    private fun resolveFuncKind(node: FuncDeclStmtNode): FuncKind? {
-        fun resolveBase(base: ExprNode): Type? {
-            val type = analyzer.typeResolver.resolve(base)
-            if (type == ErrorType) return null
-            if (type.isExprType) {
-                base.error(Msg.EXPECTED_TYPE_NAME)
-                return null
-            }
-            return type
-        }
-
-        return FuncKind.Default(node.name)
-        /*return when (val funcNameExpr = node.name) {
-            is IdentifierNode -> {
-                FuncKind.Default(funcNameExpr)
-            }
-
-            is DotAccessNode -> {
-                val base = funcNameExpr.base
-                val nameId = funcNameExpr.member
-                val type = resolveBase(base) ?: return null
-                FuncKind.Extension(nameId, type)
-            }
-
-            is ScopedDatatypeNode -> {
-                val base = funcNameExpr.base
-                if (!funcNameExpr.member.isSimple()) {
-                    funcNameExpr.member.error(Msg.EXPECTED_X_NAME.format(Terms.FUNCTION))
-                    return null
-                }
-
-                val nameId = funcNameExpr.member.identifier
-                val type = resolveBase(base) ?: return null
-                FuncKind.Qualified(nameId, type)
-            }
-
-            else -> {
-                funcNameExpr.error(Msg.EXPECTED_X_NAME.format(Terms.FUNCTION))
-                null
-            }
-        }*/
-    }
-
     private fun resolve(node: FuncDeclStmtNode) {
-        val modifiers = analyzer.modResolver.resolveFuncModifiers(node.modifiers)
+        val sym = node.getResolvedSymbol() as? FuncSymbol ?: return run {
+            node.error(Msg.SymbolIsNotRegistered.format(node.name.value))
+        }
 
-        val paramsScope = FuncParamsScope(
-            parent = scope
+        val funcScope = FuncScope(
+            parent = scope,
+            funcSymbol = sym
         )
 
-        val funcKind = resolveFuncKind(node)
-
-        when (funcKind) {
-            is FuncKind.Default -> {}
-            is FuncKind.Extension -> {}
-            is FuncKind.Qualified -> {}
-            null -> return
-        }
-
-        val funcNameId = funcKind.nameId
-
-        fun checkInfix() {
-            if (!modifiers.isInfix) return
-            val infixAllowed = funcKind is FuncKind.Extension || scope.isTypeScope()
-            if (infixAllowed) return
-            val modNode = node.modifiers?.get(ModifierNode.Infix::class) ?: return
-            val msg = Msg.F_MODIFIER_IS_NOT_INAPPLICABLE_ON_THIS_X.format(
-                modNode.keyword.value, Terms.FUNCTION
-            )
-            modNode.error(msg)
-        }
-
-        checkInfix()
-
-        val params = analyzer.withScope(paramsScope) {
-            if (funcKind is FuncKind.Extension)
-                paramsScope.define(
-                    FuncExtensionParamSymbol(type = funcKind.type)
-                )
-
-            node.params.forEach { decl ->
-                resolveFuncParam(node = decl)
-            }
-
-            return@withScope paramsScope.getParams()
-        }
-
-        val returnType = analyzer.typeResolver.resolve(node.returnType)
-
-
-        withEffectiveScope(modifiers.isStatic)
-        {
-            val pair = scope.defineFunc(node, funcNameId, params, returnType, modifiers)
-
-            val result = pair.first
-
-            result.handle(node.range) {
-                if (sym !is FuncSymbol) return@handle null
-
-                val funcScope = FuncScope(
-                    parent = scope,
-                    funcSymbol = sym
-                )
-
-                val funcType = sym.toFuncType()
-
-                node bind sym
-                node attach funcType
-
-                analyzer.withScopeResolveBody(targetScope = funcScope, body = node.body)
-            }
-        }
-
+        analyzer.withScopeResolveBody(targetScope = funcScope, body = node.body)
     }
 
     private fun resolve(node: ConstructorDeclStmtNode) {
@@ -423,9 +292,6 @@ class DeclarationResolver(
 
         resolve(node as FuncDeclStmtNode)
     }
-
-    fun Scope.isTypeScope() = this is BaseTypeScope && this !is ModuleScope
-
 //    fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Unit) =
 //        this.handle(null, onSuccess)
 }

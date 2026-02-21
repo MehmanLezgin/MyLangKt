@@ -1,6 +1,6 @@
 package lang.semantics.types
 
-object ErrorType : Type(
+object UnresolvedType : Type(
     flags = TypeFlags(),
     declaration = null
 ) {
@@ -11,11 +11,10 @@ object ErrorType : Type(
     override fun toString() = stringify()
 
     override fun equals(other: Any?): Boolean {
-        return other is ErrorType
+        return other is UnresolvedType
     }
 
     override fun hashCode(): Int {
         return super.hashCode()
     }
 }
-

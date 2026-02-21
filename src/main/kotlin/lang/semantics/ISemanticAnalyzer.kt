@@ -5,12 +5,12 @@ import lang.core.SourceRange
 import lang.messages.MsgHandler
 import lang.nodes.BlockNode
 import lang.semantics.pipeline.BindImportPass
+import lang.semantics.pipeline.DeclarationHeaderPass
 import lang.semantics.pipeline.ModuleRegPass
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
-import lang.semantics.pipeline.TypeCollectionPass
-import lang.semantics.pipeline.TypeHierarchyPass
+import lang.semantics.pipeline.NameCollectionPass
 import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
@@ -25,9 +25,9 @@ interface ISemanticAnalyzer {
     val modResolver: ModifierResolver
 
     val moduleRegPass: ModuleRegPass
-    val typeCollectionPass: TypeCollectionPass
+    val nameCollectionPass: NameCollectionPass
+    val declarationHeaderPass: DeclarationHeaderPass
     val bindImportPass: BindImportPass
-    val typeHierarchyPass: TypeHierarchyPass
 
     val semanticContext: SemanticContext
 

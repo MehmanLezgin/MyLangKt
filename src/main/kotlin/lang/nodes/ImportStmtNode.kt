@@ -21,8 +21,6 @@ data class QualifiedName(
     }
 }
 
-fun List<IdentifierNode>.toQualifiedName() = QualifiedName(this)
-
 sealed class NameSpecifier(open val target: QualifiedName, val range: SourceRange?) {
     data class Direct(override val target: QualifiedName) :
         NameSpecifier(

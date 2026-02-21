@@ -4,22 +4,27 @@ import lang.messages.Msg
 import lang.nodes.BlockNode
 import lang.nodes.ClassDeclStmtNode
 import lang.nodes.EnumDeclStmtNode
+import lang.nodes.FuncDeclStmtNode
 import lang.nodes.InterfaceDeclStmtNode
 import lang.nodes.ModuleStmtNode
+import lang.nodes.OperNode
 import lang.nodes.UsingDirectiveNode
+import lang.nodes.VarDeclStmtNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.resolvers.BaseResolver
 import lang.semantics.symbols.ClassSymbol
 import lang.semantics.symbols.EnumSymbol
 import lang.semantics.symbols.InterfaceSymbol
 import lang.semantics.symbols.ModuleSymbol
+import lang.semantics.symbols.OverloadedFuncSymbol
 import lang.semantics.symbols.TypeSymbol
+import lang.semantics.symbols.VarSymbol
 
-class TypeCollectionPass(
+class NameCollectionPass(
     override val analyzer: ISemanticAnalyzer
 ) : BaseResolver<BlockNode?, Unit>(analyzer = analyzer) {
     private val modResolver = analyzer.modResolver
-    
+
     override fun resolve(target: BlockNode?) {
         target?.nodes?.forEach { node ->
             when (node) {
@@ -28,6 +33,8 @@ class TypeCollectionPass(
                 is InterfaceDeclStmtNode -> resolve(target = node)
                 is EnumDeclStmtNode -> resolve(target = node)
                 is UsingDirectiveNode -> resolve(target = node)
+                is VarDeclStmtNode -> resolve(target = node)
+                is FuncDeclStmtNode -> resolve(target = node)
                 else -> Unit
             }
         }
@@ -37,6 +44,26 @@ class TypeCollectionPass(
         analyzer.withScope(sym.staticScope) {
             resolve(body)
         }
+    }
+
+    fun resolve(target: VarDeclStmtNode) {
+        val modifiers = modResolver.resolveVarModifiers(target.modifiers)
+
+        scope.defineVarName(
+            name = target.name.value,
+            isMutable = target.isMutable,
+            modifiers = modifiers
+        ).handle(target.name.range) {
+            val sym = sym as VarSymbol
+            target bind sym
+        }
+    }
+
+    fun resolve(target: FuncDeclStmtNode) {
+        scope.defineFuncNameIfNotExist(
+            name = target.name.value,
+            isOperator = target.name is OperNode
+        )
     }
 
     fun resolve(target: ModuleStmtNode) {
@@ -56,7 +83,7 @@ class TypeCollectionPass(
 
     fun resolve(target: InterfaceDeclStmtNode) {
         val modifiers = modResolver.resolveInterfaceModifiers(target.modifiers)
-        
+
         scope.defineInterface(target, modifiers = modifiers)
             .handle(target.name.range) {
                 val sym = sym as InterfaceSymbol
