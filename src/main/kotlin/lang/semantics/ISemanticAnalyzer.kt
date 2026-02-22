@@ -5,14 +5,9 @@ import lang.core.SourceRange
 import lang.messages.MsgHandler
 import lang.nodes.BlockNode
 import lang.semantics.pipeline.AnalysisPipeline
-import lang.semantics.pipeline.BindImportPass
-import lang.semantics.pipeline.DeclarationHeaderPass
-import lang.semantics.pipeline.ModuleRegPass
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
-import lang.semantics.pipeline.NameCollectionPass
-import lang.semantics.pipeline.VarInitPass
 import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError

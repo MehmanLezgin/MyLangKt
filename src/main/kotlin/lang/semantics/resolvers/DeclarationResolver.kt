@@ -164,7 +164,7 @@ class DeclarationResolver(
     }
 
     private fun resolve(target: VarDeclStmtNode) {
-        val sym = target.getResolvedSymbol() as? VarSymbol ?: return
+//        val sym = target.getResolvedSymbol() as? VarSymbol ?: return
     }
 
     private fun resolve(target: FuncDeclStmtNode) {
