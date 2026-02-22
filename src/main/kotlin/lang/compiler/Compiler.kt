@@ -7,7 +7,6 @@ import lang.lexer.ILexer
 import lang.lexer.Lexer
 import lang.messages.Msg
 import lang.messages.MsgHandler
-import lang.nodes.ModuleStmtNode
 import lang.parser.IParser
 import lang.parser.Parser
 import lang.semantics.ISemanticAnalyzer
@@ -164,7 +163,7 @@ fun Program.analise(): SemanticContext? {
         msgHandler = msgHandler,
     )
 
-    analyzer.registerSources(sourceManager.sources)
+    analyzer.executePipeline(sourceManager.sources)
 
     val entrySourceUnit = sourceManager.entrySourceUnit
 

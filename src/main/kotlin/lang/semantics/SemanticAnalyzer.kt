@@ -4,16 +4,12 @@ import lang.compiler.SourceUnit
 import lang.core.SourceRange
 import lang.mappers.ScopeErrorMapper
 import lang.messages.CompileStage
-import lang.messages.Msg
 import lang.messages.MsgHandler
 import lang.nodes.BlockNode
 import lang.nodes.DeclStmtNode
 import lang.nodes.ExprNode
 import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.pipeline.BindImportPass
-import lang.semantics.pipeline.DeclarationHeaderPass
-import lang.semantics.pipeline.ModuleRegPass
-import lang.semantics.pipeline.NameCollectionPass
+import lang.semantics.pipeline.*
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
@@ -21,8 +17,6 @@ import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.FileScope
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
-import lang.semantics.scopes.ScopeResult
-import lang.semantics.symbols.Symbol
 
 class SemanticAnalyzer(
     override val msgHandler: MsgHandler,
@@ -36,21 +30,25 @@ class SemanticAnalyzer(
     override val typeResolver = TypeResolver(analyzer = this)
     override val modResolver = ModifierResolver(analyzer = this)
 
-    override val nameCollectionPass = NameCollectionPass(analyzer = this)
-    override val declarationHeaderPass = DeclarationHeaderPass(analyzer = this)
-    override val moduleRegPass = ModuleRegPass(analyzer = this)
-    override val bindImportPass = BindImportPass(analyzer = this, moduleRegPass = moduleRegPass)
-
     override val semanticContext = SemanticContext()
+
+    override val pipeline: AnalysisPipeline by lazy {
+        val moduleRegPass = ModuleRegPass(analyzer = this)
+
+        AnalysisPipeline(
+            analyzer = this,
+            moduleRegPass = moduleRegPass,
+            passes = listOf(
+                NameCollectionPass(analyzer = this),
+                BindImportPass(analyzer = this, moduleRegPass = moduleRegPass),
+                DeclarationHeaderPass(analyzer = this),
+                VarInitPass(analyzer = this)
+            )
+        )
+    }
 
     override fun scopeError(error: ScopeError, range: SourceRange?) {
         semanticError(msg = ScopeErrorMapper.toSecond(error), range = range)
-    }
-
-    fun importSymbol(sym: Symbol, range: SourceRange) {
-        val result = scope.define(sym)
-        if (result !is ScopeResult.Error) return
-        scopeError(error = result.error, range = range)
     }
 
     override fun resolve(sourceUnit: SourceUnit) {
@@ -66,15 +64,6 @@ class SemanticAnalyzer(
         }
     }
 
-    private fun checkModuleErrors(sourceUnit: SourceUnit?): String? {
-        return when {
-            sourceUnit == null -> Msg.MODULE_NOT_DEFINED
-            sourceUnit == currentSourceUnit -> Msg.MODULE_CANNOT_IMPORT_ITSELF
-            sourceUnit.isAnalysing -> Msg.IMPORT_CYCLE_NOT_ALLOWED
-            else -> null
-        }
-    }
-
     override fun resolve(node: BlockNode) {
         node.nodes.forEach { childNode -> resolve(childNode) }
     }
@@ -87,32 +76,8 @@ class SemanticAnalyzer(
         }
     }
 
-//    override fun getModule(name: String): ModuleSymbol? {
-//        return moduleRegPass.getModule(name)
-//    }
-
-    override fun registerSources(sources: List<SourceUnit>) {
-        sources.forEach {
-            it.scope = moduleRegPass.resolveForSource(sourceUnit = it)
-        }
-
-        sources.forEach {
-            withScope(it.scope!!) {
-                nameCollectionPass.resolve(target = it.ast)
-            }
-        }
-
-        sources.forEach {
-            withScope(it.scope!!) {
-                bindImportPass.resolve(target = it.ast)
-            }
-        }
-
-        sources.forEach {
-            withScope(it.scope!!) {
-                declarationHeaderPass.resolve(target = it.ast)
-            }
-        }
+    override fun executePipeline(sources: List<SourceUnit>) {
+        pipeline.execute(sources = sources)
     }
 
     override fun <T> withScope(

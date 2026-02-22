@@ -90,7 +90,7 @@ class DeclarationResolver(
         }
     }
 
-    private fun Scope.defineDeclSym(target: DeclStmtNode): Symbol? {
+    /*private fun Scope.defineDeclSym(target: DeclStmtNode): Symbol? {
         val modResolver = analyzer.modResolver
         val modNode = target.modifiers
 
@@ -125,7 +125,7 @@ class DeclarationResolver(
         val sym = result?.handle(target.range) { sym }
 
         return sym
-    }
+    }*/
 
     private fun Scope.ensureDeclared(target: DeclStmtNode): Symbol? {
         target.getResolvedSymbol()?.let { return it }
@@ -133,11 +133,12 @@ class DeclarationResolver(
         if (kind == ScopeKind.CONTAINER)
             target.error(Msg.SymbolIsNotRegistered.format(target.name?.value!!))
 
-        val sym = scope.defineDeclSym(target)
-
-        target bind sym
-
-        return sym
+        return null
+//        val sym = scope.defineDeclSym(target)
+//
+//        target bind sym
+//
+//        return sym
     }
 
     private fun resolve(target: ModuleStmtNode) {
@@ -164,44 +165,6 @@ class DeclarationResolver(
 
     private fun resolve(target: VarDeclStmtNode) {
         val sym = target.getResolvedSymbol() as? VarSymbol ?: return
-
-        var type = sym.type
-
-        if (target.initializer == null && type is UnresolvedType) {
-            target.error(Msg.VarMustBeInitialized.format(sym.name))
-            return
-        }
-
-        if (target.initializer != null) {
-            analyzer.typeResolver.resolveForType(target.initializer, type)
-                .takeIf { it != ErrorType }
-                ?.let {
-                    if (sym.type is UnresolvedType) {
-                        sym.type = it
-                        type = it
-                    }
-
-                }
-
-            target.initializer attach sym.type
-        }
-
-        val isConst = sym.type.isConst
-
-        if (isConst && (!sym.modifiers.isStatic && (scope.isTypeScope()))) {
-            target.error(Msg.CONST_VAR_MUST_BE_STATIC)
-        }
-
-        val initSym = target.initializer?.getResolvedSymbol()
-
-        if (initSym is ConstValueSymbol) {
-            var value = initSym.value
-
-            if (value != null && value.type != type)
-                value = analyzer.constResolver.resolveCast(value, type)
-
-            sym.constValue = value
-        }
     }
 
     private fun resolve(target: FuncDeclStmtNode) {

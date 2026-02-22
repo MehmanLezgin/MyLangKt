@@ -1,6 +1,6 @@
 package lang.semantics.pipeline
 
-import lang.compiler.SourceUnit
+import lang.nodes.BlockNode
 import lang.nodes.IdentifierNode
 import lang.nodes.ModuleStmtNode
 import lang.semantics.ISemanticAnalyzer
@@ -15,31 +15,32 @@ import lang.semantics.symbols.Symbol
 
 class ModuleRegPass(
     override val analyzer: ISemanticAnalyzer
-) : BaseResolver<List<ModuleStmtNode>, Unit>(analyzer = analyzer) {
+) : BaseResolver<BlockNode?, FileScope?>(analyzer = analyzer) {
     private val modules = mutableMapOf<String, ModuleSymbol>()
 
     var curScope: Scope? = null
-
-    override fun resolve(target: List<ModuleStmtNode>) {
-        target.forEach(::registerModule)
-    }
-
-    fun resolveForSource(sourceUnit: SourceUnit): FileScope {
-        val modules = sourceUnit.ast.nodes.filterIsInstance<ModuleStmtNode>()
-        val fileScope = FileScope(parent = PrimitivesScope, scopeName = null)
-
-        withParent(fileScope) {
-            resolve(modules)
-        }
-
-        return fileScope
-    }
 
     val allModules
         get() = modules.toMap()
 
     val allModulesAsSymbols: Map<String, Symbol>
         get() = modules.mapValues { it.value as Symbol }
+
+    override fun resolve(target: BlockNode?) : FileScope? {
+        if (target == null) return null
+        val fileScope = FileScope(parent = PrimitivesScope, scopeName = null)
+
+        withParent(fileScope) {
+            target.nodes.forEach { node ->
+                when (node) {
+                    is ModuleStmtNode -> registerModule(node = node)
+                    else -> Unit
+                }
+            }
+        }
+
+        return fileScope
+    }
 
     fun getModule(nameNode: IdentifierNode): ModuleSymbol {
         val name = nameNode.value
@@ -74,14 +75,7 @@ class ModuleRegPass(
     }
 
     private fun registerModule(node: ModuleStmtNode) {
-        val name = node.name
-
         val moduleSym = defineModuleIfNotExists(node.name)
-
-//        if (moduleSym == null) {
-//            semanticError(Msg.CannotRegisterModule.format(name.value), node.name.range)
-//            return
-//        }
 
         node bind moduleSym
 
@@ -90,7 +84,7 @@ class ModuleRegPass(
         val moduleScope = moduleSym.scope
 
         withParent(moduleScope) {
-            resolve(target = nestedModules)
+            nestedModules.forEach(::registerModule)
         }
     }
 
