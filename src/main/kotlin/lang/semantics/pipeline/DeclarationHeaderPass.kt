@@ -42,11 +42,6 @@ class DeclarationHeaderPass(
         withScopeResolve(sym.scope, target.body)
     }
 
-    private fun withScopeResolve(targetScope: Scope, body: BlockNode?) {
-        analyzer.withScope(targetScope) {
-            resolve(body)
-        }
-    }
 
     fun resolve(target: InterfaceDeclStmtNode) {
         val sym = target.getResolvedSymbol() as? InterfaceSymbol ?: return
@@ -94,12 +89,18 @@ class DeclarationHeaderPass(
     }
 
     private fun resolve(target: VarDeclStmtNode) {
-        val sym = target.getResolvedSymbol() as? VarSymbol ?: return run {
-            target.error(Msg.SymbolIsNotRegistered.format(target.name.value))
+        val sym = target.getResolvedSymbol() as? VarSymbol ?: return
+
+        if (target.dataType is AutoDatatypeNode) return
+
+        var type = analyzer.typeResolver.resolve(target.dataType)
+
+        if (type.isExprType) {
+            type = ErrorType
+            target.dataType.error(Msg.EXPECTED_TYPE_NAME)
         }
 
-        if (target.dataType !is AutoDatatypeNode)
-            sym.type = analyzer.typeResolver.resolve(target.dataType)
+        sym.type = type
     }
 
     private fun resolveFuncKind(target: FuncDeclStmtNode): FuncKind {
@@ -223,4 +224,9 @@ class DeclarationHeaderPass(
             block()
     }
 
+    private fun withScopeResolve(targetScope: Scope, body: BlockNode?) {
+        analyzer.withScope(targetScope) {
+            resolve(body)
+        }
+    }
 }

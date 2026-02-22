@@ -1,6 +1,5 @@
 package lang.messages
 
-import lang.core.SourceRange
 import lang.messages.Terms.ordinal
 
 interface FormattableMsg
@@ -12,6 +11,14 @@ object Msg {
     const val INVALID_CONST_VALUE = "Invalid const value"
     const val CANNOT_EXPORT = "Cannot export"
 
+    object VarMustBeInitialized : FormattableMsg {
+        fun format(name: String) = "Variable '$name' must be initialized"
+    }
+
+    object AutoVarCannotBeInferred : FormattableMsg {
+        fun format(name: String) =
+            "Variable '${name}' has type 'auto' but type cannot be inferred. Specify type explicitly"
+    }
 
     object SymbolIsNotRegistered : FormattableMsg {
         fun format(symName: String) =
@@ -195,6 +202,7 @@ object Msg {
     const val EXPECTED_VARIABLE_ACTUAL_TYPE_NAME = "Expected a variable, actual: a type name"
     const val ASSIGNMENT_TO_IMMUTABLE_VARIABLE = "Assignment to immutable variable"
     const val ASSIGNMENT_TO_CONSTANT_VARIABLE = "Assignment to constant variable"
+    const val UNRESOLVED_TYPE = "[Unresolved type]"
     const val ERROR_TYPE = "[Error type]"
     const val CONST = "const"
     const val EXPECTED_CONST_VALUE = "Expected const value"

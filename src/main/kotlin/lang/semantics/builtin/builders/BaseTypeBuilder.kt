@@ -1,14 +1,14 @@
 package lang.semantics.builtin.builders
 
+import lang.core.operators.OperatorType
 import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.Scope
-import lang.semantics.symbols.ConstVarSymbol
 import lang.semantics.symbols.FuncSymbol
 import lang.semantics.symbols.Modifiers
 import lang.semantics.symbols.TypeSymbol
+import lang.semantics.symbols.VarSymbol
 import lang.semantics.types.ConstValue
 import lang.semantics.types.Type
-import lang.core.operators.OperatorType
 
 abstract class BaseTypeBuilder<T: TypeSymbol>(open val name: String, open val parent: Scope) {
     internal var superTypeScope: BaseTypeScope? = null
@@ -59,7 +59,7 @@ abstract class BaseTypeBuilder<T: TypeSymbol>(open val name: String, open val pa
         type: Type,
         value: ConstValue<*>,
         block: ConstVarBuilder.() -> Unit = {}
-    ): ConstVarSymbol {
+    ): VarSymbol {
         val sym = ConstVarBuilder(name, type, value).apply(block).build()
         withStaticScope { define(sym) }
         return sym

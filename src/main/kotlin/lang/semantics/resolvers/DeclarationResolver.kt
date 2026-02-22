@@ -26,25 +26,25 @@ class DeclarationResolver(
         }
     }
 
-    private fun resolve(node: UsingDirectiveNode) {
-        val value = node.value.let {
+    private fun resolve(target: UsingDirectiveNode) {
+        val value = target.value.let {
             if (it is IdentifierNode) it.toDatatype() else it
         }
 
-        val name = node.name
+        val name = target.name
 
-        fun getNamespaceSym(node: BaseDatatypeNode): TypeSymbol? {
-            val type = analyzer.typeResolver.resolve(node, isNamespaceCtx = true)
+        fun getNamespaceSym(target: BaseDatatypeNode): TypeSymbol? {
+            val type = analyzer.typeResolver.resolve(target, isNamespaceCtx = true)
             if (type == ErrorType) return null
             val decl = type.declaration
             if (decl !is TypeSymbol) {
-                node.error(Msg.EXPECTED_MODULE_NAME)
+                target.error(Msg.EXPECTED_MODULE_NAME)
                 return null
             }
             return decl
         }
 
-        val modifiers = analyzer.modResolver.resolveUsingModifiers(node.modifiers)
+        val modifiers = analyzer.modResolver.resolveUsingModifiers(target.modifiers)
         val visibility = modifiers.visibility
 
         fun defineUsingSymbol(name: String?, sym: Symbol) {
@@ -86,211 +86,147 @@ class DeclarationResolver(
                 }
             }
 
-            else -> node.error(Msg.EXPECTED_MODULE_NAME)
+            else -> target.error(Msg.EXPECTED_MODULE_NAME)
         }
     }
 
-    private fun Scope.defineDeclSym(node: DeclStmtNode): Symbol? {
+    private fun Scope.defineDeclSym(target: DeclStmtNode): Symbol? {
         val modResolver = analyzer.modResolver
-        val modNode = node.modifiers
+        val modNode = target.modifiers
 
-        val result = when (node) {
+        val result = when (target) {
             is InterfaceDeclStmtNode -> {
                 val modifiers = modResolver.resolveInterfaceModifiers(modNode)
-                val sym = this.defineInterface(node, modifiers)
-                analyzer.declarationHeaderPass.resolve(node)
+                val sym = this.defineInterface(target, modifiers)
+                analyzer.declarationHeaderPass.resolve(target)
                 sym
             }
 
             is ClassDeclStmtNode -> {
                 val modifiers = modResolver.resolveClassModifiers(modNode)
-                val sym = this.defineClass(node, modifiers)
-                analyzer.declarationHeaderPass.resolve(node)
+                val sym = this.defineClass(target, modifiers)
+                analyzer.declarationHeaderPass.resolve(target)
                 sym
             }
 
             is EnumDeclStmtNode -> {
                 val modifiers = modResolver.resolveEnumModifiers(modNode)
-                val sym = this.defineEnum(node, modifiers)
-                analyzer.declarationHeaderPass.resolve(node)
+                val sym = this.defineEnum(target, modifiers)
+                analyzer.declarationHeaderPass.resolve(target)
                 sym
             }
 
             else -> {
-                node.error(Msg.EXPECTED_A_DECLARATION)
+                target.error(Msg.EXPECTED_A_DECLARATION)
                 null
             }
         }
 
-        val sym = result?.handle(node.range) { sym }
+        val sym = result?.handle(target.range) { sym }
 
         return sym
     }
 
-    private fun Scope.ensureDeclared(node: DeclStmtNode): Symbol? {
-        node.getResolvedSymbol()?.let { return it }
+    private fun Scope.ensureDeclared(target: DeclStmtNode): Symbol? {
+        target.getResolvedSymbol()?.let { return it }
 
         if (kind == ScopeKind.CONTAINER)
-            node.error(Msg.SymbolIsNotRegistered.format(node.name?.value!!))
+            target.error(Msg.SymbolIsNotRegistered.format(target.name?.value!!))
 
-        val sym = scope.defineDeclSym(node)
+        val sym = scope.defineDeclSym(target)
 
-        node bind sym
+        target bind sym
 
         return sym
     }
 
-    private fun resolve(node: ModuleStmtNode) {
-        val moduleSym = node.getResolvedSymbol() as? ModuleSymbol
+    private fun resolve(target: ModuleStmtNode) {
+        val moduleSym = target.getResolvedSymbol() as? ModuleSymbol
             ?: return
 
-        analyzer.withScopeResolveBody(moduleSym.scope, node.body)
+        analyzer.withScopeResolveBody(moduleSym.scope, target.body)
     }
 
-    private fun resolve(node: InterfaceDeclStmtNode) {
-        val sym = scope.ensureDeclared(node) as InterfaceSymbol
-        analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
+    private fun resolve(target: InterfaceDeclStmtNode) {
+        val sym = scope.ensureDeclared(target) as InterfaceSymbol
+        analyzer.withScopeResolveBody(targetScope = sym.scope, body = target.body)
     }
 
-    private fun resolve(node: ClassDeclStmtNode) {
-        val sym = scope.ensureDeclared(node) as ClassSymbol
-        analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
+    private fun resolve(target: ClassDeclStmtNode) {
+        val sym = scope.ensureDeclared(target) as ClassSymbol
+        analyzer.withScopeResolveBody(targetScope = sym.scope, body = target.body)
     }
 
-    private fun resolve(node: EnumDeclStmtNode) {
-        val sym = scope.ensureDeclared(node) as EnumSymbol
-        analyzer.withScopeResolveBody(targetScope = sym.scope, body = node.body)
+    private fun resolve(target: EnumDeclStmtNode) {
+        val sym = scope.ensureDeclared(target) as EnumSymbol
+        analyzer.withScopeResolveBody(targetScope = sym.scope, body = target.body)
     }
 
-    private fun resolveAutoVarType(node: VarDeclStmtNode): Type {
-        if (node.initializer == null) {
-            semanticError(Msg.EXPECTED_TYPE_NAME, node.name.range)
-            return ErrorType
-        }
+    private fun resolve(target: VarDeclStmtNode) {
+        val sym = target.getResolvedSymbol() as? VarSymbol ?: return
 
-        val initType = analyzer.typeResolver.resolve(node.initializer)
+        var type = sym.type
 
-        val sym = node.initializer.getResolvedSymbol()
-
-        when {
-            sym is ConstValueSymbol ->
-                return initType.setFlags(isConst = false)
-
-            initType is OverloadedFuncType ->
-                node.initializer.error(Msg.AMBIGUOUS_OVERLOADED_FUNCTION)
-
-            else -> return initType
-        }
-
-        return ErrorType
-    }
-
-    private fun resolveVarType(node: VarDeclStmtNode): Type {
-        if (node.dataType is AutoDatatypeNode) {
-            val type = resolveAutoVarType(node)
-            return type
-        }
-
-        var type = analyzer.typeResolver.resolve(node.dataType)
-
-        if (type.isExprType) {
-            type = ErrorType
-            node.dataType.error(Msg.EXPECTED_TYPE_NAME)
-        }
-
-        if (node.initializer == null)
-            return type
-
-        analyzer.typeResolver.resolveForType(node.initializer, type)
-            .takeIf { it != ErrorType }
-            ?.let { type = it }
-
-        node.initializer attach type
-        return type
-    }
-
-    private fun resolveConstVar(node: VarDeclStmtNode, type: Type, modifiers: Modifiers) {
-        var constValue: ConstValue<*>? = null
-
-        if (type.isConst) {
-            val sym = node.initializer?.getResolvedSymbol()
-
-            if (sym is ConstValueSymbol) {
-                var value = sym.value
-
-                if (value != null && value.type != type)
-                    value = analyzer.constResolver.resolveCast(value, type)
-
-                constValue = value
-            }
-        }
-
-        withEffectiveScope(modifiers.isStatic) {
-            val result = scope.defineConstVar(node, type, constValue, modifiers)
-            result.handle(node.range) {
-                node bind sym
-            }
-        }
-    }
-
-    private fun resolve(node: VarDeclStmtNode) {
-        val modifiers = analyzer.modResolver.resolveVarModifiers(node.modifiers)
-
-        val type = resolveVarType(node)
-        node attach type
-
-        val isConst = type.isConst// || modifiers.isConst
-
-        if (isConst && (!modifiers.isStatic && (scope.isTypeScope()))) {
-            node.error(Msg.CONST_VAR_MUST_BE_STATIC)
-        }
-
-        if (!isConst || type is PointerType) {
-            withEffectiveScope(modifiers.isStatic) {
-                val result = scope.defineVar(node, type, modifiers)
-                result.handle(node.range) {
-                    node bind sym
-                }
-            }
-
+        if (target.initializer == null && type is UnresolvedType) {
+            target.error(Msg.VarMustBeInitialized.format(sym.name))
             return
         }
 
-        resolveConstVar(node, type, modifiers)
-    }
+        if (target.initializer != null) {
+            analyzer.typeResolver.resolveForType(target.initializer, type)
+                .takeIf { it != ErrorType }
+                ?.let {
+                    if (sym.type is UnresolvedType) {
+                        sym.type = it
+                        type = it
+                    }
 
-    private fun <T> withEffectiveScope(isStatic: Boolean, block: () -> T): T {
-        return if (!isStatic && scope.isTypeScope())
-            analyzer.withScope((scope as BaseTypeScope).instanceScope, block)
-        else
-            block()
-    }
+                }
 
-    private fun resolve(node: FuncDeclStmtNode) {
-        val sym = node.getResolvedSymbol() as? FuncSymbol ?: return run {
-            node.error(Msg.SymbolIsNotRegistered.format(node.name.value))
+            target.initializer attach sym.type
         }
+
+        val isConst = sym.type.isConst
+
+        if (isConst && (!sym.modifiers.isStatic && (scope.isTypeScope()))) {
+            target.error(Msg.CONST_VAR_MUST_BE_STATIC)
+        }
+
+        val initSym = target.initializer?.getResolvedSymbol()
+
+        if (initSym is ConstValueSymbol) {
+            var value = initSym.value
+
+            if (value != null && value.type != type)
+                value = analyzer.constResolver.resolveCast(value, type)
+
+            sym.constValue = value
+        }
+    }
+
+    private fun resolve(target: FuncDeclStmtNode) {
+        val sym = target.getResolvedSymbol() as? FuncSymbol ?: return
 
         val funcScope = FuncScope(
             parent = scope,
             funcSymbol = sym
         )
 
-        analyzer.withScopeResolveBody(targetScope = funcScope, body = node.body)
+        analyzer.withScopeResolveBody(targetScope = funcScope, body = target.body)
     }
 
-    private fun resolve(node: ConstructorDeclStmtNode) {
+    private fun resolve(target: ConstructorDeclStmtNode) {
         if (scope !is ClassScope)
-            semanticError(Msg.CONSTRUCTOR_OUTSIDE_CLASS_ERROR, node.range)
+            semanticError(Msg.CONSTRUCTOR_OUTSIDE_CLASS_ERROR, target.range)
 
-        resolve(node as FuncDeclStmtNode)
+        resolve(target as FuncDeclStmtNode)
     }
 
-    private fun resolve(node: DestructorDeclStmtNode) {
+    private fun resolve(target: DestructorDeclStmtNode) {
         if (scope !is ClassScope)
-            semanticError(Msg.DESTRUCTOR_OUTSIDE_CLASS_ERROR, node.range)
+            semanticError(Msg.DESTRUCTOR_OUTSIDE_CLASS_ERROR, target.range)
 
-        resolve(node as FuncDeclStmtNode)
+        resolve(target as FuncDeclStmtNode)
     }
 //    fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Unit) =
 //        this.handle(null, onSuccess)

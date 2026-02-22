@@ -20,12 +20,6 @@ object SymbolSerializer {
                 "value" to sym.value
             )
 
-            is ConstVarSymbol -> mapOf(
-                "name" to sym.name,
-                "type" to sym.type,
-                "value" to sym.value
-            )
-
             is FuncParamSymbol -> mapOf(
                 "name" to sym.name,
                 "type" to sym.type,
@@ -62,6 +56,7 @@ object SymbolSerializer {
             is VarSymbol -> mapOf(
                 "name" to sym.name,
                 "type" to sym.type,
+                "constValue" to sym.constValue,
                 "isMutable" to sym.isMutable,
                 "isParameter" to sym.isParameter,
                 "modifiers" to sym.modifiers

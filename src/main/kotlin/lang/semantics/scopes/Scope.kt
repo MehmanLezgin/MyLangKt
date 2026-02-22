@@ -1,12 +1,11 @@
 package lang.semantics.scopes
 
+import lang.core.operators.OperatorType
 import lang.nodes.*
 import lang.parser.ParserUtils.isBinOperator
 import lang.semantics.symbols.*
-import lang.semantics.types.ConstValue
 import lang.semantics.types.ErrorType.castCost
 import lang.semantics.types.Type
-import lang.core.operators.OperatorType
 
 typealias SymbolMap = MutableMap<String, Symbol>
 typealias SymbolIMap = Map<String, Symbol>
@@ -23,9 +22,6 @@ open class Scope(
             else -> ScopeKind.LOCAL
         }
     }
-
-    val shouldPredeclare: Boolean =
-        kind == ScopeKind.CONTAINER
 
     val absoluteScopePath: String? by lazy {
         scopeName
@@ -85,8 +81,8 @@ open class Scope(
             }
         }
 
-        if (sym is ConstVarSymbol)
-            sym = sym.toConstValueSymbol() ?: return ScopeError.InvalidConstValue.err()
+        if (sym is VarSymbol && sym.constValue != null)
+            sym = sym.toConstValueSymbol()
 
         return sym.ok()
     }
@@ -207,7 +203,7 @@ open class Scope(
     fun resolveOperFunc(operator: OperatorType, argTypes: List<Type>): ScopeResult =
         resolveFunc(operator.fullName, argTypes)
 
-    fun defineConstVar(
+    /*fun defineConstVar(
         node: VarDeclStmtNode,
         type: Type,
         constValue: ConstValue<*>?,
@@ -236,7 +232,7 @@ open class Scope(
         )
 
         return define(sym)
-    }
+    }*/
 
     /*fun defineFunc(
         node: FuncDeclStmtNode,
@@ -329,11 +325,6 @@ open class Scope(
             oper.isBinOperator() -> 2
             else -> 1
         }
-
-//        val isNonStatic = this !is ClassScope && this !is InterfaceScope
-
-//        if (isNonStatic)
-//            paramsExpected--
 
         if (funcSym.params.list.size != paramsExpected) {
             return ScopeError.OperParamCountMismatch(
@@ -462,6 +453,6 @@ open class Scope(
             modifiers = modifiers
         )
 
-        return defineIfNotExist(sym)
+        return define(sym)
     }
 }

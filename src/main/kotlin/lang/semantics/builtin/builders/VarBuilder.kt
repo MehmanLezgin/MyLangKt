@@ -1,7 +1,7 @@
 package lang.semantics.builtin.builders
 
-import lang.semantics.symbols.ConstVarSymbol
 import lang.semantics.symbols.Modifiers
+import lang.semantics.symbols.VarSymbol
 import lang.semantics.types.ConstValue
 import lang.semantics.types.Type
 
@@ -16,10 +16,11 @@ class ConstVarBuilder(
         modifiers.isStatic = true
     }
 
-    fun build() = ConstVarSymbol(
+    fun build() = VarSymbol(
         name = name,
         type = type,
-        value = value,
-        modifiers = modifiers
+        constValue = value,
+        modifiers = modifiers,
+        isMutable = false
     )
 }

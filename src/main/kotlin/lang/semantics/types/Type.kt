@@ -1,11 +1,10 @@
 package lang.semantics.types
 
 import lang.messages.Msg
-import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.symbols.TypeSymbol
 import lang.semantics.builtin.PrimitivesScope.void
 import lang.semantics.builtin.PrimitivesScope.voidPtr
 import lang.semantics.builtin.types.VoidPrimitive
+import lang.semantics.symbols.TypeSymbol
 
 abstract class Type(
     open var flags: TypeFlags = TypeFlags(),
@@ -135,7 +134,10 @@ abstract class Type(
     fun stringify(pointerLevel: Int = 0): String {
         val type = this
 
-        if (type is ErrorType) return Msg.ERROR_TYPE
+        when (type) {
+            is ErrorType -> return Msg.ERROR_TYPE
+            is UnresolvedType -> return Msg.UNRESOLVED_TYPE
+        }
         val ptrStr = "*".repeat(pointerLevel)
 
         return buildString {

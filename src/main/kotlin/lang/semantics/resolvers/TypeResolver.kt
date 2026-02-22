@@ -261,7 +261,13 @@ class TypeResolver(
         isNamespaceCtx: Boolean = false
     ): Type {
         return when (this) {
-            is VarSymbol -> type.setFlags(isMutable = isMutable, isExprType = true, isLvalue = true)
+            is VarSymbol -> {
+                if (type is UnresolvedType)
+                    target.error(Msg.AutoVarCannotBeInferred.format(this.name))
+                else
+                    type.setFlags(isMutable = isMutable, isExprType = true, isLvalue = true)
+            }
+
             is ConstValueSymbol -> type.setFlags(isExprType = true, isLvalue = true)
             is PrimitiveTypeSymbol -> type.setFlags(isExprType = false)
             is ModuleSymbol -> if (isNamespaceCtx) {
@@ -306,108 +312,6 @@ class TypeResolver(
             )
         }
     }
-
-
-    /*
-    private fun resolve(target: DatatypeNode, isNamespace: Boolean = false): Type {
-        val name = target.identifier
-        val result = scope.resolve(name.value)
-
-        return result.handle(name.range) {
-            target bind sym
-
-            val pointerLevel = target.ptrLvl
-
-            val type = when (sym) {
-                is PrimitiveTypeSymbol -> sym.type
-
-                is NamespaceSymbol -> {
-                    if (isNamespace)
-                        NamespaceType(
-                            name = sym.name,
-                            declaration = sym
-                        )
-                    else
-                        target.error(Msg.EXPECTED_A_VALUE.format(sym.name))
-                }
-
-                is TypeSymbol -> {
-                    createUserType(
-                        sym = sym,
-                        templateArgs = resolveTemplateArgs(target.typeNames)
-                    )
-                }
-
-                is TypedefSymbol -> {
-                    sym.type
-                }
-
-                else -> {
-                    name.error(::symNotDefinedError)
-                    return@handle ErrorType
-                }
-            }
-
-            return@handle type.applyTypeModifiers(
-                pointerLevel = pointerLevel,
-                isConst = target.isConst || type.isConst,
-                isReference = target.isReference
-            )
-        }
-    }
-
-        private fun resolveIdentifierWithSym(target: IdentifierNode, sym: Symbol, isNamespace: Boolean = false): Type {
-
-            target bind sym
-
-            return when (sym) {
-                is VarSymbol -> sym.type.setFlags(
-                    isMutable = sym.isMutable,
-                    isExprType = true,
-                    isLvalue = true
-                )
-
-                is ConstValueSymbol -> {
-                    sym.type.setFlags(
-                        isExprType = true,
-                        isLvalue = true
-                    )
-                }
-
-                is PrimitiveTypeSymbol -> sym.type.setFlags(
-                    isExprType = false
-                )
-
-                is NamespaceSymbol -> {
-                    if (isNamespace)
-                        NamespaceType(
-                            name = sym.name,
-                            declaration = sym
-                        )
-                    else
-                        target.error(Msg.F_SYM_NOT_ALLOWED_HERE.format(sym.name))
-                }
-
-                is TypeSymbol -> createUserType(sym = sym)
-                    .setFlags(isExprType = isNamespace)
-
-                is FuncSymbol -> sym.toFuncType()
-
-                is OverloadedFuncSymbol -> {
-                    OverloadedFuncType(
-                        name = sym.name,
-                        overloads = sym.overloads,
-                        flags = TypeFlags(
-                            isExprType = true
-                        )
-                    )
-                }
-
-
-                else -> target.error(::symNotDefinedError)
-            }.also { target attach it }
-        }
-    */
 
     fun resolve(target: IdentifierNode, asMember: Boolean = false, isNamespace: Boolean = false): Type {
         val result = scope.resolve(name = target.value, asMember = asMember)
@@ -808,7 +712,7 @@ class TypeResolver(
             return bestFuncSym?.toFuncType() ?: ErrorType
         }
 
-        if (initializerType != ErrorType && !initializerType.canCastTo(type))
+        if (initializerType != ErrorType && type !is UnresolvedType && !initializerType.canCastTo(type))
             target.error(
                 Msg.MismatchExpectedActual.format(
                     Terms.TYPE,

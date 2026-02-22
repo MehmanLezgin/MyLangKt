@@ -14,9 +14,21 @@ data class VarSymbol(
     var type: Type = UnresolvedType,
     val isMutable: Boolean,
     val isParameter: Boolean = false,
+    var constValue: ConstValue<*>? = null,
     override val modifiers: Modifiers = Modifiers()
-) : Symbol(name = name, modifiers = modifiers)
+) : Symbol(name = name, modifiers = modifiers) {
 
+    fun toConstValueSymbol() = ConstValueSymbol(
+        type = type,
+        value = constValue
+    )
+
+    val isConst: Boolean
+        get() = constValue != null
+
+}
+
+/*
 data class ConstVarSymbol(
     override val name: String,
     val type: Type,
@@ -27,6 +39,7 @@ data class ConstVarSymbol(
         return value?.let { ConstValueSymbol.from(it) }
     }
 }
+*/
 
 data class ConstValueSymbol(
     val type: Type,

@@ -1,50 +1,8 @@
 package lang.core.serializer
 
-import lang.nodes.BinOpNode
-import lang.nodes.BlockNode
-import lang.nodes.ClassDeclStmtNode
-import lang.nodes.ConstructorDeclStmtNode
-import lang.nodes.DatatypeNode
-import lang.nodes.DecrementNode
-import lang.nodes.DestructorDeclStmtNode
-import lang.nodes.DoWhileStmtNode
-import lang.nodes.ElseEntryNode
-import lang.nodes.EnumItemNode
-import lang.nodes.EnumDeclStmtNode
-import lang.nodes.ExprNode
-import lang.nodes.ForLoopStmtNode
-import lang.nodes.FuncCallNode
-import lang.nodes.FuncDatatypeNode
-import lang.nodes.FuncDeclStmtNode
-import lang.nodes.IdentifierNode
-import lang.nodes.IfElseStmtNode
-import lang.nodes.IncrementNode
-import lang.nodes.IndexAccessNode
-import lang.nodes.InterfaceDeclStmtNode
-import lang.nodes.LambdaNode
-import lang.nodes.LiteralNode
-import lang.nodes.MatchStmtNode
-import lang.nodes.DotAccessNode
-import lang.nodes.ImportFromStmtNode
-import lang.nodes.ImportModulesStmtNode
-import lang.nodes.ModifierSetNode
-import lang.nodes.ModuleStmtNode
-import lang.nodes.NameClause
-import lang.nodes.NameSpecifier
-import lang.nodes.NullLiteralNode
-import lang.nodes.OperNode
-import lang.nodes.ReturnStmtNode
-import lang.nodes.ScopedDatatypeNode
-import lang.nodes.TryCatchStmtNode
-import lang.nodes.UnaryOpNode
-import lang.nodes.UnknownNode
-import lang.nodes.UsingDirectiveNode
-import lang.nodes.UsingStmtNode
-import lang.nodes.VarDeclStmtNode
-import lang.nodes.WhileStmtNode
+import lang.nodes.*
 import lang.semantics.SemanticContext
 import lang.semantics.symbols.Symbol
-import kotlin.collections.toMutableMap
 
 object AstSerializer {
     fun serialize(
@@ -53,13 +11,13 @@ object AstSerializer {
     ): String {
         return serialize(root, ExprNode::class) { expr, _, nextIndent ->
             val children = getNodeChildren(expr).toMutableMap()
-//            semanticContext?.types[expr]?.let {
-//                children["type"] = it
-//            }
-//
-//            semanticContext?.symbols[expr]?.let {
-//                children["symbol"] = it
-//            }
+            semanticContext?.types[expr]?.let {
+                children["type"] = it
+            }
+
+            semanticContext?.symbols[expr]?.let {
+                children["symbol"] = it
+            }
 
 
             children.mapWithSymbols(nextIndent)
