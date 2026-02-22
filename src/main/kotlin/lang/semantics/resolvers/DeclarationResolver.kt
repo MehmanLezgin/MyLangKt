@@ -163,9 +163,9 @@ class DeclarationResolver(
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = target.body)
     }
 
-    private fun resolve(target: VarDeclStmtNode) {
+//    private fun resolve(target: VarDeclStmtNode) {
 //        val sym = target.getResolvedSymbol() as? VarSymbol ?: return
-    }
+//    }
 
     private fun resolve(target: FuncDeclStmtNode) {
         val sym = target.getResolvedSymbol() as? FuncSymbol ?: return
