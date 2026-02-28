@@ -88,7 +88,7 @@ class DeclarationHeaderPass(
         return type
     }
 
-    private fun resolve(target: VarDeclStmtNode) {
+    fun resolve(target: VarDeclStmtNode) {
         val sym = target.getResolvedSymbol() as? VarSymbol ?: return
 
         if (target.dataType is AutoDatatypeNode) return

@@ -133,12 +133,8 @@ class DeclarationResolver(
         if (kind == ScopeKind.CONTAINER)
             target.error(Msg.SymbolIsNotRegistered.format(target.name?.value!!))
 
-        return null
-//        val sym = scope.defineDeclSym(target)
-//
-//        target bind sym
-//
-//        return sym
+        analyzer.localDeclPipeline.execute(target)
+        return target.getResolvedSymbol()
     }
 
     private fun resolve(target: ModuleStmtNode) {
@@ -149,22 +145,28 @@ class DeclarationResolver(
     }
 
     private fun resolve(target: InterfaceDeclStmtNode) {
-        val sym = scope.ensureDeclared(target) as InterfaceSymbol
+        val sym = scope.ensureDeclared(target) as? InterfaceSymbol
+            ?: return
+
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = target.body)
     }
 
     private fun resolve(target: ClassDeclStmtNode) {
-        val sym = scope.ensureDeclared(target) as ClassSymbol
+        val sym = scope.ensureDeclared(target) as? ClassSymbol
+            ?: return
+
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = target.body)
     }
 
     private fun resolve(target: EnumDeclStmtNode) {
-        val sym = scope.ensureDeclared(target) as EnumSymbol
+        val sym = scope.ensureDeclared(target) as? EnumSymbol
+            ?: return
+
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = target.body)
     }
 
     private fun resolve(target: VarDeclStmtNode) {
-        val sym = target.getResolvedSymbol() as? VarSymbol ?: return
+        val sym = scope.ensureDeclared(target) as? VarSymbol ?: return
     }
 
     private fun resolve(target: FuncDeclStmtNode) {

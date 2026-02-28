@@ -15,9 +15,9 @@ object AstSerializer {
                 children["type"] = it
             }
 
-            semanticContext?.symbols[expr]?.let {
-                children["symbol"] = it
-            }
+//            semanticContext?.symbols[expr]?.let {
+//                children["symbol"] = it
+//            }
 
 
             children.mapWithSymbols(nextIndent)

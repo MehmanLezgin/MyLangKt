@@ -32,18 +32,31 @@ class SemanticAnalyzer(
 
     override val semanticContext = SemanticContext()
 
-    override val pipeline: AnalysisPipeline by lazy {
-        val moduleRegPass = ModuleRegPass(analyzer = this)
+    override val pipeline: AnalysisPipeline
+    override val localDeclPipeline: LocalDeclPipeline
 
-        AnalysisPipeline(
+    init {
+        val moduleRegPass = ModuleRegPass(analyzer = this)
+        val nameCollectionPass = NameCollectionPass(analyzer = this)
+        val bindImportPass = BindImportPass(analyzer = this, moduleRegPass = moduleRegPass)
+        val declarationHeaderPass = DeclarationHeaderPass(analyzer = this)
+        val varInitPass = VarInitPass(analyzer = this)
+
+        pipeline = AnalysisPipeline(
             analyzer = this,
             moduleRegPass = moduleRegPass,
             passes = listOf(
-                NameCollectionPass(analyzer = this),
-                BindImportPass(analyzer = this, moduleRegPass = moduleRegPass),
-                DeclarationHeaderPass(analyzer = this),
-                VarInitPass(analyzer = this)
+                nameCollectionPass,
+                bindImportPass,
+                declarationHeaderPass,
+                varInitPass,
             )
+        )
+
+        localDeclPipeline = LocalDeclPipeline(
+            nameCollectionPass = nameCollectionPass,
+            declarationHeaderPass = declarationHeaderPass,
+            varInitPass = varInitPass
         )
     }
 

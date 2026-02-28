@@ -5,6 +5,7 @@ import lang.core.SourceRange
 import lang.messages.MsgHandler
 import lang.nodes.BlockNode
 import lang.semantics.pipeline.AnalysisPipeline
+import lang.semantics.pipeline.LocalDeclPipeline
 import lang.semantics.resolvers.ConstResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
@@ -23,6 +24,7 @@ interface ISemanticAnalyzer {
 
     val semanticContext: SemanticContext
     val pipeline: AnalysisPipeline
+    val localDeclPipeline: LocalDeclPipeline
 
     fun resolve(sourceUnit: SourceUnit)
     fun <T> withScope(targetScope: Scope = Scope(parent = this.scope), block: () -> T): T
