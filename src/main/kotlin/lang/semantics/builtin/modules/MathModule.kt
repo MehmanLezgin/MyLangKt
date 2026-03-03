@@ -1,40 +1,55 @@
 package lang.semantics.builtin.modules
 
 import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.builtin.module
-import lang.semantics.types.ConstValue
+import lang.semantics.builtin.builders.constVar
+import lang.semantics.builtin.builders.func
+import lang.semantics.builtin.builders.module
+import lang.semantics.symbols.ModuleSymbol
 
-fun PrimitivesScope.mathModule() {
-    module("Math") {
-        staticConstVar("PI", float64Const, ConstValue(Math.PI, float64Const))
+fun mathModule(): ModuleSymbol {
+    return module(name = "math") {
+        staticScope {
+            constVar(
+                name = "PI",
+                type = PrimitivesScope.float64,
+                value = Math.E
+            )
 
-        staticFunc("sin") {
-            params { "a" ofType float64 }
-            returns(float64)
-        }
+            constVar(
+                name = "PI",
+                type = PrimitivesScope.float64,
+                value = Math.PI
+            )
 
-        staticFunc("cos") {
-            params { "a" ofType float64 }
-            returns(float64)
-        }
-
-        staticFunc("tan") {
-            params { "a" ofType float64 }
-            returns(float64)
-        }
-
-        staticFunc("sqrt") {
-            params { "a" ofType float64 }
-            returns(float64)
-        }
-
-        staticFunc("pow") {
-            params {
-                "a" ofType float64
-                "b" ofType float64
+            func(name = "sin") {
+                params { PrimitivesScope.float64.param }
+                returns(PrimitivesScope.float64)
             }
-            returns(float64)
+
+            func(name = "cos") {
+                params { PrimitivesScope.float64.param }
+                returns(PrimitivesScope.float64)
+            }
+
+            func(name = "tan") {
+                params { PrimitivesScope.float64.param }
+                returns(PrimitivesScope.float64)
+            }
+
+            func(name = "sqrt") {
+                params { PrimitivesScope.float64 }
+                returns(PrimitivesScope.float64)
+            }
+
+            func(name = "pow") {
+                params {
+                    PrimitivesScope.float64.param
+                    PrimitivesScope.float64.param
+                }
+                returns(PrimitivesScope.float64)
+            }
+
+
         }
     }
-
 }

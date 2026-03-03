@@ -4,33 +4,123 @@ import lang.core.SourceRange
 import lang.messages.Msg
 import lang.messages.Terms.quotes
 import lang.nodes.*
+import lang.parser.ParserUtils.toDatatype
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope.err
 import lang.semantics.builtin.PrimitivesScope.ok
 import lang.semantics.resolvers.BaseResolver
+import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.ScopeError
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.scopes.SymbolIMap
 import lang.semantics.symbols.AliasSymbol
 import lang.semantics.symbols.ModuleSymbol
+import lang.semantics.symbols.Symbol
+import lang.semantics.symbols.TypeSymbol
 import lang.semantics.symbols.Visibility
+import lang.semantics.types.ErrorType
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 class BindImportPass(
     override val analyzer: ISemanticAnalyzer,
     private val moduleRegPass: ModuleRegPass
 ) : BaseResolver<BlockNode?, Unit>(analyzer) {
+    private val visitedNodes = mutableMapOf<StmtNode, Boolean>()
 
     override fun resolve(target: BlockNode?) {
         target ?: return
         for (node in target.nodes) {
-            when (node) {
-                is ImportModulesStmtNode -> resolveModules(node)
-                is ImportFromStmtNode -> resolveFrom(node)
-                else -> Unit
-            }
+            if (node is BaseImportStmtNode)
+                resolve(node)
         }
     }
 
+    private fun checkIsVisited(node: StmtNode): Boolean {
+        if (visitedNodes[node] == true) return true
+        visitedNodes[node] = true
+        return false
+    }
+
+    fun resolve(node: UsingDirectiveNode) {
+        if (checkIsVisited(node)) return
+
+        val value = node.value.let {
+            if (it is IdentifierNode) it.toDatatype() else it
+        }
+
+        val name = node.name
+
+        fun getModuleSym(target: BaseDatatypeNode): TypeSymbol? {
+            val type = analyzer.typeResolver.resolve(target, isNamespaceCtx = true)
+            if (type == ErrorType) return null
+            val decl = type.declaration
+            if (decl !is TypeSymbol) {
+                target.error(Msg.EXPECTED_MODULE_NAME)
+                return null
+            }
+            return decl
+        }
+
+        val modifiers = analyzer.modResolver.resolveUsingModifiers(node.modifiers)
+        val visibility = modifiers.visibility
+
+        fun defineUsingSymbol(name: String?, sym: Symbol) {
+            scope.defineAlias(name ?: sym.name, sym, visibility)
+                .handle(value.range) {}
+        }
+
+        fun defineUsingModule(moduleScope: BaseTypeScope) {
+            moduleScope.symbols.forEach { (_, memberSym) ->
+                scope.define(memberSym, visibility)
+                    .handle(value.range) {}
+            }
+        }
+
+        when (value) {
+            is DatatypeNode -> {
+                val sym = getModuleSym(value) ?: return
+
+                if (name != null)
+                    defineUsingSymbol(name.value, sym)
+                else
+                    defineUsingModule(sym.staticScope)
+
+            }
+
+            is ScopedDatatypeNode -> {
+                val moduleSym = getModuleSym(value.base) ?: return
+                val targetScope = moduleSym.staticScope
+                val memberName = value.member.identifier
+
+                val type = analyzer.withScope(targetScope) {
+                    analyzer.typeResolver
+                        .resolve(memberName, asMember = true, isNamespace = true)
+                }
+
+                if (type == ErrorType) return
+
+                targetScope.resolve(memberName.value).handle(value.range) {
+                    if (sym !is TypeSymbol || name != null)
+                        defineUsingSymbol(name?.value, sym)
+                    else
+                        defineUsingModule(sym.staticScope)
+
+                }
+            }
+
+            else -> node.error(Msg.EXPECTED_MODULE_NAME)
+        }
+    }
+
+    fun resolve(node: BaseImportStmtNode) {
+        if (checkIsVisited(node)) return
+
+        when (node) {
+            is ImportModulesStmtNode -> resolveModules(node)
+            is ImportFromStmtNode -> resolveFrom(node)
+        }
+    }
 
     private fun resolveModulePath(parts: List<IdentifierNode>): ModuleSymbol? {
         var symbols: SymbolIMap = moduleRegPass.allModules

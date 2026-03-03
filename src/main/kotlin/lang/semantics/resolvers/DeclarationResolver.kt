@@ -27,13 +27,18 @@ class DeclarationResolver(
     }
 
     private fun resolve(target: UsingDirectiveNode) {
+        analyzer.localDeclPipeline.execute(target)
+    }
+
+/*
+    private fun resolve(target: UsingDirectiveNode) {
         val value = target.value.let {
             if (it is IdentifierNode) it.toDatatype() else it
         }
 
         val name = target.name
 
-        fun getNamespaceSym(target: BaseDatatypeNode): TypeSymbol? {
+        fun getModuleSym(target: BaseDatatypeNode): TypeSymbol? {
             val type = analyzer.typeResolver.resolve(target, isNamespaceCtx = true)
             if (type == ErrorType) return null
             val decl = type.declaration
@@ -52,8 +57,8 @@ class DeclarationResolver(
                 .handle(value.range) {}
         }
 
-        fun defineUsingNamespace(namespaceScope: BaseTypeScope) {
-            namespaceScope.symbols.forEach { (_, memberSym) ->
+        fun defineUsingModule(moduleScope: BaseTypeScope) {
+            moduleScope.symbols.forEach { (_, memberSym) ->
                 scope.define(memberSym, visibility)
                     .handle(value.range) {}
             }
@@ -61,13 +66,13 @@ class DeclarationResolver(
 
         when (value) {
             is DatatypeNode -> {
-                val namespaceSym = getNamespaceSym(value) ?: return
-                defineUsingNamespace(namespaceScope = namespaceSym.staticScope)
+                val moduleSym = getModuleSym(value) ?: return
+                defineUsingModule(moduleScope = moduleSym.staticScope)
             }
 
             is ScopedDatatypeNode -> {
-                val namespaceSym = getNamespaceSym(value.base) ?: return
-                val targetScope = namespaceSym.staticScope
+                val moduleSym = getModuleSym(value.base) ?: return
+                val targetScope = moduleSym.staticScope
                 val memberName = value.member.identifier
 
                 val type = analyzer.withScope(targetScope) {
@@ -79,7 +84,7 @@ class DeclarationResolver(
 
                 targetScope.resolve(memberName.value).handle(value.range) {
                     if (sym is TypeSymbol)
-                        defineUsingNamespace(sym.staticScope)
+                        defineUsingModule(sym.staticScope)
                     else
                         defineUsingSymbol(name?.value, sym)
 
@@ -89,6 +94,7 @@ class DeclarationResolver(
             else -> target.error(Msg.EXPECTED_MODULE_NAME)
         }
     }
+*/
 
     /*private fun Scope.defineDeclSym(target: DeclStmtNode): Symbol? {
         val modResolver = analyzer.modResolver
@@ -127,12 +133,8 @@ class DeclarationResolver(
         return sym
     }*/
 
-    private fun Scope.ensureDeclared(target: DeclStmtNode): Symbol? {
+    private fun ensureDeclared(target: DeclStmtNode): Symbol? {
         target.getResolvedSymbol()?.let { return it }
-
-        if (kind == ScopeKind.CONTAINER)
-            target.error(Msg.SymbolIsNotRegistered.format(target.name?.value!!))
-
         analyzer.localDeclPipeline.execute(target)
         return target.getResolvedSymbol()
     }
@@ -145,28 +147,28 @@ class DeclarationResolver(
     }
 
     private fun resolve(target: InterfaceDeclStmtNode) {
-        val sym = scope.ensureDeclared(target) as? InterfaceSymbol
+        val sym = ensureDeclared(target) as? InterfaceSymbol
             ?: return
 
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = target.body)
     }
 
     private fun resolve(target: ClassDeclStmtNode) {
-        val sym = scope.ensureDeclared(target) as? ClassSymbol
+        val sym = ensureDeclared(target) as? ClassSymbol
             ?: return
 
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = target.body)
     }
 
     private fun resolve(target: EnumDeclStmtNode) {
-        val sym = scope.ensureDeclared(target) as? EnumSymbol
+        val sym = ensureDeclared(target) as? EnumSymbol
             ?: return
 
         analyzer.withScopeResolveBody(targetScope = sym.scope, body = target.body)
     }
 
     private fun resolve(target: VarDeclStmtNode) {
-        val sym = scope.ensureDeclared(target) as? VarSymbol ?: return
+        val sym = ensureDeclared(target) as? VarSymbol ?: return
     }
 
     private fun resolve(target: FuncDeclStmtNode) {

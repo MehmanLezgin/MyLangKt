@@ -1,27 +1,27 @@
 package lang.semantics.builtin.builders
 
 import lang.semantics.scopes.BaseTypeScope
-import lang.semantics.scopes.ClassScope
+import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.Scope
-import lang.semantics.symbols.ClassSymbol
+import lang.semantics.symbols.ModuleSymbol
 
 class ModuleBuilder(
-    override val name: String,
-    override val parent: Scope
-) : BaseTypeBuilder<ClassSymbol>(name, parent) {
-    override var typeScope: BaseTypeScope = ClassScope(
+    override val name: String
+) : BaseTypeBuilder<ModuleSymbol>(name) {
+
+    override var typeScope: BaseTypeScope = ModuleScope(
         parent = parent,
-        scopeName = name,
+        scopeName = name
     )
 
-    override fun build(): ClassSymbol {
-        val clazz = ClassSymbol(
+    override fun build(): ModuleSymbol {
+        val sym = ModuleSymbol(
             name = name,
             modifiers = modifiers,
-            scope = typeScope as ClassScope
+            scope = typeScope as ModuleScope
         )
 
-        return clazz
+        return sym
     }
 }
 

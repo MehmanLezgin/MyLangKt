@@ -2,7 +2,7 @@ package lang.nodes
 
 import lang.core.SourceRange
 
-interface StmtNode : ExprNode
+sealed interface StmtNode : ExprNode
 
 abstract class StmtNodeNoChild(
     override val range: SourceRange

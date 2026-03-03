@@ -2,6 +2,7 @@ package lang.semantics.builtin
 
 import lang.messages.MsgHandler
 import lang.semantics.builtin.modules.mathModule
+import lang.semantics.builtin.modules.stdModule
 import lang.semantics.builtin.types.*
 import lang.semantics.scopes.Scope
 import lang.semantics.types.*
@@ -13,51 +14,49 @@ object PrimitivesScope : Scope(
     // ========= TYPES =========
 
     val bool = BoolPrimitive()
-    val boolConst by lazy { bool.toConst() }
+    val boolConst by lazyConst(bool)
 
     // ---- CHAR ----
     val char = CharPrimitive()
     val uchar = UCharPrimitive()
 
-    val charConst by lazy { char.toConst() }
-    val ucharConst by lazy { uchar.toConst() }
+    val charConst by lazyConst(char)
+    val ucharConst by lazyConst(uchar)
 
     // ---- 8 BIT ----
     val int8 = Int8Primitive()
     val uint8 = UInt8Primitive()
 
-    val int8Const by lazy { int8.toConst() }
-    val uint8Const by lazy { uint8.toConst() }
+    val int8Const by lazyConst(int8)
+    val uint8Const by lazyConst(uint8)
 
     // ---- 16 BIT ----
     val int16 = Int16Primitive()
     val uint16 = UInt16Primitive()
 
-    val int16Const by lazy { int16.toConst() }
-    val uint16Const by lazy { uint16.toConst() }
+    val int16Const by lazyConst(int16)
+    val uint16Const by lazyConst(uint16)
 
     // ---- 32 BIT ----
     val int32 = Int32Primitive()
     val uint32 = UInt32Primitive()
 
-    val int32Const by lazy {
-        int32.toConst()
-    }
-    val uint32Const by lazy { uint32.toConst() }
+    val int32Const by lazyConst(int32)
+    val uint32Const by lazyConst(uint32)
 
     // ---- 64 BIT ----
     val int64 = Int64Primitive()
     val uint64 = UInt64Primitive()
 
-    val int64Const by lazy { int64.toConst() }
-    val uint64Const by lazy { uint64.toConst() }
+    val int64Const by lazyConst(int64)
+    val uint64Const by lazyConst(uint64)
 
     // ---- FLOAT ----
     val float32 = Float32Primitive()
     val float64 = Float64Primitive()
 
-    val float32Const by lazy { float32.toConst() }
-    val float64Const by lazy { float64.toConst() }
+    val float32Const by lazyConst(float32)
+    val float64Const by lazyConst(float64)
 
     val void = VoidPrimitive()
 
@@ -80,14 +79,21 @@ object PrimitivesScope : Scope(
         ints + floats + void + char + uchar + bool
 
 
-    val ptrOperPlus = buildPtrOperPlus()
-    val ptrOperMinus = buildPtrOperMinus()
-    val ptrOperEq = buildPtrOperEq()
-    val ptrOperNotEq = buildPtrOperNotEq()
-    val ptrOperGrThan = buildPtrOperGrThan()
-    val ptrOperLessThan = buildPtrOperLessThan()
-    val ptrOperGrEqThan = buildPtrOperGrEqThan()
-    val ptrOperLessEqThan = buildPtrOperLessEqThan()
+    val ptrOperPlus = ptrOperPlus()
+    val ptrOperMinus = ptrOperMinus()
+    val ptrOperEq = ptrOperEq()
+    val ptrOperNotEq = ptrOperNotEq()
+    val ptrOperGrThan = ptrOperGrThan()
+    val ptrOperLessThan = ptrOperLessThan()
+    val ptrOperGrEqThan = ptrOperGrEqThan()
+    val ptrOperLessEqThan = ptrOperLessEqThan()
+
+    val builtInModules = listOf(
+        mathModule(),
+        stdModule()
+    )
+
+    fun lazyConst(type: PrimitiveType) = lazy { type.toConst() }
 
 
     init {
@@ -95,7 +101,7 @@ object PrimitivesScope : Scope(
 
         primitives(allPrimitives)
 
-        mathModule()
+
 
         if (msgHandler.hasErrors)
             println(msgHandler.formatErrors())

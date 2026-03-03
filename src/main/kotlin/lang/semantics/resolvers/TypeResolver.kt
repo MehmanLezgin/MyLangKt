@@ -712,7 +712,10 @@ class TypeResolver(
             return bestFuncSym?.toFuncType() ?: ErrorType
         }
 
-        if (initializerType != ErrorType && type !is UnresolvedType && !initializerType.canCastTo(type))
+        if (type is UnresolvedType)
+            return initializerType
+
+        if (initializerType != ErrorType && !initializerType.canCastTo(type))
             target.error(
                 Msg.MismatchExpectedActual.format(
                     Terms.TYPE,

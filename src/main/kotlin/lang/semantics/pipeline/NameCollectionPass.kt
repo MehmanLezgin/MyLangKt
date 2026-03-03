@@ -1,6 +1,5 @@
 package lang.semantics.pipeline
 
-import lang.messages.Msg
 import lang.nodes.BlockNode
 import lang.nodes.ClassDeclStmtNode
 import lang.nodes.EnumDeclStmtNode
@@ -16,7 +15,6 @@ import lang.semantics.symbols.ClassSymbol
 import lang.semantics.symbols.EnumSymbol
 import lang.semantics.symbols.InterfaceSymbol
 import lang.semantics.symbols.ModuleSymbol
-import lang.semantics.symbols.OverloadedFuncSymbol
 import lang.semantics.symbols.TypeSymbol
 import lang.semantics.symbols.VarSymbol
 
@@ -70,11 +68,8 @@ class NameCollectionPass(
         val modifiers = analyzer.modResolver.resolveModuleModifiers(target.modifiers)
 
         val moduleSym = target.getResolvedSymbol() as? ModuleSymbol
-
-        if (moduleSym == null) {
-            target.error(Msg.SymbolIsNotRegistered.format(target.name.value))
-            return
-        }
+            ?: return
+//            target.error(Msg.SymbolIsNotRegistered.format(target.name.value))
 
         analyzer.withScope(targetScope = moduleSym.scope) {
             resolveBody(moduleSym, target.body)
@@ -119,9 +114,12 @@ class NameCollectionPass(
         if (!target.isType) return
         val name = target.name ?: return
         val modifiers = modResolver.resolveUsingModifiers(target.modifiers)
-        scope.defineUsing(name = name.value, visibility = modifiers.visibility)
-            .handle(target.name.range) {
-                target bind sym
-            }
+        scope.defineAlias(
+            name = name.value,
+            sym = null,
+            visibility = modifiers.visibility
+        ).handle(target.name.range) {
+            target bind sym
+        }
     }
 }

@@ -18,6 +18,12 @@ class ModuleRegPass(
 ) : BaseResolver<BlockNode?, FileScope?>(analyzer = analyzer) {
     private val modules = mutableMapOf<String, ModuleSymbol>()
 
+    init {
+        PrimitivesScope.builtInModules.forEach {
+            modules[it.name] = it
+        }
+    }
+
     var curScope: Scope? = null
 
     val allModules
@@ -42,8 +48,7 @@ class ModuleRegPass(
         return fileScope
     }
 
-    fun getModule(nameNode: IdentifierNode): ModuleSymbol {
-        val name = nameNode.value
+    fun getModule(name: String): ModuleSymbol {
         val existing = modules[name]
 
         fun newModule(sharedSymbols: SymbolMap = mutableMapOf()) =
@@ -62,14 +67,14 @@ class ModuleRegPass(
             }
 
         if (curScope is FileScope)
-            return newModule(existing.scope.symbols)
+            return newModule(sharedSymbols = existing.scope.symbols)
 
 
         return existing
     }
 
     private fun defineModuleIfNotExists(name: IdentifierNode): ModuleSymbol {
-        val sym = getModule(name)
+        val sym = getModule(name.value)
         curScope?.define(sym)?.handle(name.range) {}
         return sym
     }

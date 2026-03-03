@@ -66,7 +66,8 @@ open class Scope(
     fun resolve(name: String, asMember: Boolean = false): ScopeResult {
         var sym = symbols[name]
 
-        if (sym is AliasSymbol) sym = sym.sym
+        if (sym is AliasSymbol)
+            sym = sym.sym
 
         if (sym == null) {
             if (asMember || parent == null)
@@ -422,14 +423,21 @@ open class Scope(
         return define(sym)
     }
 
-    fun defineUsing(name: String, visibility: Visibility): ScopeResult {
+    fun defineAlias(name: String, sym: Symbol?, visibility: Visibility): ScopeResult {
+        val existing = symbols[name]
+
+        if (existing is AliasSymbol && existing.sym == null) {
+            existing.sym = sym
+            return existing.ok()
+        }
+
         val sym = AliasSymbol(
             name = name,
-            sym = null,
+            sym = sym,
             visibility = visibility
         )
 
-        return define(sym)
+        return defineIfNotExist(sym)
     }
 
     fun defineFuncNameIfNotExist(name: String, isOperator: Boolean) : ScopeResult {

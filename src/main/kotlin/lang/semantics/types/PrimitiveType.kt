@@ -1,8 +1,7 @@
 package lang.semantics.types
 
-import lang.semantics.builtin.PrimitivesScope.constCharPtr
-import lang.semantics.builtin.operFunc
-import lang.semantics.builtin.staticConstVar
+import lang.semantics.builtin.builders.constVar
+import lang.semantics.builtin.builders.init
 import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.Scope
 import lang.semantics.symbols.PrimitiveTypeSymbol
@@ -41,8 +40,11 @@ open class PrimitiveType(
         this.declaration = sym
         scope.define(sym)
 
-        this.staticConstVar("SIZE_BYTES", this, ConstValue(size.size))
-            .staticConstVar("SIZE_BITS", this, ConstValue(size.size * 8))
+        scope.init {
+            val type = this@PrimitiveType
+            constVar("SIZE_BYTES", type, ConstValue(size.size))
+            constVar("SIZE_BITS", type, ConstValue(size.size * 8))
+        }
     }
 
     protected open fun recreate(flags: TypeFlags): PrimitiveType =

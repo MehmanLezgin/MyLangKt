@@ -5,6 +5,7 @@ import lang.core.SourceRange
 import lang.mappers.ScopeErrorMapper
 import lang.messages.CompileStage
 import lang.messages.MsgHandler
+import lang.nodes.BaseImportStmtNode
 import lang.nodes.BlockNode
 import lang.nodes.DeclStmtNode
 import lang.nodes.ExprNode
@@ -55,8 +56,9 @@ class SemanticAnalyzer(
 
         localDeclPipeline = LocalDeclPipeline(
             nameCollectionPass = nameCollectionPass,
+            bindImportPass = bindImportPass,
             declarationHeaderPass = declarationHeaderPass,
-            varInitPass = varInitPass
+            varInitPass = varInitPass,
         )
     }
 
@@ -65,15 +67,8 @@ class SemanticAnalyzer(
     }
 
     override fun resolve(sourceUnit: SourceUnit) {
-        if (sourceUnit.isReady || sourceUnit.isAnalysing) return
-
         withSourceUnit(targetSourceUnit = sourceUnit) {
-            isAnalysing = true
-
             resolve(node = ast)
-
-            isAnalysing = false
-            isReady = true
         }
     }
 
@@ -81,10 +76,15 @@ class SemanticAnalyzer(
         node.nodes.forEach { childNode -> resolve(childNode) }
     }
 
+    private fun resolve(node: BaseImportStmtNode) {
+        localDeclPipeline.execute(node)
+    }
+
     fun resolve(node: ExprNode) {
         when (node) {
-            is DeclStmtNode -> declResolver.resolve(node)
+            is DeclStmtNode -> declResolver.resolve(target = node)
             is BlockNode -> resolve(node = node)
+            is BaseImportStmtNode -> resolve(node = node)
             else -> typeResolver.resolve(target = node)
         }
     }

@@ -5,17 +5,28 @@ import lang.semantics.symbols.FuncParamSymbol
 import lang.semantics.types.Type
 
 class FuncParamBuilder(
-    val funcParams: MutableList<FuncParamSymbol> = mutableListOf()
+    private val funcParams: MutableList<FuncParamSymbol> = mutableListOf()
 ) {
-    infix fun String.ofType(type: Type) {
+    private fun nextParamName() = "x${funcParams.size}"
+
+    fun addParam(name: String, type: Type) {
         val param = FuncParamSymbol(
-            name = this,
+            name = name,
             type = type,
             defaultValue = null
         )
 
         funcParams.add(param)
     }
+
+    infix fun String.ofType(type: Type) {
+        addParam(name = this, type = type)
+    }
+
+    val Type.param: Unit
+        get() {
+            addParam(name = nextParamName(), type = this)
+        }
 
     fun build() = FuncParamListSymbol(list = funcParams)
 }

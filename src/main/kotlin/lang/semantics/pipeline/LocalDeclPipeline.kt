@@ -4,17 +4,29 @@ import lang.nodes.*
 
 class LocalDeclPipeline(
     val nameCollectionPass: NameCollectionPass,
+    val bindImportPass: BindImportPass,
     val declarationHeaderPass: DeclarationHeaderPass,
     val varInitPass: VarInitPass
 ) {
-    fun execute(node: DeclStmtNode) {
+    fun execute(node: StmtNode) {
         when (node) {
             is VarDeclStmtNode -> execute(node = node)
             is InterfaceDeclStmtNode -> execute(node = node)
             is ClassDeclStmtNode -> execute(node = node)
             is FuncDeclStmtNode -> execute(node = node)
             is EnumDeclStmtNode -> execute(node = node)
+            is BaseImportStmtNode -> execute(node = node)
+            is UsingDirectiveNode -> execute(node = node)
+            else -> Unit
         }
+    }
+
+    fun execute(node: UsingDirectiveNode) {
+        bindImportPass.resolve(node)
+    }
+
+    fun execute(node: BaseImportStmtNode) {
+        bindImportPass.resolve(node)
     }
 
     fun execute(node: VarDeclStmtNode) {
