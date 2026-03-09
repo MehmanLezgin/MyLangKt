@@ -7,7 +7,7 @@ import lang.messages.CompileStage
 import lang.messages.MsgHandler
 import lang.nodes.BaseImportStmtNode
 import lang.nodes.BlockNode
-import lang.nodes.DeclStmtNode
+import lang.nodes.DeclStmtNamedNode
 import lang.nodes.ExprNode
 import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.pipeline.*
@@ -82,7 +82,7 @@ class SemanticAnalyzer(
 
     fun resolve(node: ExprNode) {
         when (node) {
-            is DeclStmtNode -> declResolver.resolve(target = node)
+            is DeclStmtNamedNode -> declResolver.resolve(target = node)
             is BlockNode -> resolve(node = node)
             is BaseImportStmtNode -> resolve(node = node)
             else -> typeResolver.resolve(target = node)

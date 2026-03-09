@@ -108,11 +108,15 @@ data class ReturnStmtNode(
     }
 }
 
-open class DeclStmtNode(
-    open var modifiers: ModifierSetNode?,
+sealed interface BaseDeclStmtNode : StmtNode {
+    var modifiers: ModifierSetNode?
+}
+
+open class DeclStmtNamedNode(
+    override var modifiers: ModifierSetNode?,
     override val range: SourceRange,
     open val name: IdentifierNode? = null,
-) : StmtNode {
+) : BaseDeclStmtNode {
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
 
@@ -123,7 +127,7 @@ data class VarDeclStmtNode(
     val initializer: ExprNode?,
     override val range: SourceRange,
     val isMutable: Boolean
-) : DeclStmtNode(modifiers, range, name) {
+) : DeclStmtNamedNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -142,7 +146,7 @@ open class FuncDeclStmtNode(
     val returnType: BaseDatatypeNode,
     open val body: BlockNode?,
     override val range: SourceRange
-) : DeclStmtNode(modifiers, range, name) {
+) : DeclStmtNamedNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = FuncDeclStmtNode(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -172,7 +176,7 @@ data class ConstructorDeclStmtNode(
     range = range,
 ) {
     companion object {
-        fun getName() = "\$constructor"
+        fun getName() = $$"$constructor"
     }
 
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
@@ -199,7 +203,7 @@ data class DestructorDeclStmtNode(
     range = range,
 ) {
     companion object {
-        fun getName() = "\$destructor"
+        fun getName() = $$"$destructor"
     }
 
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
@@ -249,7 +253,7 @@ data class InterfaceDeclStmtNode(
     val superInterface: BaseDatatypeNode?,
     val body: BlockNode?,
     override val range: SourceRange
-) : DeclStmtNode(modifiers, range, name) {
+) : DeclStmtNamedNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -269,7 +273,7 @@ data class ClassDeclStmtNode(
     val superClass: BaseDatatypeNode?,
     val body: BlockNode?,
     override val range: SourceRange
-) : DeclStmtNode(modifiers, range, name) {
+) : DeclStmtNamedNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -287,7 +291,7 @@ data class EnumDeclStmtNode(
     override val name: IdentifierNode,
     val body: BlockNode,
     override val range: SourceRange
-) : DeclStmtNode(modifiers, range, name) {
+) : DeclStmtNamedNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
@@ -340,19 +344,14 @@ data class TryCatchStmtNode(
 }
 
 data class UsingDirectiveNode(
-    override val name: IdentifierNode?,
-    val isType: Boolean = false,
-    val value: ExprNode,
+    val clause: NameClause,
+    override var modifiers: ModifierSetNode? = null,
     override val range: SourceRange,
-) : DeclStmtNode(
-    modifiers = null,
-    name = name,
-    range = range
-) {
+) : BaseDeclStmtNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
-            name = name?.mapRecursive(mapper) as? IdentifierNode ?: name,
-            value = value.mapRecursive(mapper)
+            clause = clause,
+            modifiers = modifiers?.mapRecursive(mapper) as? ModifierSetNode? ?: modifiers,
         )
         return mapper(newNode)
     }

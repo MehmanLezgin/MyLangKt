@@ -22,6 +22,7 @@ class LocalDeclPipeline(
     }
 
     fun execute(node: UsingDirectiveNode) {
+        nameCollectionPass.resolve(node)
         bindImportPass.resolve(node)
     }
 

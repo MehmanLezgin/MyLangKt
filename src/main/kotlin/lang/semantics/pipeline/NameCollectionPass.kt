@@ -6,6 +6,8 @@ import lang.nodes.EnumDeclStmtNode
 import lang.nodes.FuncDeclStmtNode
 import lang.nodes.InterfaceDeclStmtNode
 import lang.nodes.ModuleStmtNode
+import lang.nodes.NameClause
+import lang.nodes.NameSpecifier
 import lang.nodes.OperNode
 import lang.nodes.UsingDirectiveNode
 import lang.nodes.VarDeclStmtNode
@@ -111,15 +113,27 @@ class NameCollectionPass(
     }
 
     fun resolve(target: UsingDirectiveNode) {
-        if (!target.isType) return
-        val name = target.name ?: return
+        val clause = target.clause
         val modifiers = modResolver.resolveUsingModifiers(target.modifiers)
-        scope.defineAlias(
-            name = name.value,
-            sym = null,
-            visibility = modifiers.visibility
-        ).handle(target.name.range) {
-            target bind sym
+
+        when (clause) {
+            is NameClause.Items -> {
+                clause.items.forEach { item ->
+                    when(item) {
+                        is NameSpecifier.Alias -> {
+                            scope.defineAlias(
+                                name = item.alias.value,
+                                sym = null,
+                                visibility = modifiers.visibility
+                            ).handle(item.alias.range) {
+                                target bind sym
+                            }
+                        }
+                        else -> Unit
+                    }
+                }
+            }
+            NameClause.Wildcard -> Unit
         }
     }
 }

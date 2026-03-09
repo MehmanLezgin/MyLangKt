@@ -10,7 +10,7 @@ fun mathModule(): ModuleSymbol {
     return module(name = "math") {
         staticScope {
             constVar(
-                name = "PI",
+                name = "E",
                 type = PrimitivesScope.float64,
                 value = Math.E
             )

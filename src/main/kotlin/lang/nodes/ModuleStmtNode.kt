@@ -6,7 +6,7 @@ data class ModuleStmtNode(
     override val name: IdentifierNode,
     val body: BlockNode,
     override val range: SourceRange
-) : DeclStmtNode(
+) : DeclStmtNamedNode(
     modifiers = null,
     name = name,
     range = range

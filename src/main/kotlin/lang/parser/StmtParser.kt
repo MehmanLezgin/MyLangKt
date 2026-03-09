@@ -9,12 +9,9 @@ import lang.messages.Msg
 import lang.messages.Terms
 import lang.messages.Terms.plural
 import lang.nodes.*
-import lang.parser.ParserUtils.flattenCommaNode
-import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isKeyword
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.range
-import lang.parser.ParserUtils.toBlockNode
 import lang.parser.ParserUtils.toDatatype
 import lang.parser.ParserUtils.toIdentifierNode
 import lang.parser.ParserUtils.wrapToBlock
@@ -108,14 +105,14 @@ class StmtParser(
         return parserFunc() ?: VoidNode
     }
 
-    private fun parseUsingStmt(): ExprNode? {
+    private fun parseUsingStmt(): StmtNode {
         return ts.captureRange {
             ts.next()
 
-            var expr = parser.parseExpr(ctx = ParsingContext.Condition)
-
-            if (ts.match(Token.LBrace::class)) {
+            if (ts.match(Token.LParen::class)) {
+                val expr = parser.parseExpr(ctx = ParsingContext.Condition)
                 val body = parseBlock()
+
                 return@captureRange UsingStmtNode(
                     scopedExpr = expr,
                     body = body,
@@ -123,66 +120,15 @@ class StmtParser(
                 )
             }
 
-            expr = parser.analiseAsDatatype(
-                expr = expr,
-                allowAsExpression = true
-            ) ?: return@captureRange null
 
+            val clause = parser.parseNameClause()
 
-            if (expr isBinOperator BinOpType.COMMA) {
-                val allUsingNodes = expr.flattenCommaNode().mapNotNull { usingNode ->
-                    buildUsingDirective(
-                        expr = usingNode,
-                        resultRange = usingNode.range
-                    )
-                }
-
-                val block = allUsingNodes.toBlockNode(resultRange)
-                return@captureRange block
-
-            }
-
-            return@captureRange buildUsingDirective(
-                expr = expr,
-                resultRange = resultRange
-            )
-        }
-    }
-
-
-    private fun buildUsingDirective(
-        expr: ExprNode,
-        resultRange: SourceRange
-    ): UsingDirectiveNode? {
-        return when (expr) {
-            is BinOpNode -> {
-                val left = expr.left
-                if (expr.operator != BinOpType.ASSIGN || left !is IdentifierNode) {
-                    syntaxError(Msg.EXPECTED_IDENTIFIER, expr.range)
-                    return null
-                }
-
-                UsingDirectiveNode(
-                    name = left,
-                    value = expr.right,
-                    range = resultRange
-                )
-            }
-
-            is QualifiedDatatypeNode,
-            is IdentifierNode -> UsingDirectiveNode(
-                name = null,
-                value = expr,
+            UsingDirectiveNode(
+                clause = clause,
                 range = resultRange
             )
-
-            else -> {
-                syntaxError(Msg.EXPECTED_IDENTIFIER, expr.range)
-                null
-            }
         }
     }
-
 
     override fun parseBlock(): BlockNode {
         if (ts.matchOperator(OperatorType.COLON))
@@ -879,14 +825,12 @@ class StmtParser(
 
     private fun parseBreakStmt() = BreakStmtNode(range = ts.next().range)
 
-    private fun parseDeclarationWithModifiers(): DeclStmtNode? {
+    private fun parseDeclarationWithModifiers(): StmtNode? {
         val modifiers = parseModifiers()
         val range = ts.range
 
-        val stmt = parse()
-
-        val stmtWithMod = when {
-            stmt is DeclStmtNode -> {
+        val stmtWithMod = when (val stmt = parse()) {
+            is BaseDeclStmtNode -> {
                 stmt.modifiers = modifiers
                 stmt
             }

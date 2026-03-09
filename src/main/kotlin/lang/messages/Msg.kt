@@ -5,6 +5,8 @@ import lang.messages.Terms.ordinal
 interface FormattableMsg
 
 object Msg {
+    const val WILDCARD_IS_NOT_ALLOWED_HERE = "Wildcard is not allowed here"
+
     const val SRC_CAN_CONTAIN_ONE_FILE_MODULE_DECL =
         "Source file can only contain one file-scoped module decl"
 

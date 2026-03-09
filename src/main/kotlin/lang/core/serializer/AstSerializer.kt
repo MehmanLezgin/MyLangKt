@@ -235,8 +235,8 @@ object AstSerializer {
             )
 
             is UsingDirectiveNode -> mapOf(
-                "name" to expr.name,
-                "value" to expr.value
+                "clause" to expr.clause,
+                "modifiers" to expr.modifiers
             )
 
             is UsingStmtNode -> mapOf(

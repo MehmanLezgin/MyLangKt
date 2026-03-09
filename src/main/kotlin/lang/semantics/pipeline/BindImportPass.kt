@@ -4,23 +4,16 @@ import lang.core.SourceRange
 import lang.messages.Msg
 import lang.messages.Terms.quotes
 import lang.nodes.*
-import lang.parser.ParserUtils.toDatatype
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope.err
 import lang.semantics.builtin.PrimitivesScope.ok
 import lang.semantics.resolvers.BaseResolver
-import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.ScopeError
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.scopes.SymbolIMap
-import lang.semantics.symbols.AliasSymbol
 import lang.semantics.symbols.ModuleSymbol
-import lang.semantics.symbols.Symbol
 import lang.semantics.symbols.TypeSymbol
 import lang.semantics.symbols.Visibility
-import lang.semantics.types.ErrorType
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 class BindImportPass(
     override val analyzer: ISemanticAnalyzer,
@@ -31,8 +24,11 @@ class BindImportPass(
     override fun resolve(target: BlockNode?) {
         target ?: return
         for (node in target.nodes) {
-            if (node is BaseImportStmtNode)
-                resolve(node)
+            when (node) {
+                is BaseImportStmtNode -> resolve(node)
+                is UsingDirectiveNode -> resolve(node)
+                else -> Unit
+            }
         }
     }
 
@@ -45,72 +41,13 @@ class BindImportPass(
     fun resolve(node: UsingDirectiveNode) {
         if (checkIsVisited(node)) return
 
-        val value = node.value.let {
-            if (it is IdentifierNode) it.toDatatype() else it
-        }
-
-        val name = node.name
-
-        fun getModuleSym(target: BaseDatatypeNode): TypeSymbol? {
-            val type = analyzer.typeResolver.resolve(target, isNamespaceCtx = true)
-            if (type == ErrorType) return null
-            val decl = type.declaration
-            if (decl !is TypeSymbol) {
-                target.error(Msg.EXPECTED_MODULE_NAME)
-                return null
-            }
-            return decl
-        }
-
-        val modifiers = analyzer.modResolver.resolveUsingModifiers(node.modifiers)
-        val visibility = modifiers.visibility
-
-        fun defineUsingSymbol(name: String?, sym: Symbol) {
-            scope.defineAlias(name ?: sym.name, sym, visibility)
-                .handle(value.range) {}
-        }
-
-        fun defineUsingModule(moduleScope: BaseTypeScope) {
-            moduleScope.symbols.forEach { (_, memberSym) ->
-                scope.define(memberSym, visibility)
-                    .handle(value.range) {}
-            }
-        }
-
-        when (value) {
-            is DatatypeNode -> {
-                val sym = getModuleSym(value) ?: return
-
-                if (name != null)
-                    defineUsingSymbol(name.value, sym)
-                else
-                    defineUsingModule(sym.staticScope)
-
-            }
-
-            is ScopedDatatypeNode -> {
-                val moduleSym = getModuleSym(value.base) ?: return
-                val targetScope = moduleSym.staticScope
-                val memberName = value.member.identifier
-
-                val type = analyzer.withScope(targetScope) {
-                    analyzer.typeResolver
-                        .resolve(memberName, asMember = true, isNamespace = true)
-                }
-
-                if (type == ErrorType) return
-
-                targetScope.resolve(memberName.value).handle(value.range) {
-                    if (sym !is TypeSymbol || name != null)
-                        defineUsingSymbol(name?.value, sym)
-                    else
-                        defineUsingModule(sym.staticScope)
-
-                }
-            }
-
-            else -> node.error(Msg.EXPECTED_MODULE_NAME)
-        }
+        import(
+            clause = node.clause,
+            symbols = scope.symbols,
+            range = node.range,
+            scopeName = null,
+            wildcardAllowed = false
+        )
     }
 
     fun resolve(node: BaseImportStmtNode) {
@@ -177,44 +114,68 @@ class BindImportPass(
 
     private fun importItems(items: List<NameSpecifier>, symbols: SymbolIMap, scopeName: String?) {
         for (item in items) {
-            val target: QualifiedName
-            val alias: IdentifierNode?
+            val target: QualifiedName = item.target
+            var alias: IdentifierNode? = null
+            var allFrom = false
 
             when (item) {
-                is NameSpecifier.Direct -> {
-                    target = item.target
-                    alias = null
-                }
+                is NameSpecifier.Direct -> Unit
 
                 is NameSpecifier.Alias -> {
-                    target = item.target
                     alias = item.alias
+                }
+
+                is NameSpecifier.AllFrom -> {
+                    alias = null
+                    allFrom = true
                 }
             }
 
-            importOne(target, alias, symbols, scopeName)
+            importOne(
+                target = target,
+                alias = alias,
+                allFrom = allFrom,
+                symbols = symbols,
+                scopeName = scopeName
+            )
         }
     }
 
     private fun importOne(
         target: QualifiedName,
         alias: IdentifierNode? = null,
+        allFrom: Boolean = false,
         symbols: SymbolIMap,
         scopeName: String?
     ) {
         val result = resolveSymbol(target, symbols, scopeName)
 
         result?.handle(target.range) {
-            val symToDefine = if (alias == null)
-                sym
-            else
-                AliasSymbol(
-                    name = alias.value,
-                    visibility = Visibility.PRIVATE,
-                    sym = sym
-                )
+            when {
+                allFrom -> {
+                    val sym = sym as? TypeSymbol ?: run {
+                        semanticError(Msg.EXPECTED_MODULE_NAME, target.range)
+                        return@handle
+                    }
 
-            scope.define(symToDefine).handle(target.range) {}
+                    importAll(
+                        symbols = sym.staticScope.symbols,
+                        range = target.range ?: return@handle
+                    )
+                }
+
+                alias == null -> {
+                    scope.define(sym).handle(target.range) {}
+                }
+
+                else -> {
+                    scope.defineAlias(
+                        name = alias.value,
+                        sym = sym,
+                        visibility = Visibility.PRIVATE
+                    ).handle(target.range) {}
+                }
+            }
         }
     }
 
@@ -222,10 +183,16 @@ class BindImportPass(
         clause: NameClause,
         symbols: SymbolIMap,
         range: SourceRange,
-        scopeName: String?
+        scopeName: String?,
+        wildcardAllowed: Boolean
     ) {
         when (clause) {
-            NameClause.Wildcard -> importAll(symbols, range)
+            NameClause.Wildcard ->
+                if (wildcardAllowed)
+                    importAll(symbols, range)
+                else
+                    semanticError(Msg.WILDCARD_IS_NOT_ALLOWED_HERE, range)
+
             is NameClause.Items -> importItems(clause.items, symbols, scopeName)
         }
     }
@@ -235,7 +202,8 @@ class BindImportPass(
             clause = node.items,
             symbols = moduleRegPass.allModulesAsSymbols,
             range = node.range,
-            scopeName = null
+            scopeName = null,
+            wildcardAllowed = false
         )
 
     private fun resolveFrom(node: ImportFromStmtNode) {
@@ -245,7 +213,8 @@ class BindImportPass(
             clause = node.items,
             symbols = module.scope.symbols,
             range = node.range,
-            scopeName = node.sourceName.target.toString()
+            scopeName = node.sourceName.target.toString(),
+            wildcardAllowed = true
         )
     }
 }

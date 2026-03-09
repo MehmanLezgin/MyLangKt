@@ -2,16 +2,15 @@ package lang.semantics.resolvers
 
 import lang.messages.Msg
 import lang.nodes.*
-import lang.parser.ParserUtils.toDatatype
 import lang.semantics.ISemanticAnalyzer
-import lang.semantics.scopes.*
+import lang.semantics.scopes.ClassScope
+import lang.semantics.scopes.FuncScope
 import lang.semantics.symbols.*
-import lang.semantics.types.*
 
 class DeclarationResolver(
     override val analyzer: ISemanticAnalyzer
-) : BaseResolver<DeclStmtNode, Unit>(analyzer = analyzer) {
-    override fun resolve(target: DeclStmtNode) {
+) : BaseResolver<BaseDeclStmtNode, Unit>(analyzer = analyzer) {
+    override fun resolve(target: BaseDeclStmtNode) {
         when (target) {
             is ModuleStmtNode -> resolve(target)
             is InterfaceDeclStmtNode -> resolve(target)
@@ -23,6 +22,7 @@ class DeclarationResolver(
             is DestructorDeclStmtNode -> resolve(target)
             is FuncDeclStmtNode -> resolve(target)
             is UsingDirectiveNode -> resolve(target)
+            else -> {}
         }
     }
 
@@ -133,7 +133,7 @@ class DeclarationResolver(
         return sym
     }*/
 
-    private fun ensureDeclared(target: DeclStmtNode): Symbol? {
+    private fun ensureDeclared(target: DeclStmtNamedNode): Symbol? {
         target.getResolvedSymbol()?.let { return it }
         analyzer.localDeclPipeline.execute(target)
         return target.getResolvedSymbol()

@@ -27,6 +27,11 @@ sealed class NameSpecifier(open val target: QualifiedName, val range: SourceRang
             target = target,
             range = target.parts.firstOrNull()?.range
         )
+    data class AllFrom(override val target: QualifiedName) :
+        NameSpecifier(
+            target = target,
+            range = target.parts.firstOrNull()?.range
+        )
 
     data class Alias(override val target: QualifiedName, val alias: IdentifierNode) :
         NameSpecifier(

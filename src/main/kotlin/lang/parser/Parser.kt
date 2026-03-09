@@ -108,20 +108,21 @@ class Parser(
         fun checkSeparator(): Boolean {
             val isSeparator = ts.peek() isOperator separator
             if (isSeparator) ts.next()
-            return isSeparator
+            val isMul = ts.peek() isOperator OperatorType.MUL
+            return isSeparator && !isMul
         }
 
         val list = mutableListOf<IdentifierNode>()
         list.apply {
             do {
-                val identifier = ts.peek()
+                val t = ts.peek()
 
-                if (identifier !is Token.Identifier) {
-                    syntaxError(Msg.EXPECTED_IDENTIFIER, identifier.range)
+                if (t !is Token.Identifier) {
+                    syntaxError(Msg.EXPECTED_IDENTIFIER, t.range)
                     return null
                 }
 
-                add(identifier.toIdentifierNode())
+                add(t.toIdentifierNode())
                 ts.next()
             } while (checkSeparator())
         }
@@ -139,6 +140,7 @@ class Parser(
 
         while (true) {
             val item = parseNameSpecifier() ?: continue
+
             items.add(item)
 
             if (!ts.matchOperator(OperatorType.COMMA))
@@ -156,7 +158,11 @@ class Parser(
 
         var alias: IdentifierNode? = null
 
-        if (ts.matchOperator(OperatorType.AS)) {
+        val isAllFrom = ts.peek() isOperator OperatorType.MUL
+        if (isAllFrom) ts.next()
+
+
+        if (!isAllFrom && ts.matchOperator(OperatorType.AS)) {
             ts.next()
             val id = ts.peek()
             if (id !is Token.Identifier) {
@@ -169,6 +175,10 @@ class Parser(
         }
 
         val target = QualifiedName(ids)
+
+        if (isAllFrom) return NameSpecifier.AllFrom(
+            target = target
+        )
 
         if (alias != null) return NameSpecifier.Alias(
             target = target,
