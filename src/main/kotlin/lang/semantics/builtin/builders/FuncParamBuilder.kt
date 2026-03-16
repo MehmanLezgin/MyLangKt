@@ -12,8 +12,7 @@ class FuncParamBuilder(
     fun addParam(name: String, type: Type) {
         val param = FuncParamSymbol(
             name = name,
-            type = type,
-            defaultValue = null
+            type = type
         )
 
         funcParams.add(param)

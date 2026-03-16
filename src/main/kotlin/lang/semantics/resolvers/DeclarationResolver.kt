@@ -5,6 +5,7 @@ import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.scopes.ClassScope
 import lang.semantics.scopes.FuncScope
+import lang.semantics.scopes.Scope
 import lang.semantics.symbols.*
 
 class DeclarationResolver(
@@ -30,71 +31,71 @@ class DeclarationResolver(
         analyzer.localDeclPipeline.execute(target)
     }
 
-/*
-    private fun resolve(target: UsingDirectiveNode) {
-        val value = target.value.let {
-            if (it is IdentifierNode) it.toDatatype() else it
-        }
-
-        val name = target.name
-
-        fun getModuleSym(target: BaseDatatypeNode): TypeSymbol? {
-            val type = analyzer.typeResolver.resolve(target, isNamespaceCtx = true)
-            if (type == ErrorType) return null
-            val decl = type.declaration
-            if (decl !is TypeSymbol) {
-                target.error(Msg.EXPECTED_MODULE_NAME)
-                return null
+    /*
+        private fun resolve(target: UsingDirectiveNode) {
+            val value = target.value.let {
+                if (it is IdentifierNode) it.toDatatype() else it
             }
-            return decl
-        }
 
-        val modifiers = analyzer.modResolver.resolveUsingModifiers(target.modifiers)
-        val visibility = modifiers.visibility
+            val name = target.name
 
-        fun defineUsingSymbol(name: String?, sym: Symbol) {
-            scope.defineUsing(name ?: sym.name, visibility)
-                .handle(value.range) {}
-        }
+            fun getModuleSym(target: BaseDatatypeNode): TypeSymbol? {
+                val type = analyzer.typeResolver.resolve(target, isNamespaceCtx = true)
+                if (type == ErrorType) return null
+                val decl = type.declaration
+                if (decl !is TypeSymbol) {
+                    target.error(Msg.EXPECTED_MODULE_NAME)
+                    return null
+                }
+                return decl
+            }
 
-        fun defineUsingModule(moduleScope: BaseTypeScope) {
-            moduleScope.symbols.forEach { (_, memberSym) ->
-                scope.define(memberSym, visibility)
+            val modifiers = analyzer.modResolver.resolveUsingModifiers(target.modifiers)
+            val visibility = modifiers.visibility
+
+            fun defineUsingSymbol(name: String?, sym: Symbol) {
+                scope.defineUsing(name ?: sym.name, visibility)
                     .handle(value.range) {}
             }
-        }
 
-        when (value) {
-            is DatatypeNode -> {
-                val moduleSym = getModuleSym(value) ?: return
-                defineUsingModule(moduleScope = moduleSym.staticScope)
-            }
-
-            is ScopedDatatypeNode -> {
-                val moduleSym = getModuleSym(value.base) ?: return
-                val targetScope = moduleSym.staticScope
-                val memberName = value.member.identifier
-
-                val type = analyzer.withScope(targetScope) {
-                    analyzer.typeResolver
-                        .resolve(memberName, asMember = true, isNamespace = true)
-                }
-
-                if (type == ErrorType) return
-
-                targetScope.resolve(memberName.value).handle(value.range) {
-                    if (sym is TypeSymbol)
-                        defineUsingModule(sym.staticScope)
-                    else
-                        defineUsingSymbol(name?.value, sym)
-
+            fun defineUsingModule(moduleScope: BaseTypeScope) {
+                moduleScope.symbols.forEach { (_, memberSym) ->
+                    scope.define(memberSym, visibility)
+                        .handle(value.range) {}
                 }
             }
 
-            else -> target.error(Msg.EXPECTED_MODULE_NAME)
+            when (value) {
+                is DatatypeNode -> {
+                    val moduleSym = getModuleSym(value) ?: return
+                    defineUsingModule(moduleScope = moduleSym.staticScope)
+                }
+
+                is ScopedDatatypeNode -> {
+                    val moduleSym = getModuleSym(value.base) ?: return
+                    val targetScope = moduleSym.staticScope
+                    val memberName = value.member.identifier
+
+                    val type = analyzer.withScope(targetScope) {
+                        analyzer.typeResolver
+                            .resolve(memberName, asMember = true, isNamespace = true)
+                    }
+
+                    if (type == ErrorType) return
+
+                    targetScope.resolve(memberName.value).handle(value.range) {
+                        if (sym is TypeSymbol)
+                            defineUsingModule(sym.staticScope)
+                        else
+                            defineUsingSymbol(name?.value, sym)
+
+                    }
+                }
+
+                else -> target.error(Msg.EXPECTED_MODULE_NAME)
+            }
         }
-    }
-*/
+    */
 
     /*private fun Scope.defineDeclSym(target: DeclStmtNode): Symbol? {
         val modResolver = analyzer.modResolver
@@ -174,10 +175,22 @@ class DeclarationResolver(
     private fun resolve(target: FuncDeclStmtNode) {
         val sym = target.getResolvedSymbol() as? FuncSymbol ?: return
 
+        val paramsScope = Scope(parent = scope) // allow sym shadowing in func scope
+
         val funcScope = FuncScope(
-            parent = scope,
+            parent = paramsScope,
             funcSymbol = sym
         )
+
+        val params = sym.params.list
+
+        params.forEach { param ->
+            val range = param.range ?: target.range
+
+            paramsScope
+                .define(param)
+                .handle(range) {}
+        }
 
         analyzer.withScopeResolveBody(targetScope = funcScope, body = target.body)
     }

@@ -20,7 +20,7 @@ data class FuncParamsScope(
         val param = FuncParamSymbol(
             name = name.value,
             type = type,
-            defaultValue = node.initializer
+            defaultValue = node.initializer,
         )
 
         params.add(param)

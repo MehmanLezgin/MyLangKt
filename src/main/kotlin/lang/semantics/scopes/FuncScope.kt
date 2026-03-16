@@ -6,6 +6,5 @@ class FuncScope(
     override val parent: Scope?,
     val funcSymbol: FuncSymbol,
 ) : Scope(
-    parent = parent,
-    scopeName = ""
+    parent = parent
 )

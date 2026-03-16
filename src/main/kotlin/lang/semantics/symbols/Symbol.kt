@@ -9,9 +9,9 @@ sealed class Symbol(
     open val modifiers: Modifiers = Modifiers()
 )
 
-data class VarSymbol(
+open class VarSymbol(
     override val name: String,
-    var type: Type = UnresolvedType,
+    open var type: Type = UnresolvedType,
     val isMutable: Boolean,
     val isParameter: Boolean = false,
     var constValue: ConstValue<*>? = null,

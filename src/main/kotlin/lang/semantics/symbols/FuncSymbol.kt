@@ -1,5 +1,6 @@
 package lang.semantics.symbols
 
+import lang.core.SourceRange
 import lang.nodes.ExprNode
 import lang.semantics.types.FuncType
 import lang.semantics.types.Type
@@ -9,9 +10,16 @@ import lang.messages.Terms
 
 open class FuncParamSymbol(
     override val name: String,
-    open val type: Type,
-    val defaultValue: ExprNode? = null
-) : Symbol(name = name) {
+    override var type: Type,
+    val defaultValue: ExprNode? = null,
+    val range: SourceRange? = null
+) : VarSymbol(
+    name = name,
+    type = type,
+    isMutable = false,
+    isParameter = true,
+    modifiers = Modifiers()
+) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is FuncParamSymbol) return false
@@ -23,14 +31,6 @@ open class FuncParamSymbol(
         return type.hashCode()
     }
 }
-
-class FuncExtensionParamSymbol(
-    override val type: Type,
-) : FuncParamSymbol(
-    name = "\\$${Terms.EXTENSION}",
-    type = type,
-    defaultValue = null
-)
 
 data class FuncParamListSymbol(
     val list: List<FuncParamSymbol> = listOf()

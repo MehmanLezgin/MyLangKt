@@ -14,22 +14,13 @@ open class Scope(
     open val parent: Scope?,
     open val scopeName: String? = null
 ) {
-    val kind: ScopeKind by lazy {
-        when (this) {
-            is BaseTypeScope,
-            is FileScope -> ScopeKind.CONTAINER
-
-            else -> ScopeKind.LOCAL
-        }
-    }
-
     val absoluteScopePath: String? by lazy {
         scopeName
             ?.takeIf { it.isNotEmpty() }
             ?.let { name ->
                 parent?.absoluteScopePath?.let { "$it::$name" } ?: name
             }
-            ?: parent?.absoluteScopePath
+//            ?: parent?.absoluteScopePath
     }
 
     open val symbols: SymbolMap = mutableMapOf()
