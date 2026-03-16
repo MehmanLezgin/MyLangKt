@@ -77,11 +77,19 @@ abstract class BaseResolver<T, TResult>(
             is ScopeResult.Error -> {
                 if (range != null)
                     analyzer.scopeError(error, range)
+
                 null
             }
 
             is ScopeResult.Success<*> -> {
                 onSuccess()
+            }
+
+            is ScopeResult.ResultList -> {
+                list.forEach { result ->
+                    result.handle(range, onSuccess)
+                }
+                null
             }
         }
     }

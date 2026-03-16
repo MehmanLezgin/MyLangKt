@@ -46,8 +46,6 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
                     a.scopeName,
                 )
             }
-
-            ScopeError.Redeclaration -> Msg.REDECLARATION
         }
     }
 }

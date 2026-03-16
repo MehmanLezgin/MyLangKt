@@ -40,7 +40,7 @@ open class Scope(
     fun isTypeScope() = this is BaseTypeScope && this !is ModuleScope
 
 
-    fun <T : Symbol> define(sym: T, visibility: Visibility = Visibility.PUBLIC): ScopeResult {
+    private fun <T : Symbol> defineRaw(sym: T, visibility: Visibility = Visibility.PUBLIC): ScopeResult {
         val name = sym.name
         val definedSym = symbols[name]
 
@@ -55,12 +55,20 @@ open class Scope(
         return sym.ok()
     }
 
+    fun <T : Symbol> define(sym: T, visibility: Visibility = Visibility.PUBLIC): ScopeResult {
+        return when (sym) {
+            is FuncSymbol -> defineFunc(sym)
+            is OverloadedFuncSymbol -> defineFuncOverload(sym)
+            else -> defineRaw(sym, visibility)
+        }
+    }
+
     private fun defineIfNotExist(sym: Symbol): ScopeResult {
         val existing = symbols[sym.name]
         if (existing != null && existing.javaClass == sym.javaClass)
             return existing.ok()
 
-        return define(sym)
+        return defineRaw(sym)
     }
 
     fun resolve(name: String, asMember: Boolean = false): ScopeResult {
@@ -77,6 +85,7 @@ open class Scope(
                 ).err()
 
             when (val parentResult = parent!!.resolve(name)) {
+                is ScopeResult.ResultList,
                 is ScopeResult.Error -> return parentResult
                 is ScopeResult.Success<*> -> sym = parentResult.sym
             }
@@ -169,6 +178,7 @@ open class Scope(
         argTypes: List<Type>
     ): ScopeResult {
         return when (val result = resolve(name)) {
+            is ScopeResult.ResultList,
             is ScopeResult.Error -> result
             is ScopeResult.Success<*> -> {
                 val overloads = when (val sym = result.sym) {
@@ -203,79 +213,6 @@ open class Scope(
 
     fun resolveOperFunc(operator: OperatorType, argTypes: List<Type>): ScopeResult =
         resolveFunc(operator.fullName, argTypes)
-
-    /*fun defineConstVar(
-        node: VarDeclStmtNode,
-        type: Type,
-        constValue: ConstValue<*>?,
-        modifiers: Modifiers
-    ): ScopeResult {
-        val name = node.name
-
-        val sym = ConstVarSymbol(
-            name = name.value,
-            type = type,
-            value = constValue,
-            modifiers = modifiers
-        )
-
-        return define(sym)
-    }
-
-    fun defineVar(node: VarDeclStmtNode, type: Type, modifiers: Modifiers): ScopeResult {
-        val name = node.name
-
-        val sym = VarSymbol(
-            name = name.value,
-            type = type,
-            isMutable = node.isMutable,
-            modifiers = modifiers
-        )
-
-        return define(sym)
-    }*/
-
-    /*fun defineFunc(
-        node: FuncDeclStmtNode,
-        params: FuncParamListSymbol,
-        returnType: Type,
-        modifiers: Modifiers
-    ): Pair<ScopeResult, FuncSymbol> {
-        val name = node.name
-        val funcSym = if (name is OperNode) OperatorFuncSymbol(
-            operator = name.operatorType,
-            params = params,
-            returnType = returnType,
-            modifiers = modifiers
-        )
-        else {
-            val name = if (node.name is IdentifierNode)
-                (node.name as IdentifierNode).value else node.name.toString()
-
-            when (node) {
-                is ConstructorDeclStmtNode -> ConstructorSymbol(
-                    name = name,
-                    params = params,
-                    returnType = returnType,
-                    modifiers = modifiers
-                )
-
-                is DestructorDeclStmtNode -> DestructorSymbol(
-                    name = name,
-                    returnType = returnType
-                )
-
-                else -> FuncSymbol(
-                    name = name,
-                    params = params,
-                    returnType = returnType,
-                    modifiers = modifiers
-                )
-            }
-        }
-
-        return defineFunc(funcSym) to funcSym
-    }*/
 
     fun defineFunc(
         node: FuncDeclStmtNode,
@@ -337,7 +274,22 @@ open class Scope(
         return null
     }
 
-    fun defineFunc(funcSym: FuncSymbol): ScopeResult {
+    private fun defineFuncOverload(funcSym: OverloadedFuncSymbol): ScopeResult {
+        return when (val definedSymResult = resolve(funcSym.name)) {
+            is ScopeResult.Success<*> -> {
+                val results = funcSym.overloads.map { overload ->
+                    defineOrOverloadFunction(funcSym = overload, existingSym = definedSymResult.sym)
+                }
+
+                ScopeResult.ResultList(list = results)
+            }
+
+            is ScopeResult.ResultList,
+            is ScopeResult.Error -> defineRaw(sym = funcSym)
+        }
+    }
+
+    private fun defineFunc(funcSym: FuncSymbol): ScopeResult {
         checkOperatorFunc(funcSym)?.let {
             return it.err()
         }
@@ -346,8 +298,9 @@ open class Scope(
             is ScopeResult.Success<*> ->
                 defineOrOverloadFunction(funcSym = funcSym, existingSym = definedSymResult.sym)
 
+            is ScopeResult.ResultList,
             is ScopeResult.Error ->
-                define(sym = funcSym.toOverloadedFuncSymbol()) // always store as overloaded
+                defineRaw(sym = funcSym.toOverloadedFuncSymbol()) // always store as overloaded
         }
     }
 
@@ -367,7 +320,7 @@ open class Scope(
 
             is OverloadedFuncSymbol -> {
                 if (existingSym.hasOverload(funcSym)) {
-                    return ScopeError.Redeclaration.err()
+                    return ScopeError.AlreadyDefined(funcSym.name, scopeName).err()
                 }
 
                 // add anyway, for error: multiple declarations (on call)
@@ -394,7 +347,7 @@ open class Scope(
             ),
             modifiers = modifiers
         )
-        return define(sym)
+        return defineRaw(sym)
     }
 
     fun defineClass(
@@ -410,7 +363,7 @@ open class Scope(
             modifiers = modifiers
         )
 
-        return define(sym)
+        return defineRaw(sym)
     }
 
     fun defineEnum(node: EnumDeclStmtNode, modifiers: Modifiers): ScopeResult {
@@ -420,7 +373,7 @@ open class Scope(
             modifiers = modifiers
         )
 
-        return define(sym)
+        return defineRaw(sym)
     }
 
     fun defineAlias(name: String, sym: Symbol?, visibility: Visibility): ScopeResult {
@@ -440,7 +393,7 @@ open class Scope(
         return defineIfNotExist(sym)
     }
 
-    fun defineFuncNameIfNotExist(name: String, isOperator: Boolean) : ScopeResult {
+    fun defineFuncNameIfNotExist(name: String, isOperator: Boolean): ScopeResult {
         val sym = OverloadedFuncSymbol(
             name = name,
             isOperator = isOperator,
@@ -454,13 +407,13 @@ open class Scope(
         name: String,
         isMutable: Boolean,
         modifiers: Modifiers
-    ) : ScopeResult {
+    ): ScopeResult {
         val sym = VarSymbol(
             name = name,
             isMutable = isMutable,
             modifiers = modifiers
         )
 
-        return define(sym)
+        return defineRaw(sym)
     }
 }

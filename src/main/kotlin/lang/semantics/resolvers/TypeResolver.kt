@@ -728,20 +728,8 @@ class TypeResolver(
     }
 
     fun ScopeResult.handle(range: SourceRange?, onSuccess: ScopeResult.Success<*>.() -> Type): Type {
-        return when (this) {
-            is ScopeResult.Error -> {
-                if (range != null)
-                    analyzer.scopeError(error, range)
-
-                ErrorType
-            }
-
-            is ScopeResult.Success<*> -> {
-                onSuccess()
-            }
-        }
+        return handle<Type?>(range, onSuccess) ?: ErrorType
     }
-
     /*
         fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Type) =
             this.handle(null, onSuccess)

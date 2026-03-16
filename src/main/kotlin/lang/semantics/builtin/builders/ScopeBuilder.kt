@@ -14,7 +14,7 @@ class ScopeBuilder(
 
     internal fun addFunc(name: String, block: FuncBuilder.() -> Unit): FuncSymbol {
         val sym = FuncBuilder(name).apply(block).build()
-        scope.defineFunc(sym)
+        scope.define(sym)
         return sym
     }
 
@@ -22,7 +22,7 @@ class ScopeBuilder(
         val builder = FuncBuilder(oper)
 
         val sym = builder.apply(block).build()
-        scope.defineFunc(sym)
+        scope.define(sym)
         return sym
     }
 

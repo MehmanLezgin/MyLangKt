@@ -5,6 +5,7 @@ import lang.core.SourceRange
 import lang.mappers.ScopeErrorMapper
 import lang.messages.CompileStage
 import lang.messages.MsgHandler
+import lang.nodes.BaseDeclStmtNode
 import lang.nodes.BaseImportStmtNode
 import lang.nodes.BlockNode
 import lang.nodes.DeclStmtNamedNode
@@ -82,7 +83,7 @@ class SemanticAnalyzer(
 
     fun resolve(node: ExprNode) {
         when (node) {
-            is DeclStmtNamedNode -> declResolver.resolve(target = node)
+            is BaseDeclStmtNode -> declResolver.resolve(target = node)
             is BlockNode -> resolve(node = node)
             is BaseImportStmtNode -> resolve(node = node)
             else -> typeResolver.resolve(target = node)

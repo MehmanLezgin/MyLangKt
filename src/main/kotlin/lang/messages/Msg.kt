@@ -13,6 +13,7 @@ object Msg {
     const val INVALID_CONST_VALUE = "Invalid const value"
     const val CANNOT_EXPORT = "Cannot export"
 
+
     object VarMustBeInitialized : FormattableMsg {
         fun format(name: String) = "Variable '$name' must be initialized"
     }
@@ -212,7 +213,6 @@ object Msg {
     const val DESTRUCTOR_OUTSIDE_CLASS_ERROR = "Destructor outside class body is not allowed"
     const val EXPECTED_OPERATOR = "Expected an operator"
     const val CONFLICTING_OVERLOADS = "Conflicting overloads"
-    const val REDECLARATION = "Redeclaration"
     const val CANNOT_RESOLVE_PARAM_OUTSIDE_FUNC = "Cannot resolve parameter outside a function"
     const val EXPECTED_ASSIGN: String = "Expected '='"
     const val LITERALS_MUST_BE_SURROUNDED_BY_WHITESPACES = "Literals must be surrounded by whitespaces"

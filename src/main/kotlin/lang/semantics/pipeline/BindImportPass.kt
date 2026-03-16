@@ -26,7 +26,6 @@ class BindImportPass(
         for (node in target.nodes) {
             when (node) {
                 is BaseImportStmtNode -> resolve(node)
-                is UsingDirectiveNode -> resolve(node)
                 else -> Unit
             }
         }
