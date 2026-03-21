@@ -15,11 +15,15 @@ class ClassBuilder(
     )
 
     override fun build(): ClassSymbol {
+        val classScope = typeScope as ClassScope
+
         val clazz = ClassSymbol(
             name = name,
             modifiers = modifiers,
-            scope = typeScope as ClassScope
+            scope = classScope
         )
+
+        classScope.classSym = clazz
 
         return clazz
     }

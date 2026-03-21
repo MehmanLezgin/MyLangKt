@@ -289,13 +289,13 @@ data class ClassDeclStmtNode(
 data class EnumDeclStmtNode(
     override var modifiers: ModifierSetNode?,
     override val name: IdentifierNode,
-    val body: BlockNode,
+    val body: BlockNode?,
     override val range: SourceRange
 ) : DeclStmtNamedNode(modifiers, range, name) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
-            body = body.mapRecursive(mapper) as? BlockNode ?: body
+            body = body?.mapRecursive(mapper) as? BlockNode ?: body
         )
         return mapper(newNode)
     }

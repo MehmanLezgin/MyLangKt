@@ -1,10 +1,15 @@
 package lang.semantics.resolvers
 
+import lang.messages.Msg
+import lang.messages.Terms
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
+import lang.semantics.StructLayout
+import lang.semantics.TypeLayout
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.ConstValueSymbol
 import lang.semantics.types.ConstValue
+import lang.semantics.types.ErrorType
 import lang.semantics.types.Type
 
 class ConstResolver(
@@ -19,8 +24,91 @@ class ConstResolver(
             is UnaryOpNode -> resolve(target)
             is BinOpNode -> resolve(target)
             is DatatypeNode -> resolve(target)
+            is SizeofNode -> resolve(target)
+            is AlignofNode -> resolve(target)
+            is OffsetofNode -> resolve(target)
             else -> null
         }
+    }
+
+    private fun resolveFromTypeLayout(
+        datatype: ExprNode,
+        propName: String,
+        block: (TypeLayout) -> Any?
+    ): ConstValue<*>? {
+        val operandType = analyzer.typeResolver.resolve(datatype)
+
+        if (operandType == ErrorType) return null
+
+        if (operandType.isExprType) {
+            datatype.error(Msg.EXPECTED_TYPE_NAME)
+            return null
+        }
+
+        val layout = analyzer.typeLayoutProvider.getLayout(type = operandType)
+
+        if (layout != null) {
+            val constValue = ConstValue(
+                value = block(layout) ?: return null
+            )
+
+            println("$operandType $layout")
+
+            return constValue
+        }
+
+        datatype.error(Msg.CannotCalcPropOf.format(propName, operandType.toString()))
+        return null
+    }
+
+
+    private fun resolve(target: SizeofNode): ConstValue<*>? {
+        return resolveFromTypeLayout(
+            datatype = target.datatype,
+            propName = Terms.SIZE,
+            block = { it.size }
+        )
+    }
+
+    private fun resolve(target: AlignofNode): ConstValue<*>? {
+        return resolveFromTypeLayout(
+            datatype = target.datatype,
+            propName = Terms.ALIGN,
+            block = { it.align }
+        )
+    }
+
+    private fun resolve(target: OffsetofNode): ConstValue<*>? {
+        return resolveFromTypeLayout(
+            datatype = target.base,
+            propName = Terms.ALIGN,
+            block = {
+                val fieldName =  target.field.value
+                fun notDefinedError() {
+                    target.error(
+                        Msg.SymbolNotDefinedIn.format(
+                            itemKind = Terms.FIELD,
+                            name = fieldName,
+                            scopeName = target.base.value,
+                        )
+                    )
+                }
+
+                if (it !is StructLayout) {
+                    notDefinedError()
+                    return@resolveFromTypeLayout null
+                }
+
+                val offset = it.getFieldWithSuper(fieldName = fieldName)?.offset
+
+                if (offset == null) {
+                    notDefinedError()
+                    return@resolveFromTypeLayout null
+                }
+
+                offset
+            }
+        )
     }
 
     private fun ScopeResult.getConstValueOrNull(): ConstValue<*>? {

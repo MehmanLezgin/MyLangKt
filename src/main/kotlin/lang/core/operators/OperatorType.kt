@@ -16,7 +16,9 @@ enum class OperatorType(val raw: String) {
     IN("in"),
     UNTIL("until"),
 
-    SIZEOF("sizeof"),
+    SIZE_OF("sizeof"),
+    ALIGN_OF("alignof"),
+    OFFSET_OF("offsetof"),
     NEW("new"),
     DELETE("delete"),
 

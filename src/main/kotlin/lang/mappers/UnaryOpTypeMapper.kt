@@ -11,7 +11,6 @@ class UnaryOpTypeMapper : IOneWayMapper<OperatorType, UnaryOpType?> {
         OperatorType.MINUS to UnaryOpType.MINUS,
         OperatorType.NOT to UnaryOpType.NOT,
         OperatorType.BIN_NOT to UnaryOpType.BITWISE_NOT,
-        OperatorType.SIZEOF to UnaryOpType.SIZEOF,
         OperatorType.NEW to UnaryOpType.NEW,
         OperatorType.DELETE to UnaryOpType.DELETE,
         OperatorType.IS to UnaryOpType.IS,

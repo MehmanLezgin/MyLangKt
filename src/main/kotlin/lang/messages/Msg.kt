@@ -133,6 +133,11 @@ object Msg {
         fun format(funcName: String, paramsStr: String, scopeName: String?): String
     }
 
+    object CannotCalcPropOf : FormattableMsg {
+        fun format(propName: String, typeName: String) =
+            "Cannot calculate $propName of '$typeName'"
+    }
+
     object CannotRegisterModule {
         fun format(moduleName: String) =
             "cannot register a module '$moduleName'"
@@ -244,6 +249,7 @@ object Msg {
     const val EXPECTED_IF = "Expected 'if'"
     const val EXPECTED_LBRACE_AFTER_CONDITION = "Expected '{' after condition"
     const val EXPECTED_SEMICOLON: String = "Expected ';'"
+    const val EXPECTED_DOT: String = "Expected '.'"
     const val EXPECTED_WHILE_AND_POST_CONDITION = "Expected 'while' and post-condition"
     const val EXPECTED_RPAREN = "Expected ')'"
     const val EXPECTED_LBRACE = "Expected '{'"

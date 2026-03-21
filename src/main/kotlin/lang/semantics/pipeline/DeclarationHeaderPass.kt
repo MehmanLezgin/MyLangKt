@@ -219,13 +219,6 @@ class DeclarationHeaderPass(
         return sym
     }
 
-    private fun <T> withEffectiveScope(isStatic: Boolean, block: () -> T): T {
-        return if (!isStatic && scope.isTypeScope())
-            analyzer.withScope((scope as BaseTypeScope).instanceScope, block)
-        else
-            block()
-    }
-
     private fun withScopeResolve(targetScope: Scope, body: BlockNode?) {
         analyzer.withScope(targetScope) {
             resolve(body)

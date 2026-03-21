@@ -4,10 +4,10 @@ import lang.semantics.scopes.*
 import lang.semantics.types.PrimitiveType
 import lang.semantics.types.Type
 
-open class TypeSymbol(
+abstract class TypeSymbol(
     override val name: String,
     val staticScope: BaseTypeScope,
-    override val modifiers: Modifiers// = Modifiers()
+    override val modifiers: Modifiers
 ) : Symbol(name = name, modifiers = modifiers) {
     var superType: Type? = null
 

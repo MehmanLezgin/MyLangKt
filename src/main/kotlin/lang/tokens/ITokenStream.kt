@@ -20,11 +20,19 @@ interface ITokenStream {
     fun next(): Token
     fun next222(): Token
     fun match(vararg types: KClass<out Token>): Boolean
-    fun <T : Token> expect(clazz: KClass<T>, msg: String): Boolean
+
+//    fun <T : Token> expect(clazz: KClass<T>, msg: String): Boolean
+//    fun expect(vararg classes: KClass<out Token>, msg: String): Boolean
+
+    fun <T: Token> expect(clazz: KClass<out T>, msg: String): T?
     fun expect(vararg classes: KClass<out Token>, msg: String): Boolean
-    fun expectKeyword(type: KeywordType, msg: String): Boolean
-    fun matchSemicolonOrLinebreak(): Boolean
+
     fun expectSemicolonOrLinebreak(msg: String = Msg.EXPECTED_SEMICOLON): Boolean
+    fun matchSemicolonOrLinebreak(): Boolean
+
+    fun expectKeyword(type: KeywordType, msg: String): Token.Keyword?
+    fun expectOperator(type: OperatorType, msg: String): Token.Operator?
+
     fun skipTokens(vararg classes: KClass<out Token>)
     fun skipUntil(vararg classes: KClass<out Token>)
     fun skipEnclosed(openToken: KClass<out Token>, closeToken: KClass<out Token>)
@@ -35,4 +43,5 @@ interface ITokenStream {
     fun getTokens(): List<Token>
     fun <T> captureRangeToCur(block: RangeBuilder.() -> T): T
     fun <T> captureRange(block: RangeBuilder.() -> T): T
+    fun <T: Token> consume(clazz: KClass<out T>, msg: String) : T?
 }

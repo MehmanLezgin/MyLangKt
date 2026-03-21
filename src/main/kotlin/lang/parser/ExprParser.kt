@@ -2,23 +2,24 @@ package lang.parser
 
 import lang.core.KeywordType
 import lang.core.LangSpec
+import lang.core.RangeBuilder
+import lang.core.SourceRange
 import lang.core.operators.OperatorMaps
 import lang.core.operators.OperatorType
-import lang.core.SourceRange
 import lang.mappers.BinOpTypeMapper
 import lang.mappers.UnaryOpTypeMapper
 import lang.messages.Msg
 import lang.nodes.*
 import lang.parser.ParserUtils.flattenCommaNode
-import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isKeyword
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.isOperator
-import lang.parser.ParserUtils.isSimpleUnaryOp
 import lang.parser.ParserUtils.range
 import lang.parser.ParserUtils.toIdentifierNode
 import lang.parser.ParserUtils.tryConvertToDatatype
-import lang.tokens.*
+import lang.tokens.ITokenStream
+import lang.tokens.Token
+import lang.tokens.areOnSameLine
 
 class ExprParser(
     private val ts: ITokenStream,
@@ -47,7 +48,7 @@ class ExprParser(
 
 //        if (startsWithLParen) {
         ts.expect(Token.RParen::class, Msg.EXPECTED_RPAREN)
-        ts.next()
+//        ts.next()
 //        }
 
         if (ctx == ParsingContext.Default && ts.match(Token.LBrace::class)) {
@@ -188,7 +189,7 @@ class ExprParser(
             }
 
             is Token.Keyword -> {
-                if (ctx == ParsingContext.FuncHeader)
+                if (t.type == KeywordType.OPERATOR && ctx == ParsingContext.FuncHeader)
                     parseOperator()
                 else
                     parser.parseStmt()
@@ -205,8 +206,8 @@ class ExprParser(
             is Token.LParen -> {
                 ts.next()
                 val expr = parse()
-                if (ts.expect(Token.RParen::class, Msg.EXPECTED_RPAREN))
-                    ts.next()
+                ts.expect(Token.RParen::class, Msg.EXPECTED_RPAREN)
+//                    ts.next()
 
 
                 if (ts.peek() isOperator OperatorType.DOT)
@@ -543,9 +544,7 @@ class ExprParser(
 
         val range = ts.range
 
-        val operator = if (ts.expect(Token.Operator::class, Msg.EXPECTED_OPERATOR)) {
-            ts.next() as Token.Operator
-        } else null
+        val operator = ts.expect(Token.Operator::class, Msg.EXPECTED_OPERATOR)
 
         return OperNode(
             operatorType = operator?.type ?: OperatorType.UNKNOWN,
@@ -573,61 +572,111 @@ class ExprParser(
                     }
                 }
 
-                is Token.Operator -> {
-                    when {
-                        t.type.isSimpleUnaryOp() -> {
-                            ts.next()
-                            val operator = unaryOpTypeMapper.toSecond(t.type)
-
-                            if (operator == null) {
-                                syntaxError(Msg.EXPECTED_AN_EXPRESSION, resultRange)
-                                return@captureRange parsePostfixExpr(ctx)
-                            }
-
-                            UnaryOpNode(
-                                operand = parseUnaryExpr(ctx),
-                                operator = operator,
-                                tokenOperatorType = t.type,
-                                range = resultRange
-                            )
-                        }
-
-                        t.type == OperatorType.INCREMENT -> {
-                            ts.next()
-
-                            IncrementNode(
-                                operand = parseUnaryExpr(ctx),
-                                isPost = false,
-                                range = resultRange
-                            )
-                        }
-
-                        t.type == OperatorType.DECREMENT -> {
-                            ts.next()
-
-                            DecrementNode(
-                                operand = parseUnaryExpr(ctx),
-                                isPost = false,
-                                range = resultRange
-                            )
-                        }
-
-                        else -> parsePostfixExpr(ctx)
-                    }
-                }
+                is Token.Operator ->
+                    parseUnaryOper(type = t.type, ctx = ctx)
 
                 else -> parsePostfixExpr(ctx)
             }
         }
     }
 
+    private fun RangeBuilder.parseUnaryOper(type: OperatorType, ctx: ParsingContext): ExprNode {
+        return when(type) {
+            OperatorType.PLUS,
+            OperatorType.MINUS,
+            OperatorType.NOT,
+            OperatorType.BIN_NOT,
+            OperatorType.NEW,
+            OperatorType.DELETE,
+            OperatorType.NON_NULL_ASSERT,
+            OperatorType.AMPERSAND,
+            OperatorType.MUL,
+            OperatorType.IS -> {
+                ts.next()
+                val operator = unaryOpTypeMapper.toSecond(type)
+
+                if (operator == null) {
+                    syntaxError(Msg.EXPECTED_AN_EXPRESSION, resultRange)
+                    return parsePostfixExpr(ctx)
+                }
+
+                UnaryOpNode(
+                    operand = parseUnaryExpr(ctx),
+                    operator = operator,
+                    tokenOperatorType = type,
+                    range = resultRange
+                )
+            }
+
+            OperatorType.SIZE_OF -> {
+                ts.next()
+                val datatype = parseDatatype(startIdentifier = null, ctx)
+
+                SizeofNode(
+                    datatype = datatype,
+                    range = resultRange
+                )
+            }
+
+            OperatorType.ALIGN_OF -> {
+                ts.next()
+                val datatype = parseDatatype(startIdentifier = null, ctx)
+
+                AlignofNode(
+                    datatype = datatype,
+                    range = resultRange
+                )
+            }
+
+            OperatorType.OFFSET_OF -> parseOffsetofNode() ?: VoidNode
+
+            OperatorType.INCREMENT -> {
+                ts.next()
+
+                IncrementNode(
+                    operand = parseUnaryExpr(ctx),
+                    isPost = false,
+                    range = resultRange
+                )
+            }
+
+            OperatorType.DECREMENT -> {
+                ts.next()
+
+                DecrementNode(
+                    operand = parseUnaryExpr(ctx),
+                    isPost = false,
+                    range = resultRange
+                )
+            }
+
+            else -> parsePostfixExpr(ctx)
+        }
+    }
+
+    private fun RangeBuilder.parseOffsetofNode(): ExprNode? {
+        ts.next()
+
+        val base = ts.consume(Token.Identifier::class, Msg.EXPECTED_IDENTIFIER) ?: return null
+        ts.expectOperator(OperatorType.DOT, Msg.EXPECTED_DOT) ?: return null
+        val member = ts.consume(Token.Identifier::class, Msg.EXPECTED_IDENTIFIER) ?: return null
+
+        ts.next()
+
+        return OffsetofNode(
+            base = base.toIdentifierNode(),
+            field = member.toIdentifierNode(),
+            range = resultRange
+        )
+    }
+
+
     private fun parseInitialiserList(): InitialiserList {
         val range = ts.next().range
 
         val exprList = parse().flattenCommaNode()
 
-        if (ts.expect(Token.RBracket::class, Msg.EXPECTED_RBRACKET))
-            ts.next()
+        ts.expect(Token.RBracket::class, Msg.EXPECTED_RBRACKET)
 
         return InitialiserList(nodes = exprList, range = range)
     }

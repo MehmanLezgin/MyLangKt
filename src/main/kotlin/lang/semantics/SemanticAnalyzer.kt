@@ -36,6 +36,9 @@ class SemanticAnalyzer(
 
     override val pipeline: AnalysisPipeline
     override val localDeclPipeline: LocalDeclPipeline
+    override val typeLayoutProvider = TypeLayoutProvider(
+        msgHandler = msgHandler
+    )
 
     init {
         val moduleRegPass = ModuleRegPass(analyzer = this)

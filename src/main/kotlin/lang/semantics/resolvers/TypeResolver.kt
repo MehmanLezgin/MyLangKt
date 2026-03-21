@@ -11,6 +11,7 @@ import lang.semantics.symbols.*
 import lang.semantics.types.*
 import lang.core.operators.OperatorType
 import lang.core.SourceRange
+import lang.semantics.scopes.FuncScope
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class TypeResolver(
@@ -23,14 +24,45 @@ class TypeResolver(
                 isExprType = true
             )
 
+            is VoidNode -> PrimitivesScope.void
+
             is IdentifierNode -> resolve(target)
             is BaseDatatypeNode -> resolve(target)
             is BinOpNode -> resolve(target)
             is UnaryOpNode -> resolve(target)
             is FuncCallNode -> resolve(target)
             is DotAccessNode -> resolve(target)
+            is ReturnStmtNode -> resolve(target)
+            is SizeofNode,
+            is AlignofNode,
+            is OffsetofNode -> resolveConst(target)
             else -> ErrorType
         }.also { target attach it }
+    }
+
+    private fun resolveConst(target: ExprNode): Type {
+        val a = target.constFoldAndBind()
+        return a?.type ?: ErrorType
+    }
+
+    private fun resolve(target: ReturnStmtNode): Type {
+        val exprType = resolve(target.expr)
+        val funcScope = scope.getEnclosingScope<FuncScope>()
+            ?: return target.error(Msg.EXPECTED_FUNC_DECL)
+
+        val funcRetType = funcScope.funcSymbol.returnType
+
+        if (!exprType.canCastTo(funcRetType)) {
+            return target.expr.error(
+                Msg.MismatchExpectedActual.format(
+                    mismatchKind = Terms.RETURN_TYPE,
+                    typeName1 = funcRetType.toString(),
+                    typeName2 = exprType.toString()
+                )
+            )
+        }
+
+        return funcRetType
     }
 
     private fun resolve(target: DotAccessNode): Type {
@@ -391,7 +423,6 @@ class TypeResolver(
             }
 
             UnaryOpType.BITWISE_NOT -> {}
-            UnaryOpType.SIZEOF -> {}
             UnaryOpType.IS -> {}
             UnaryOpType.NON_NULL_ASSERT -> {}
             else -> {}
@@ -416,7 +447,7 @@ class TypeResolver(
             leftType = ErrorType
         }
 
-        if (rightType != ErrorType && !rightType.isExprType) {
+        if (rightType != ErrorType && !rightType.isExprType && target.operator != BinOpType.CAST) {
             target.right.error(Msg.EXPECTED_VALUE_OR_REF)
             rightType = ErrorType
         }

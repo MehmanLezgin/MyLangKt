@@ -149,8 +149,7 @@ class StmtParser(
                     ts.skipTokens(Token.Semicolon::class)
                 }
 
-                if (ts.expect(Token.RBrace::class, Msg.EXPECTED_RBRACE))
-                    ts.next()
+                ts.expect(Token.RBrace::class, Msg.EXPECTED_RBRACE)
 
                 BlockNode(nodes = list, range = resultRange)
             }
@@ -232,7 +231,7 @@ class StmtParser(
             val sourceName = parser.parseNameSpecifier()
                 ?: return@captureRange null
 
-            if (!ts.expectKeyword(KeywordType.IMPORT, Msg.EXPECTED_IMPORT))
+            if (ts.expectKeyword(KeywordType.IMPORT, Msg.EXPECTED_IMPORT) == null)
                 return@captureRange null
 
             ts.next()
@@ -730,21 +729,12 @@ class StmtParser(
                 )
             }
 
-
-            if (!ts.expect(Token.LBrace::class, Msg.EXPECTED_LBRACE))
-                return@captureRange EnumDeclStmtNode(
-                    modifiers = null,
-                    name = enumName,
-                    body = BlockNode.empty(resultRange),
-                    range = resultRange
-                )
-
-            val items = parseBlock()
+            val body = parseBodyForDeclStmt()
 
             EnumDeclStmtNode(
                 modifiers = null,
                 name = enumName,
-                body = items,
+                body = body,
                 range = resultRange
             )
         }
@@ -953,7 +943,6 @@ class StmtParser(
                 KeywordType.WHILE,
                 Msg.EXPECTED_WHILE_AND_POST_CONDITION
             )
-            ts.next()
 
             val condition = parser.parseExpr(ctx = ParsingContext.Condition)
 

@@ -94,23 +94,6 @@ object ParserUtils {
 
     infix fun ExprNode.isNotUnaryOperator(type: UnaryOpType) = this !is UnaryOpNode || this.operator != type
 
-
-    val simpleUnaryOps = listOf(
-        OperatorType.PLUS,
-        OperatorType.MINUS,
-        OperatorType.NOT,
-        OperatorType.BIN_NOT,
-        OperatorType.SIZEOF,
-        OperatorType.NEW,
-        OperatorType.DELETE,
-        OperatorType.NON_NULL_ASSERT,
-        OperatorType.AMPERSAND,
-        OperatorType.MUL,
-        OperatorType.IS
-    )
-
-    fun OperatorType.isSimpleUnaryOp() = this in simpleUnaryOps
-
     fun <T : ExprNode> List<T>.range(defaultEmpty: SourceRange): SourceRange {
         return when (size) {
             0 -> defaultEmpty

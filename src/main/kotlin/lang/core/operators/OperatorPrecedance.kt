@@ -3,7 +3,9 @@ package lang.core.operators
 fun operatorPrecedence(): OperatorInfoMap {
     return operatorsInfo {
         level {
-            oper(OperatorType.SIZEOF)
+            oper(OperatorType.SIZE_OF)
+            oper(OperatorType.ALIGN_OF)
+            oper(OperatorType.OFFSET_OF)
             oper(OperatorType.NEW)
             oper(OperatorType.DELETE)
         }

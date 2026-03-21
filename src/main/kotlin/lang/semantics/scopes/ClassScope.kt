@@ -2,6 +2,7 @@ package lang.semantics.scopes
 
 import lang.nodes.ConstructorDeclStmtNode
 import lang.nodes.DestructorDeclStmtNode
+import lang.semantics.symbols.ClassSymbol
 import lang.semantics.symbols.Symbol
 
 data class ClassScope(
@@ -11,6 +12,8 @@ data class ClassScope(
     parent = parent,
     scopeName = scopeName,
 ) {
+    lateinit var classSym: ClassSymbol
+
     fun defineConstructor(node: ConstructorDeclStmtNode) : Symbol? {
         /*val type = scopeType
         if (type is ScopeType.Func) {

@@ -21,7 +21,7 @@ class VoidPrimitive(
 ) : PrimitiveType(
     flags = flags,
     name = "void",
-    size = PrimitiveSize.NO_SIZE,
+    primitiveSize = PrimitiveSize.NO_SIZE,
     prec = Int.MIN_VALUE
 ) {
     override fun recreate(flags: TypeFlags) = VoidPrimitive(flags = flags)
@@ -32,7 +32,7 @@ class BoolPrimitive(
 ) : PrimitiveType(
     flags = flags,
     name = "bool",
-    size = PrimitiveSize.BYTE,
+    primitiveSize = PrimitiveSize.BYTE,
     prec = 0
 ) {
     override fun recreate(flags: TypeFlags) = BoolPrimitive(flags = flags)
@@ -43,7 +43,7 @@ class CharPrimitive(
 ) : PrimitiveType(
     flags = flags,
     name = "char",
-    size = PrimitiveSize.BYTE,
+    primitiveSize = PrimitiveSize.BYTE,
     prec = 1
 ) {
     override fun recreate(flags: TypeFlags) = CharPrimitive(flags = flags)
@@ -86,7 +86,7 @@ class UCharPrimitive(
 ) : PrimitiveType(
     flags = flags,
     name = "uchar",
-    size = PrimitiveSize.BYTE,
+    primitiveSize = PrimitiveSize.BYTE,
     prec = 1
 ) {
     override fun recreate(flags: TypeFlags) = UCharPrimitive(flags = flags)
@@ -108,7 +108,7 @@ class Int8Primitive(
 ) : PrimitiveType(
     flags = flags,
     name = "byte",
-    size = PrimitiveSize.BYTE,
+    primitiveSize = PrimitiveSize.BYTE,
     prec = 2
 ) {
     override fun recreate(flags: TypeFlags) = Int8Primitive(flags = flags)
@@ -129,7 +129,7 @@ class UInt8Primitive(
 ) : PrimitiveType(
     flags = flags,
     name = "ubyte",
-    size = PrimitiveSize.BYTE,
+    primitiveSize = PrimitiveSize.BYTE,
     prec = 3
 ) {
     override fun recreate(flags: TypeFlags) = UInt8Primitive(flags = flags)
@@ -151,7 +151,7 @@ class Int16Primitive(
 ) : PrimitiveType(
     flags = flags,
     name = "short",
-    size = PrimitiveSize.WORD,
+    primitiveSize = PrimitiveSize.WORD,
     prec = 4
 ) {
     override fun recreate(flags: TypeFlags) = Int16Primitive(flags = flags)
@@ -172,7 +172,7 @@ class UInt16Primitive(
 ) : PrimitiveType(
     flags = flags,
     name = "ushort",
-    size = PrimitiveSize.WORD,
+    primitiveSize = PrimitiveSize.WORD,
     prec = 5
 ) {
     override fun recreate(flags: TypeFlags) = UInt16Primitive(flags = flags)
@@ -194,7 +194,7 @@ class Int32Primitive(
 ) : PrimitiveType(
     flags = flags,
     name = "int",
-    size = PrimitiveSize.DWORD,
+    primitiveSize = PrimitiveSize.DWORD,
     prec = 6
 ) {
     override fun recreate(flags: TypeFlags) = Int32Primitive(flags = flags)
@@ -237,7 +237,7 @@ class UInt32Primitive(
 ) : PrimitiveType(
     flags = flags,
     name = "uint",
-    size = PrimitiveSize.DWORD,
+    primitiveSize = PrimitiveSize.DWORD,
     prec = 7
 ) {
     override fun recreate(flags: TypeFlags) = UInt32Primitive(flags = flags)
@@ -259,7 +259,7 @@ class Int64Primitive(
 ) : PrimitiveType(
     flags = flags,
     name = "long",
-    size = PrimitiveSize.QWORD,
+    primitiveSize = PrimitiveSize.QWORD,
     prec = 8
 ) {
     override fun recreate(flags: TypeFlags) = Int64Primitive(flags = flags)
@@ -280,7 +280,7 @@ class UInt64Primitive(
 ) : PrimitiveType(
     flags = flags,
     name = "ulong",
-    size = PrimitiveSize.QWORD,
+    primitiveSize = PrimitiveSize.QWORD,
     prec = 9
 ) {
     override fun recreate(flags: TypeFlags) = UInt64Primitive(flags = flags)
@@ -302,7 +302,7 @@ class Float32Primitive(
 ) : PrimitiveType(
     flags = flags,
     name = "float",
-    size = PrimitiveSize.DWORD,
+    primitiveSize = PrimitiveSize.DWORD,
     prec = 10
 ) {
     override fun recreate(flags: TypeFlags) = Float32Primitive(flags = flags)
@@ -323,7 +323,7 @@ class Float64Primitive(
 ) : PrimitiveType(
     flags = flags,
     name = "double",
-    size = PrimitiveSize.QWORD,
+    primitiveSize = PrimitiveSize.QWORD,
     prec = 11
 ) {
     override fun recreate(flags: TypeFlags) = Float64Primitive(flags = flags)

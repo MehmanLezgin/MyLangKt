@@ -8,7 +8,7 @@ import lang.semantics.symbols.PrimitiveTypeSymbol
 
 open class PrimitiveType(
     val name: String,
-    val size: PrimitiveSize,
+    val primitiveSize: PrimitiveSize,
     val prec: Int,
     override var flags: TypeFlags = TypeFlags()
 ) : Type(
@@ -42,15 +42,15 @@ open class PrimitiveType(
 
         scope.init {
             val type = this@PrimitiveType
-            constVar("SIZE_BYTES", type, ConstValue(size.size))
-            constVar("SIZE_BITS", type, ConstValue(size.size * 8))
+            constVar("SIZE_BYTES", type, ConstValue(primitiveSize.size))
+            constVar("SIZE_BITS", type, ConstValue(primitiveSize.size * 8))
         }
     }
 
     protected open fun recreate(flags: TypeFlags): PrimitiveType =
         PrimitiveType(
             name = name,
-            size = size,
+            primitiveSize = primitiveSize,
             prec = prec,
             flags = flags
         )
@@ -68,14 +68,14 @@ open class PrimitiveType(
 
         other as PrimitiveType
         if (name != other.name) return false
-        if (size != other.size) return false
+        if (primitiveSize != other.primitiveSize) return false
         return true
     }
 
     override fun hashCode(): Int {
         var result = super.hashCode()
         result = 31 * result + name.hashCode()
-        result = 31 * result + size.hashCode()
+        result = 31 * result + primitiveSize.hashCode()
         return result
     }
 

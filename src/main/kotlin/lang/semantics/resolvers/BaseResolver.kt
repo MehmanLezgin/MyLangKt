@@ -5,6 +5,7 @@ import lang.messages.Msg
 import lang.messages.MsgHandler
 import lang.nodes.ExprNode
 import lang.semantics.ISemanticAnalyzer
+import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeResult
@@ -92,5 +93,12 @@ abstract class BaseResolver<T, TResult>(
                 null
             }
         }
+    }
+
+    fun <T> withEffectiveScope(isStatic: Boolean, block: () -> T): T {
+        return if (!isStatic && scope.isTypeScope())
+            analyzer.withScope((scope as BaseTypeScope).instanceScope, block)
+        else
+            block()
     }
 }

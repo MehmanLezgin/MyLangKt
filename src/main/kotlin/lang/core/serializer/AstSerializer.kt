@@ -15,9 +15,9 @@ object AstSerializer {
                 children["type"] = it
             }
 
-//            semanticContext?.symbols[expr]?.let {
-//                children["symbol"] = it
-//            }
+            semanticContext?.symbols[expr]?.let {
+                children["symbol"] = it
+            }
 
 
             children.mapWithSymbols(nextIndent)
@@ -74,6 +74,19 @@ object AstSerializer {
             is DecrementNode -> mapOf(
                 "isPost" to expr.isPost,
                 "operand" to expr.operand
+            )
+
+            is SizeofNode -> mapOf(
+                "datatype" to expr.datatype
+            )
+
+            is AlignofNode -> mapOf(
+                "datatype" to expr.datatype
+            )
+
+            is OffsetofNode -> mapOf(
+                "base" to expr.base,
+                "member" to expr.field
             )
 
             is UnaryOpNode -> mapOf(

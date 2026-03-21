@@ -1,6 +1,9 @@
 package lang.messages
 
 object Terms {
+    const val FIELD = "field"
+    const val SIZE = "size"
+    const val ALIGN = "align"
     const val MODULE = "module"
     const val USING = "using"
     const val EXTENSION = "extension"
@@ -21,6 +24,7 @@ object Terms {
     const val NON_STATIC = "non-static"
     const val STATIC = "static"
     const val ARGUMENT_TYPE = "argument type"
+    const val RETURN_TYPE = "return type"
     const val TYPE = "type"
     const val CURRENT_SCOPE = "current scope"
 

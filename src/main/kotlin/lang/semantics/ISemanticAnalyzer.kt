@@ -25,6 +25,7 @@ interface ISemanticAnalyzer {
     val semanticContext: SemanticContext
     val pipeline: AnalysisPipeline
     val localDeclPipeline: LocalDeclPipeline
+    val typeLayoutProvider: TypeLayoutProvider
 
     fun resolve(sourceUnit: SourceUnit)
     fun <T> withScope(targetScope: Scope = Scope(parent = this.scope), block: () -> T): T

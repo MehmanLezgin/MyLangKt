@@ -13,6 +13,7 @@ import lang.nodes.UsingDirectiveNode
 import lang.nodes.VarDeclStmtNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.resolvers.BaseResolver
+import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.symbols.ClassSymbol
 import lang.semantics.symbols.EnumSymbol
 import lang.semantics.symbols.InterfaceSymbol
@@ -49,13 +50,15 @@ class NameCollectionPass(
     fun resolve(target: VarDeclStmtNode) {
         val modifiers = modResolver.resolveVarModifiers(target.modifiers)
 
-        scope.defineVarName(
-            name = target.name.value,
-            isMutable = target.isMutable,
-            modifiers = modifiers
-        ).handle(target.name.range) {
-            val sym = sym as VarSymbol
-            target bind sym
+        withEffectiveScope(isStatic = modifiers.isStatic) {
+            scope.defineVarName(
+                name = target.name.value,
+                isMutable = target.isMutable,
+                modifiers = modifiers
+            ).handle(target.name.range) {
+                val sym = sym as VarSymbol
+                target bind sym
+            }
         }
     }
 
@@ -119,7 +122,7 @@ class NameCollectionPass(
         when (clause) {
             is NameClause.Items -> {
                 clause.items.forEach { item ->
-                    when(item) {
+                    when (item) {
                         is NameSpecifier.Alias -> {
                             scope.defineAlias(
                                 name = item.alias.value,
@@ -129,10 +132,12 @@ class NameCollectionPass(
                                 target bind sym
                             }
                         }
+
                         else -> Unit
                     }
                 }
             }
+
             NameClause.Wildcard -> Unit
         }
     }

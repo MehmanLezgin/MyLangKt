@@ -28,6 +28,19 @@ open class BaseTokenStream(
         return RangeBuilder(range) { prevRange }.block()
     }
 
+    override fun <T : Token> consume(clazz: KClass<out T>, msg: String): T? {
+        val token = peek()
+
+        @Suppress("UNCHECKED_CAST")
+        return if (clazz.isInstance(token)) {
+            next()
+            token as T
+        } else {
+            msgHandler.syntaxError(msg, token.range)
+            null
+        }
+    }
+
     override fun reset() {
         lexer.reset()
     }
@@ -45,37 +58,53 @@ open class BaseTokenStream(
         return types.any { it.isInstance(t) }
     }
 
-    override fun <T : Token> expect(clazz: KClass<T>, msg: String): Boolean {
+    override fun <T : Token> expect(clazz: KClass<out T>, msg: String): T? {
         val t = peek()
+
+        @Suppress("UNCHECKED_CAST")
         if (clazz.isInstance(t)) {
-            return true
+            next()
+            return t as T
         }
+
         msgHandler.syntaxError(msg = msg, t.range)
-        return false
+        return null
     }
 
     override fun expect(vararg classes: KClass<out Token>, msg: String): Boolean {
         val t = peek()
 
-        if (classes.any { it.isInstance(t) }) {
+        if (classes.any { it.isInstance(t) })
             return true
+
+        msgHandler.syntaxError(msg = msg, t.range)
+        return false
+    }
+
+
+    override fun expectKeyword(type: KeywordType, msg: String): Token.Keyword? {
+        val t = peek()
+        if (t is Token.Keyword && t.type == type) {
+            next()
+            return t
         }
 
         msgHandler.syntaxError(msg = msg, t.range)
-        return false
+        return null
     }
 
-
-    override fun expectKeyword(type: KeywordType, msg: String): Boolean {
+    override fun expectOperator(type: OperatorType, msg: String): Token.Operator? {
         val t = peek()
-        if (t is Token.Keyword && t.type == type)
-            return true
+        if (t is Token.Operator && t.type == type) {
+            next()
+            return t
+        }
 
         msgHandler.syntaxError(msg = msg, t.range)
-        return false
+        return null
     }
 
-    override fun matchSemicolonOrLinebreak() : Boolean {
+    override fun matchSemicolonOrLinebreak(): Boolean {
         val t = peek()
 
         if (t is Token.Semicolon || t is Token.EOF) {
@@ -113,6 +142,7 @@ open class BaseTokenStream(
             is Token.Str,
             is Token.UnclosedQuote,
             is Token.Unknown -> next()
+
             else -> {}
         }
 

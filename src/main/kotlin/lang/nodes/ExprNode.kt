@@ -171,6 +171,50 @@ data class IncrementNode(
     range = range
 )
 
+data class SizeofNode(
+    val datatype: BaseDatatypeNode,
+    override val range: SourceRange
+) : ExprNode {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = SizeofNode(
+            datatype = mapper(datatype) as? BaseDatatypeNode ?: datatype,
+            range = range
+        )
+
+        return mapper(newNode)
+    }
+}
+
+data class AlignofNode(
+    val datatype: BaseDatatypeNode,
+    override val range: SourceRange
+) : ExprNode {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = AlignofNode(
+            datatype = mapper(datatype) as? BaseDatatypeNode ?: datatype,
+            range = range
+        )
+
+        return mapper(newNode)
+    }
+}
+
+data class OffsetofNode(
+    val base: IdentifierNode,
+    val field: IdentifierNode,
+    override val range: SourceRange
+) : ExprNode {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
+        val newNode = OffsetofNode(
+            base = mapper(base) as? IdentifierNode ?: base,
+            field = mapper(field) as? IdentifierNode ?: field,
+            range = range
+        )
+
+        return mapper(newNode)
+    }
+}
+
 data class DecrementNode(
     override val operand: ExprNode,
     val isPost: Boolean,

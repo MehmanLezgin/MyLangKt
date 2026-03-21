@@ -10,7 +10,7 @@ sealed class ParsingContext {
     object ScopeChain : ParsingContext()
 
     fun canParseTrailingLambdas(): Boolean =
-        this != Header && this != Condition
+        this != Header && this != FuncHeader && this != Condition
 
     fun canParseTypeArgs() : Boolean =
         this == TypeArg ||

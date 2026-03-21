@@ -345,14 +345,18 @@ open class Scope(
         node: ClassDeclStmtNode,
         modifiers: Modifiers,
     ): ScopeResult {
+        val classScope = ClassScope(
+            parent = this,
+            scopeName = node.name.value,
+        )
+
         val sym = ClassSymbol(
             name = node.name.value,
-            scope = ClassScope(
-                parent = this,
-                scopeName = node.name.value,
-            ),
+            scope = classScope,
             modifiers = modifiers
         )
+
+        classScope.classSym = sym
 
         return defineRaw(sym)
     }
@@ -406,5 +410,14 @@ open class Scope(
         )
 
         return defineRaw(sym)
+    }
+
+    inline fun <reified T: Scope> getEnclosingScope() : T? {
+        var curr = this
+
+        while (true) {
+            if (curr is T) return curr
+            curr = curr.parent ?: return null
+        }
     }
 }

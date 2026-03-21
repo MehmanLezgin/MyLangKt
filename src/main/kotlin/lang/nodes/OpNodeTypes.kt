@@ -52,7 +52,6 @@ enum class UnaryOpType {
     ADDRESS_OF,
     INDIRECTION,
     BITWISE_NOT,
-    SIZEOF,
     IS,
     NON_NULL_ASSERT
 }
