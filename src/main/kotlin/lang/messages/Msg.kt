@@ -172,6 +172,11 @@ object Msg {
             "$itemKind '$name' not defined in ${scopeName ?: Terms.CURRENT_SCOPE}"
     }
 
+    object SymbolIsInaccessible : FormattableMsg {
+        fun format(itemKind: String = Terms.SYMBOL, name: String) =
+            "$itemKind '$name' is inaccessible"
+    }
+
     object SymbolAlreadyDefinedIn : FormattableMsg {
         fun format(itemKind: String = Terms.SYMBOL, name: String, scopeName: String?) =
             "$itemKind '$name' is already defined in ${scopeName ?: Terms.CURRENT_SCOPE}"

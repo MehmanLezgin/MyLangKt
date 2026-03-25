@@ -6,7 +6,7 @@ import lang.semantics.types.UnresolvedType
 
 sealed class Symbol(
     open val name: String,
-    open val modifiers: Modifiers = Modifiers()
+    open val modifiers: Modifiers = Modifiers(),
 )
 
 open class VarSymbol(

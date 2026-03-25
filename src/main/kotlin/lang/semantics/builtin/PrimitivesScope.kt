@@ -97,13 +97,17 @@ object PrimitivesScope : Scope(
 
 
     init {
-        val msgHandler = MsgHandler()
+        try {
 
-        primitives(allPrimitives)
+            val msgHandler = MsgHandler()
 
+            primitives(allPrimitives)
 
+            if (msgHandler.hasErrors)
+                println(msgHandler.formatErrors())
 
-        if (msgHandler.hasErrors)
-            println(msgHandler.formatErrors())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

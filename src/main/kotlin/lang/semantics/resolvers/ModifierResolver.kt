@@ -19,7 +19,6 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
     private val moduleAllowedModifiers = setOf(
         ModifierNode.Private::class,
         ModifierNode.Public::class,
-        ModifierNode.Protected::class,
         ModifierNode.Static::class,
     )
 
@@ -28,33 +27,28 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
     private val classAllowedModifiers = setOf(
         ModifierNode.Private::class,
         ModifierNode.Public::class,
-        ModifierNode.Protected::class,
         ModifierNode.Open::class,
         ModifierNode.Abstract::class,
     )
 
     private val interfaceAllowedModifiers = setOf(
         ModifierNode.Public::class,
-        ModifierNode.Protected::class,
         ModifierNode.Abstract::class,
     )
 
     private val enumAllowedModifiers = setOf(
         ModifierNode.Public::class,
-        ModifierNode.Protected::class,
     )
 
     private val varAllowedModifiers = setOf(
         ModifierNode.Private::class,
         ModifierNode.Public::class,
-        ModifierNode.Protected::class,
         ModifierNode.Static::class,
     )
 
     private val funcAllowedModifiers = setOf(
         ModifierNode.Private::class,
         ModifierNode.Public::class,
-        ModifierNode.Protected::class,
         ModifierNode.Static::class,
         ModifierNode.Override::class,
         ModifierNode.Open::class,
@@ -70,7 +64,7 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         return when (modifierNode) {
             is ModifierNode.Public -> Visibility.PUBLIC
             is ModifierNode.Private -> Visibility.PRIVATE
-            is ModifierNode.Protected -> Visibility.PROTECTED
+            is ModifierNode.Internal -> Visibility.INTERNAL
             else -> null
         }
     }

@@ -69,6 +69,7 @@ class DeclarationHeaderPass(
         }
 
         sym.superType = superType
+        sym.staticScope.superTypeScope = decl?.staticScope
         withScopeResolve(sym.scope, target.body)
     }
 

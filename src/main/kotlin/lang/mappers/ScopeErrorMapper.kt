@@ -7,11 +7,12 @@ import lang.messages.Terms.plural
 import lang.semantics.scopes.ScopeError
 
 object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
-    private fun operatorParamMsg(operSymbolStr: String, expected: Int): String {
+    private fun operatorParamMsg(operSymbolStr: String, expected: Int, isStatic: Boolean): String {
         val expectedStr = "${expected.exactly()} ${Terms.PARAM.plural()}"
+        val prefix = if (isStatic) Terms.STATIC else Terms.NON_STATIC
 
         return Msg.SymRequiresItem.format(
-            "${Terms.NON_STATIC} ${Terms.OPERATOR}",
+            "$prefix ${Terms.OPERATOR}",
             operSymbolStr,
             expectedStr
         )
@@ -26,15 +27,15 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
                 )
 
             is ScopeError.OperParamCountMismatch ->
-                operatorParamMsg(a.oper.raw, a.expected)
+                operatorParamMsg(a.oper.raw, a.expected, a.isStatic)
 
             is ScopeError.NotDefined ->
                 Msg.SymbolNotDefinedIn.format(name = a.symName, scopeName = a.scopeName)
 
             ScopeError.AmbiguousOverloadedFunc -> Msg.AMBIGUOUS_OVERLOADED_FUNCTION
-            ScopeError.CannotExport -> Msg.CANNOT_EXPORT
             ScopeError.ConflictingOverloads -> Msg.CONFLICTING_OVERLOADS
             ScopeError.InvalidConstValue -> Msg.INVALID_CONST_VALUE
+
             is ScopeError.NoFuncOverload -> {
                 val msg = if (a.isOperator)
                     Msg.NoOperOverload
@@ -46,6 +47,9 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
                     a.scopeName,
                 )
             }
+
+            is ScopeError.Inaccessible ->
+                Msg.SymbolIsInaccessible.format(name = a.symName)
         }
     }
 }

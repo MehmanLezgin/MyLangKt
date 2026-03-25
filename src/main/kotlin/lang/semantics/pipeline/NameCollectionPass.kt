@@ -13,7 +13,6 @@ import lang.nodes.UsingDirectiveNode
 import lang.nodes.VarDeclStmtNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.resolvers.BaseResolver
-import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.symbols.ClassSymbol
 import lang.semantics.symbols.EnumSymbol
 import lang.semantics.symbols.InterfaceSymbol
@@ -95,7 +94,8 @@ class NameCollectionPass(
 
     fun resolve(target: ClassDeclStmtNode) {
         val modifiers = modResolver.resolveClassModifiers(target.modifiers)
-        scope.defineClass(target, modifiers = modifiers)
+
+        scope.defineClass(node = target, modifiers = modifiers)
             .handle(target.name.range) {
                 val sym = sym as ClassSymbol
                 target bind sym

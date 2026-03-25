@@ -12,7 +12,13 @@ sealed class ScopeResult {
 
 sealed class ScopeError {
     data class AlreadyDefined(val symName: String, val scopeName: String?) : ScopeError()
-    data class OperParamCountMismatch(val oper: OperatorType, val expected: Int) : ScopeError()
+
+    data class OperParamCountMismatch(
+        val oper: OperatorType,
+        val expected: Int,
+        val isStatic: Boolean = false
+    ) : ScopeError()
+
     data class NotDefined(val symName: String, val scopeName: String?) : ScopeError()
     data class NoFuncOverload(
         val symName: String,
@@ -21,8 +27,9 @@ sealed class ScopeError {
         val scopeName: String?,
     ) : ScopeError()
 
+    data class Inaccessible(val symName: String) : ScopeError()
+
     object ConflictingOverloads : ScopeError()
     object InvalidConstValue : ScopeError()
     object AmbiguousOverloadedFunc : ScopeError()
-    object CannotExport : ScopeError()
 }

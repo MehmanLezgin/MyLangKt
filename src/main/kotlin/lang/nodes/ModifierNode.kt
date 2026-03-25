@@ -10,7 +10,7 @@ sealed class ModifierNode(
 ) : ExprNode {
     data class Private      (override val range: SourceRange) : ModifierNode(KeywordType.PRIVATE, range)
     data class Public       (override val range: SourceRange) : ModifierNode(KeywordType.PUBLIC, range)
-    data class Protected    (override val range: SourceRange) : ModifierNode(KeywordType.PROTECTED, range)
+    data class Internal     (override val range: SourceRange) : ModifierNode(KeywordType.INTERNAL, range)
     data class Static       (override val range: SourceRange) : ModifierNode(KeywordType.STATIC, range)
     data class Override     (override val range: SourceRange) : ModifierNode(KeywordType.OVERRIDE, range)
     data class Open         (override val range: SourceRange) : ModifierNode(KeywordType.OPEN, range)

@@ -4,6 +4,7 @@ import lang.core.operators.OperatorType
 import lang.semantics.builtin.builders.constVar
 import lang.semantics.builtin.builders.init
 import lang.semantics.builtin.builders.operFunc
+import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.Scope
 import lang.semantics.types.PrimitiveSize
 import lang.semantics.types.PrimitiveType
@@ -48,7 +49,7 @@ class CharPrimitive(
 ) {
     override fun recreate(flags: TypeFlags) = CharPrimitive(flags = flags)
 
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val charType = this
 
@@ -92,7 +93,7 @@ class UCharPrimitive(
     override fun recreate(flags: TypeFlags) = UCharPrimitive(flags = flags)
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 
@@ -113,7 +114,7 @@ class Int8Primitive(
 ) {
     override fun recreate(flags: TypeFlags) = Int8Primitive(flags = flags)
 
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 
@@ -135,7 +136,7 @@ class UInt8Primitive(
     override fun recreate(flags: TypeFlags) = UInt8Primitive(flags = flags)
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 
@@ -156,7 +157,7 @@ class Int16Primitive(
 ) {
     override fun recreate(flags: TypeFlags) = Int16Primitive(flags = flags)
 
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 
@@ -178,7 +179,7 @@ class UInt16Primitive(
     override fun recreate(flags: TypeFlags) = UInt16Primitive(flags = flags)
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 
@@ -199,34 +200,32 @@ class Int32Primitive(
 ) {
     override fun recreate(flags: TypeFlags) = Int32Primitive(flags = flags)
 
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 
-        this.apply {
-            scope.init {
-                constVar(SymNames.MIN_VALUE, type, Int.MIN_VALUE)
-                constVar(SymNames.MAX_VALUE, type, Int.MAX_VALUE)
+        scope.init {
+            constVar(SymNames.MIN_VALUE, type, Int.MIN_VALUE)
+            constVar(SymNames.MAX_VALUE, type, Int.MAX_VALUE)
 
-                operFunc(OperatorType.PLUS) {
-                    params { SymNames.OTHER ofType type }
-                    returns(type)
-                }
+            operFunc(OperatorType.PLUS) {
+                params { SymNames.OTHER ofType type }
+                returns(type)
+            }
 
-                operFunc(OperatorType.MUL) {
-                    params { SymNames.OTHER ofType type }
-                    returns(type)
-                }
+            operFunc(OperatorType.MUL) {
+                params { SymNames.OTHER ofType type }
+                returns(type)
+            }
 
-                operFunc(OperatorType.SHIFT_LEFT) {
-                    params { SymNames.OTHER ofType type }
-                    returns(type)
-                }
+            operFunc(OperatorType.SHIFT_LEFT) {
+                params { SymNames.OTHER ofType type }
+                returns(type)
+            }
 
-                operFunc(OperatorType.SHIFT_RIGHT) {
-                    params { SymNames.OTHER ofType type }
-                    returns(type)
-                }
+            operFunc(OperatorType.SHIFT_RIGHT) {
+                params { SymNames.OTHER ofType type }
+                returns(type)
             }
         }
     }
@@ -243,7 +242,7 @@ class UInt32Primitive(
     override fun recreate(flags: TypeFlags) = UInt32Primitive(flags = flags)
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 
@@ -264,7 +263,7 @@ class Int64Primitive(
 ) {
     override fun recreate(flags: TypeFlags) = Int64Primitive(flags = flags)
 
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 
@@ -286,7 +285,7 @@ class UInt64Primitive(
     override fun recreate(flags: TypeFlags) = UInt64Primitive(flags = flags)
 
     @OptIn(ExperimentalUnsignedTypes::class)
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 
@@ -307,7 +306,7 @@ class Float32Primitive(
 ) {
     override fun recreate(flags: TypeFlags) = Float32Primitive(flags = flags)
 
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 
@@ -328,7 +327,7 @@ class Float64Primitive(
 ) {
     override fun recreate(flags: TypeFlags) = Float64Primitive(flags = flags)
 
-    override fun initWith(scope: Scope) {
+    override fun initWith(scope: BaseTypeScope) {
         super.initWith(scope)
         val type = this
 

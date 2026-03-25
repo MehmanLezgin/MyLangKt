@@ -21,7 +21,7 @@ enum class KeywordType(val value: String) {
 
     PRIVATE("private"),
     PUBLIC("public"),
-    PROTECTED("protected"),
+    INTERNAL("internal"),
     CONST("const"),
     STATIC("static"),
     OPEN("open"),

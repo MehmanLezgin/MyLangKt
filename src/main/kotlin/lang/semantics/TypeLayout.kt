@@ -52,5 +52,4 @@ class FieldLayout(
     override val align: Int,
     val offset: Int,
     val field: Symbol,
-    val isSuper: Boolean = false
 ) : TypeLayout

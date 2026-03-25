@@ -8,10 +8,13 @@ import lang.semantics.symbols.BuiltInOperatorFuncSymbol
 import lang.core.operators.OperatorType
 import lang.semantics.builtin.builders.init
 import lang.semantics.builtin.builders.operFunc
+import lang.semantics.symbols.Modifiers
 
 fun PrimitivesScope.ptrOperPlus() =
     init {
         operFunc(OperatorType.PLUS) {
+            modifiers(Modifiers(isStatic = true))
+
             params {
                 "ptr" ofType voidPtr
                 "offset" ofType int32
@@ -24,6 +27,8 @@ fun PrimitivesScope.ptrOperPlus() =
 fun PrimitivesScope.ptrOperMinus() =
     init {
         operFunc(OperatorType.MINUS) {
+            modifiers(Modifiers(isStatic = true))
+
             params {
                 "ptr" ofType voidPtr
                 "offset" ofType int32
@@ -35,6 +40,8 @@ fun PrimitivesScope.ptrOperMinus() =
 fun PrimitivesScope.ptrOperEq() =
     init {
         operFunc(OperatorType.EQUAL) {
+            modifiers(Modifiers(isStatic = true))
+
             ptrComparison()
         } as BuiltInOperatorFuncSymbol
     }
@@ -42,6 +49,8 @@ fun PrimitivesScope.ptrOperEq() =
 fun PrimitivesScope.ptrOperNotEq() =
     init {
         operFunc(OperatorType.NOT_EQUAL) {
+            modifiers(Modifiers(isStatic = true))
+
             ptrComparison()
         } as BuiltInOperatorFuncSymbol
     }
@@ -49,6 +58,8 @@ fun PrimitivesScope.ptrOperNotEq() =
 fun PrimitivesScope.ptrOperGrThan() =
     init {
         operFunc(OperatorType.GREATER) {
+            modifiers(Modifiers(isStatic = true))
+
             ptrComparison()
         } as BuiltInOperatorFuncSymbol
     }
@@ -56,6 +67,8 @@ fun PrimitivesScope.ptrOperGrThan() =
 fun PrimitivesScope.ptrOperLessThan() =
     init {
         operFunc(OperatorType.LESS) {
+            modifiers(Modifiers(isStatic = true))
+
             ptrComparison()
         } as BuiltInOperatorFuncSymbol
     }
@@ -63,6 +76,8 @@ fun PrimitivesScope.ptrOperLessThan() =
 fun PrimitivesScope.ptrOperGrEqThan() =
     init {
         operFunc(OperatorType.GREATER_EQUAL) {
+            modifiers(Modifiers(isStatic = true))
+
             ptrComparison()
         } as BuiltInOperatorFuncSymbol
     }
@@ -70,6 +85,8 @@ fun PrimitivesScope.ptrOperGrEqThan() =
 fun PrimitivesScope.ptrOperLessEqThan() =
     init {
         operFunc(OperatorType.LESS_EQUAL) {
+            modifiers(Modifiers(isStatic = true))
+
             ptrComparison()
         } as BuiltInOperatorFuncSymbol
     }

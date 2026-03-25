@@ -45,13 +45,12 @@ class TypeLayoutProvider(
         return layout
     }
 
-    private fun layoutClass(cls: ClassSymbol): StructLayout {
+    private fun layoutClass(cls: ClassSymbol): StructLayout? {
         var offset = 0
         var maxAlign = 1
         val fieldsLayout = mutableListOf<FieldLayout>()
         var parentLayouts: List<TypeLayout>? = null
 
-        // ⚠ Важно: порядок должен быть объявленным, не через Map.values
         val fields = cls.scope.instanceScope
             .symbols
             .values
@@ -61,13 +60,6 @@ class TypeLayoutProvider(
             val superLayout = getLayout(superType) ?: return@let
 
             parentLayouts = listOf(superLayout)
-//                FieldLayout(
-//                    field = superType.declaration!!,
-//                    offset = offset,
-//                    size = superLayout.size,
-//                    align = superLayout.align
-//                )
-//            )
             val tailPadding = if (superLayout is StructLayout) superLayout.tailPadding else 0
 
             offset += superLayout.size - tailPadding
@@ -77,27 +69,24 @@ class TypeLayoutProvider(
         for (field in fields) {
 
             val fieldLayout = getLayout(field.type)
-                ?: error("Type ${field.type} has no layout")
+                ?: return null
 
             val fieldAlign = fieldLayout.align
             val fieldSize = fieldLayout.size
 
-            // 🔹 выравниваем offset под поле
             offset = alignTo(offset, fieldAlign)
 
             fieldsLayout += FieldLayout(
                 field = field,
                 offset = offset,
                 size = fieldSize,
-                align = fieldAlign,
-                isSuper = true
+                align = fieldAlign
             )
 
             offset += fieldSize
             maxAlign = maxOf(maxAlign, fieldAlign)
         }
 
-        // 🔹 финальное выравнивание размера структуры
         val finalSize = alignTo(offset, maxAlign)
         val tailPadding = finalSize - offset
 

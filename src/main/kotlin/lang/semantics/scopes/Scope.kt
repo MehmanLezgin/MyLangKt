@@ -3,6 +3,7 @@ package lang.semantics.scopes
 import lang.core.operators.OperatorType
 import lang.nodes.*
 import lang.parser.ParserUtils.isBinOperator
+import lang.parser.ParserUtils.isUnaryOperator
 import lang.semantics.symbols.*
 import lang.semantics.types.ErrorType.castCost
 import lang.semantics.types.Type
@@ -31,7 +32,7 @@ open class Scope(
     fun isTypeScope() = this is BaseTypeScope && this !is ModuleScope
 
 
-    private fun <T : Symbol> defineRaw(sym: T, visibility: Visibility = Visibility.PUBLIC): ScopeResult {
+    private fun <T : Symbol> defineRaw(sym: T): ScopeResult {
         val name = sym.name
         val definedSym = symbols[name]
 
@@ -46,11 +47,11 @@ open class Scope(
         return sym.ok()
     }
 
-    fun <T : Symbol> define(sym: T, visibility: Visibility = Visibility.PUBLIC): ScopeResult {
+    fun <T : Symbol> define(sym: T): ScopeResult {
         return when (sym) {
             is FuncSymbol -> defineFunc(sym)
             is OverloadedFuncSymbol -> defineFuncOverload(sym)
-            else -> defineRaw(sym, visibility)
+            else -> defineRaw(sym)
         }
     }
 
@@ -62,14 +63,41 @@ open class Scope(
         return defineRaw(sym)
     }
 
-    fun resolve(name: String, asMember: Boolean = false): ScopeResult {
+    open fun isSymVisibleFrom(sym: Symbol, scope: Scope): Boolean {
+        return sym.modifiers.visibility == Visibility.PUBLIC
+    }
+
+    internal fun resolveRaw(name: String): Symbol? {
         var sym = symbols[name]
 
         if (sym is AliasSymbol)
             sym = sym.sym
 
+        return sym
+    }
+
+    internal fun prepareResult(sym: Symbol, from: Scope): ScopeResult {
+        return when {
+            !isSymVisibleFrom(sym = sym, scope = from) ->
+                ScopeError.Inaccessible(
+                    symName = sym.name
+                ).err()
+
+            sym is VarSymbol && sym.constValue != null ->
+                sym.toConstValueSymbol().ok()
+
+            else -> sym.ok()
+        }
+    }
+
+    fun resolve(name: String, from: Scope = this, asMember: Boolean = false): ScopeResult {
+        if (asMember && this is BaseTypeScope)
+            return this.resolveMember(name, from)
+
+        var sym = resolveRaw(name)
+
         if (sym == null) {
-            if (asMember || parent == null)
+            if (parent == null)
                 return ScopeError.NotDefined(
                     symName = name,
                     scopeName = absoluteScopePath
@@ -77,15 +105,18 @@ open class Scope(
 
             when (val parentResult = parent!!.resolve(name)) {
                 is ScopeResult.ResultList,
-                is ScopeResult.Error -> return parentResult
-                is ScopeResult.Success<*> -> sym = parentResult.sym
+                is ScopeResult.Error -> {
+                    val enclosingTypeScope = getEnclosingScope<BaseTypeScope>()
+                    return enclosingTypeScope?.resolveMember(name, from = enclosingTypeScope)
+                        ?: parentResult
+                }
+
+                is ScopeResult.Success<*> ->
+                    sym = parentResult.sym
             }
         }
 
-        if (sym is VarSymbol && sym.constValue != null)
-            sym = sym.toConstValueSymbol()
-
-        return sym.ok()
+        return prepareResult(sym = sym, from = from)
     }
 
     private fun checkArgumentTypes(
@@ -166,24 +197,30 @@ open class Scope(
 
     fun resolveFunc(
         name: String,
-        argTypes: List<Type>
+        argTypes: List<Type>,
+        isStatic: Boolean = false
     ): ScopeResult {
         return when (val result = resolve(name)) {
             is ScopeResult.ResultList,
             is ScopeResult.Error -> result
+
             is ScopeResult.Success<*> -> {
                 val overloads = when (val sym = result.sym) {
                     is FuncSymbol -> listOf(sym)
                     is OverloadedFuncSymbol -> {
-                        resolveBestOverloads(sym.overloads, argTypes).also {
-                            if (it.isEmpty())
-                                return ScopeError.NoFuncOverload(
-                                    symName = name,
-                                    isOperator = sym.isOperator,
-                                    argTypes = argTypes,
-                                    scopeName = absoluteScopePath
-                                ).err()
-                        }
+                        val effectiveArgTypes = if (isStatic) argTypes else argTypes.drop(1)
+
+                        val bestOverloads = resolveBestOverloads(sym.overloads, effectiveArgTypes)
+
+                        if (bestOverloads.isEmpty())
+                            return ScopeError.NoFuncOverload(
+                                symName = name,
+                                isOperator = sym.isOperator,
+                                argTypes = argTypes,
+                                scopeName = absoluteScopePath
+                            ).err()
+
+                        bestOverloads
                     }
 
                     else -> return ScopeError.NotDefined(
@@ -202,8 +239,8 @@ open class Scope(
         }
     }
 
-    fun resolveOperFunc(operator: OperatorType, argTypes: List<Type>): ScopeResult =
-        resolveFunc(operator.fullName, argTypes)
+    fun resolveOperFunc(operator: OperatorType, argTypes: List<Type>, isStatic: Boolean): ScopeResult =
+        resolveFunc(operator.fullName, argTypes, isStatic)
 
     fun defineFunc(
         node: FuncDeclStmtNode,
@@ -250,15 +287,32 @@ open class Scope(
         if (funcSym !is OperatorFuncSymbol) return null
         val oper = funcSym.operator
 
-        val paramsExpected = when {
-            oper.isBinOperator() -> 2
-            else -> 1
-        }
+        val isUnary = oper.isUnaryOperator()
+        val isBin = oper.isBinOperator()
 
-        if (funcSym.params.list.size != paramsExpected) {
+        val paramsCount = funcSym.params.list.size
+
+        val isStatic = funcSym.modifiers.isStatic
+        val factor = if (isStatic) 1 else 0
+
+        val unaryParamCount = 0 + factor
+        val binParamCount = 1 + factor
+        val isValid = isUnary && paramsCount == unaryParamCount || isBin && paramsCount == binParamCount
+
+        if (isValid) return null
+
+        val paramsExpected = when {
+            isUnary && isBin -> 1
+            isBin -> 1
+            else -> 0
+        } + factor
+
+
+        if (paramsCount != paramsExpected) {
             return ScopeError.OperParamCountMismatch(
                 oper = oper,
-                expected = paramsExpected
+                expected = paramsExpected,
+                isStatic = isStatic
             )
         }
 
@@ -343,11 +397,11 @@ open class Scope(
 
     fun defineClass(
         node: ClassDeclStmtNode,
-        modifiers: Modifiers,
+        modifiers: Modifiers
     ): ScopeResult {
         val classScope = ClassScope(
             parent = this,
-            scopeName = node.name.value,
+            scopeName = node.name.value
         )
 
         val sym = ClassSymbol(
@@ -412,7 +466,7 @@ open class Scope(
         return defineRaw(sym)
     }
 
-    inline fun <reified T: Scope> getEnclosingScope() : T? {
+    inline fun <reified T : Scope> getEnclosingScope(): T? {
         var curr = this
 
         while (true) {

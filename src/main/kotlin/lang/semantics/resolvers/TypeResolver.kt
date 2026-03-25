@@ -36,6 +36,7 @@ class TypeResolver(
             is SizeofNode,
             is AlignofNode,
             is OffsetofNode -> resolveConst(target)
+
             else -> ErrorType
         }.also { target attach it }
     }
@@ -67,7 +68,7 @@ class TypeResolver(
 
     private fun resolve(target: DotAccessNode): Type {
         val baseType = resolve(target.base)
-        val targetScope = baseType.declaration?.staticScope?.instanceScope
+        val targetScope = baseType.declaration?.staticScope//?.instanceScope
 
         if (!baseType.isExprType) {
             if (baseType != ErrorType)
@@ -80,17 +81,17 @@ class TypeResolver(
             return ErrorType
         }
 
-        return analyzer.withScope(targetScope) {
-            val member = target.member
 
-            val result = targetScope.resolve(name = member.value, asMember = true)
+        val member = target.member
 
-            result.handle(member.range) {
-                target bind sym
-                target.member bind sym
+        val result = targetScope.resolve(name = member.value, from = scope, asMember = true)
+
+        return result.handle(member.range) {
+            target bind sym
+            target.member bind sym
+            analyzer.withScope(targetScope) {
                 resolve(member, asMember = true)
             }
-
         }.also {
             target attach it
             target.member attach it
@@ -119,7 +120,7 @@ class TypeResolver(
         return analyzer.withScope(targetScope) {
             val member = target.member.identifier
 
-            val result = targetScope.resolve(name = member.value, asMember = true)
+            val result = targetScope.resolve(name = member.value, from = scope, asMember = true)
 
             result.handle(member.range) {
                 target bind sym
@@ -474,20 +475,26 @@ class TypeResolver(
         operator: OperatorType,
     ): Type {
         val leftType = argTypes.getOrNull(0) ?: return ErrorType
+        val isStatic: Boolean
 
         val operScope = when (leftType) {
             is PrimitiveType,
-            is UserType ->
+            is UserType -> {
+                isStatic = false
                 leftType.declaration?.staticScope?.instanceScope
+            }
 
-            else -> scope
+            else -> {
+                isStatic = true
+                scope
+            }
         }
 
         if (operScope == null) {
             return target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(leftType.toString()))
         }
 
-        val result = operScope.resolveOperFunc(operator = operator, argTypes = argTypes)
+        val result = operScope.resolveOperFunc(operator = operator, argTypes = argTypes, isStatic = isStatic)
 
         return result.handle(target.range) {
             val operFunc = sym as? FuncSymbol

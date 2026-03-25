@@ -1,5 +1,6 @@
 package lang.semantics.types
 
+import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.builtin.builders.constVar
 import lang.semantics.builtin.builders.init
 import lang.semantics.scopes.BaseTypeScope
@@ -28,23 +29,14 @@ open class PrimitiveType(
         return c
     }
 
-    open fun initWith(scope: Scope) {
+    open fun initWith(scope: BaseTypeScope) {
         val sym = PrimitiveTypeSymbol(
             type = this,
-            scope = BaseTypeScope(
-                parent = scope,
-                scopeName = this.name,
-            )
+            scope = scope
         )
 
         this.declaration = sym
-        scope.define(sym)
-
-        scope.init {
-            val type = this@PrimitiveType
-            constVar("SIZE_BYTES", type, ConstValue(primitiveSize.size))
-            constVar("SIZE_BITS", type, ConstValue(primitiveSize.size * 8))
-        }
+        PrimitivesScope.define(sym)
     }
 
     protected open fun recreate(flags: TypeFlags): PrimitiveType =

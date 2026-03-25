@@ -76,8 +76,10 @@ class StmtParser(
             KeywordType.CONST, KeywordType.STATIC,
             KeywordType.OPEN, KeywordType.ABSTRACT,
             KeywordType.OVERRIDE, KeywordType.INFIX,
-            KeywordType.PRIVATE, KeywordType.PUBLIC,
-            KeywordType.PROTECTED ->
+
+            KeywordType.PRIVATE,
+            KeywordType.PUBLIC,
+            KeywordType.INTERNAL ->
                 ::parseDeclarationWithModifiers
 
             KeywordType.CONTINUE -> ::parseContinueStmt
