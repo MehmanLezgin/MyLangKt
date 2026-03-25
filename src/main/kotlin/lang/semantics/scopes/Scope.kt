@@ -63,7 +63,7 @@ open class Scope(
         return defineRaw(sym)
     }
 
-    open fun isSymVisibleFrom(sym: Symbol, scope: Scope): Boolean {
+    open fun isSymVisibleFrom(sym: Symbol, scope: Scope, asMember: Boolean): Boolean {
         return sym.modifiers.visibility == Visibility.PUBLIC
     }
 
@@ -76,9 +76,9 @@ open class Scope(
         return sym
     }
 
-    internal fun prepareResult(sym: Symbol, from: Scope): ScopeResult {
+    internal fun prepareResult(sym: Symbol, from: Scope, asMember: Boolean): ScopeResult {
         return when {
-            !isSymVisibleFrom(sym = sym, scope = from) ->
+            !isSymVisibleFrom(sym = sym, scope = from, asMember = asMember) ->
                 ScopeError.Inaccessible(
                     symName = sym.name
                 ).err()
@@ -116,7 +116,11 @@ open class Scope(
             }
         }
 
-        return prepareResult(sym = sym, from = from)
+        return prepareResult(
+            sym = sym,
+            from = from,
+            asMember = asMember
+        )
     }
 
     private fun checkArgumentTypes(

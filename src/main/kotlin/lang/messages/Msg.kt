@@ -11,7 +11,6 @@ object Msg {
         "Source file can only contain one file-scoped module decl"
 
     const val INVALID_CONST_VALUE = "Invalid const value"
-    const val CANNOT_EXPORT = "Cannot export"
 
 
     object VarMustBeInitialized : FormattableMsg {
@@ -48,11 +47,6 @@ object Msg {
             "Cannot find declaration of '$name'"
     }
 
-    object F_MODULE_DOES_NOT_EXPORT_SYM : FormattableMsg {
-        fun format(modName: String, symName: String) =
-            "A module '$modName' does not export '$symName'"
-    }
-
     object MODULE_ALREADY_EXISTS_IN : FormattableMsg {
         fun format(modName: String, symName: String) =
             "Module '$modName' already exists in '$symName'"
@@ -85,6 +79,11 @@ object Msg {
     object F_MODIFIER_IS_NOT_ALLOWED_ON : FormattableMsg {
         fun format(modifierName: String, declKindName: String) =
             "Modifier '$modifierName' is not allowed on $declKindName"
+    }
+
+    object F_MODIFIER_IS_NOT_ALLOWED_IN_THIS_SCOPE : FormattableMsg {
+        fun format(modifierName: String, declKindName: String) =
+            "Modifier '$modifierName' is not allowed in this scope"
     }
 
     object F_MODIFIER_IS_NOT_INAPPLICABLE_ON_THIS_X : FormattableMsg {
@@ -193,8 +192,6 @@ object Msg {
     const val ENTRY_SOURCE_NOT_DEFINED = "Entry source not defined"
     const val EXPECTED_IMPORT = "Expected 'import'"
     const val MODULE_IS_NOT_AT_START = "Module declaration is not at the start of the file"
-    const val EXPORT_IS_NOT_ALLOWED_IN_THIS_SCOPE = "Modifier 'export' is not allowed in this scope"
-    const val STATIC_IS_NOT_ALLOWED_IN_THIS_SCOPE = "Modifier 'static' is not allowed in this scope"
     const val VOID_CANNOT_BE_PARAM_TYPE = "'void' cannot be a parameter type"
     const val STATIC_FUNC_CANNOT_BE_ABSTRACT = "Static function cannot be abstract"
     const val STATIC_FUNC_CANNOT_BE_OPEN = "Static function cannot be open"

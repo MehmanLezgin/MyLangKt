@@ -32,14 +32,6 @@ abstract class BaseResolver<T, TResult>(
             scopeName.isNullOrEmpty() ->
                 symNotDefinedError(name, range)
 
-            scope is ModuleScope ->
-                semanticError(
-                    Msg.F_MODULE_DOES_NOT_EXPORT_SYM.format(
-                        name,
-                        scopeName
-                    ), range
-                )
-
             else ->
                 semanticError(
                     Msg.SymbolNotDefinedIn.format(

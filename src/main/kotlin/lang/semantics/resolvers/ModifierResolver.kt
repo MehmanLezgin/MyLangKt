@@ -9,6 +9,7 @@ import lang.nodes.ModifierSetNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.ClassScope
+import lang.semantics.scopes.InterfaceScope
 import lang.semantics.scopes.ModuleScope
 import lang.semantics.symbols.Modifiers
 import lang.semantics.symbols.Visibility
@@ -237,13 +238,23 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         val isOpen = hasAllowed(ModifierNode.Open::class)
         val isOverride = hasAllowed(ModifierNode.Override::class)
         val isInfix = hasAllowed(ModifierNode.Infix::class)
-        val visibility = resolveVisibility(modifiers = node)
+        var visibility = resolveVisibility(modifiers = node)
 
         checkModifier(
             isStatic && (scope !is ModuleScope && scope !is BaseTypeScope),
             node.get(ModifierNode.Static::class)?.range,
-            Msg.STATIC_IS_NOT_ALLOWED_IN_THIS_SCOPE
+            Msg.F_MODIFIER_IS_NOT_ALLOWED_IN_THIS_SCOPE.format(
+                KeywordType.STATIC.value, declKindName
+            )
         ) { isStatic = false }
+
+        checkModifier(
+            visibility == Visibility.INTERNAL && (scope !is ClassScope && scope !is InterfaceScope),
+            node.get(ModifierNode.Internal::class)?.range,
+            Msg.F_MODIFIER_IS_NOT_ALLOWED_IN_THIS_SCOPE.format(
+                KeywordType.INTERNAL.value, declKindName
+            )
+        ) { visibility = Visibility.PUBLIC }
 
         val finalIsOpen = isOpen || isAbstract
 

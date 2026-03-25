@@ -19,16 +19,16 @@ open class BaseTypeScope(
         )
     }
 
-    override fun isSymVisibleFrom(sym: Symbol, scope: Scope): Boolean {
-        if (super.isSymVisibleFrom(sym, scope)) return true
+    override fun isSymVisibleFrom(sym: Symbol, scope: Scope, asMember: Boolean): Boolean {
+        if (super.isSymVisibleFrom(sym, scope, asMember)) return true
 
         val enclosing = scope.getEnclosingScope<BaseTypeScope>()
 
         return when (sym.modifiers.visibility) {
             Visibility.PUBLIC -> true
-            Visibility.PRIVATE -> this == enclosing
+            Visibility.PRIVATE -> !asMember && this == enclosing
             Visibility.INTERNAL -> {
-                if (this == enclosing) return true
+                if (!asMember && this == enclosing) return true
                 enclosing?.hasSuperTypeScope(this) == true
             }
         }
@@ -48,7 +48,7 @@ open class BaseTypeScope(
         val sym = instanceScope.resolveRaw(name)
 
         if (sym != null)
-            return prepareResult(sym = sym, from = from)
+            return prepareResult(sym = sym, from = from, asMember = true)
 
         val superTypeScope = superTypeScope
             ?: return ScopeError.NotDefined(
