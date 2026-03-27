@@ -1,12 +1,14 @@
 package lang.semantics.scopes
 
 import lang.core.operators.OperatorType
+import lang.messages.Terms
 import lang.nodes.*
 import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isUnaryOperator
 import lang.semantics.symbols.*
 import lang.semantics.types.ErrorType.castCost
 import lang.semantics.types.Type
+import kotlin.collections.find
 
 typealias SymbolMap = MutableMap<String, Symbol>
 typealias SymbolIMap = Map<String, Symbol>
@@ -63,8 +65,19 @@ open class Scope(
         return defineRaw(sym)
     }
 
-    open fun isSymVisibleFrom(sym: Symbol, scope: Scope, asMember: Boolean): Boolean {
-        return sym.modifiers.visibility == Visibility.PUBLIC
+    fun isSymVisibleFrom(sym: Symbol, scope: Scope, asMember: Boolean = false): Boolean {
+        val fromEnclosing = scope.getEnclosingScope<BaseTypeScope>()
+        val thisEnclosing = this.getEnclosingScope<BaseTypeScope>()
+
+        return when (sym.modifiers.visibility) {
+            Visibility.PUBLIC -> true
+            Visibility.PRIVATE -> !asMember && thisEnclosing == fromEnclosing
+            Visibility.INTERNAL -> {
+                if (thisEnclosing == null) return false
+                if (!asMember && thisEnclosing == fromEnclosing) return true
+                fromEnclosing?.hasSuperTypeScope(thisEnclosing) == true
+            }
+        }
     }
 
     internal fun resolveRaw(name: String): Symbol? {
@@ -148,15 +161,20 @@ open class Scope(
 
     fun resolveBestOverloads(
         overloads: List<FuncSymbol>,
+        from: Scope,
         types: List<Type>,
         returnType: Type? = null
     ): List<FuncSymbol> {
         // compute (func, cost) for all valid overloads
         val costs = overloads.mapNotNull { func ->
+
             if (func.params.list.size != types.size) return@mapNotNull null
 
             val params = func.params.list
             var totalCost = 0
+
+            if (!isSymVisibleFrom(func, from))
+                totalCost += 100
 
             for (i in types.indices) {
                 val cost = types[i].castCost(params[i].type) ?: return@mapNotNull null
@@ -174,6 +192,72 @@ open class Scope(
         val minCost = costs.minOfOrNull { it.second } ?: return emptyList()
 
         return costs.filter { it.second == minCost }.map { it.first }
+    }
+
+    private fun pickSingleFuncSym(
+        name: String,
+        from: Scope,
+        argTypes: List<Type>,
+        kind: FuncKind,
+        overloads: List<FuncSymbol>?
+    ): ScopeResult {
+        return if (overloads.isNullOrEmpty())
+            ScopeError.NoFuncOverload(
+                kind = kind,
+                symName = name,
+                argTypes = argTypes,
+                scopeName = absoluteScopePath
+            ).err()
+        else if (overloads.size > 1)
+            ScopeError.AmbiguousOverloadedFunc.err()
+        else {
+            val best = overloads[0]
+            if (!isSymVisibleFrom(sym = best, scope = from, asMember = false))
+                return ScopeError.Inaccessible(best.name).err()
+
+            best.ok()
+        }
+    }
+
+    fun resolveFunc(
+        overloadedFunc: OverloadedFuncSymbol,
+        from: Scope,
+        argTypes: List<Type>,
+    ): ScopeResult {
+        val constOverloads = resolveBestOverloads(
+            overloadedFunc.overloads,
+            from,
+            argTypes
+        )
+
+        return pickSingleFuncSym(
+            name = overloadedFunc.name,
+            from = from,
+            argTypes = argTypes,
+            kind = overloadedFunc.kind,
+            overloads = constOverloads
+        )
+    }
+
+    fun resolveConstructor(
+        argTypes: List<Type>,
+        from: Scope
+    ): ScopeResult {
+        val overloadedFunc = (symbols.values.find { sym ->
+            sym is OverloadedFuncSymbol && sym.kind == FuncKind.CONSTRUCTOR
+        } as? OverloadedFuncSymbol)
+            ?: return ScopeError.NoFuncOverload(
+                symName = Terms.CONSTRUCTOR,
+                kind = FuncKind.CONSTRUCTOR,
+                argTypes = argTypes,
+                scopeName = absoluteScopePath
+            ).err()
+
+        return resolveFunc(
+            overloadedFunc = overloadedFunc,
+            from = from,
+            argTypes = argTypes
+        )
     }
 
     fun resolveExactOverload(
@@ -201,6 +285,7 @@ open class Scope(
 
     fun resolveFunc(
         name: String,
+        from: Scope,
         argTypes: List<Type>,
         isStatic: Boolean = false
     ): ScopeResult {
@@ -214,12 +299,16 @@ open class Scope(
                     is OverloadedFuncSymbol -> {
                         val effectiveArgTypes = if (isStatic) argTypes else argTypes.drop(1)
 
-                        val bestOverloads = resolveBestOverloads(sym.overloads, effectiveArgTypes)
+                        val bestOverloads = resolveBestOverloads(
+                            overloads = sym.overloads,
+                            from = from,
+                            types = effectiveArgTypes
+                        )
 
                         if (bestOverloads.isEmpty())
                             return ScopeError.NoFuncOverload(
                                 symName = name,
-                                isOperator = sym.isOperator,
+                                kind = sym.kind,
                                 argTypes = argTypes,
                                 scopeName = absoluteScopePath
                             ).err()
@@ -243,8 +332,17 @@ open class Scope(
         }
     }
 
-    fun resolveOperFunc(operator: OperatorType, argTypes: List<Type>, isStatic: Boolean): ScopeResult =
-        resolveFunc(operator.fullName, argTypes, isStatic)
+    fun resolveOperFunc(
+        operator: OperatorType,
+        from: Scope,
+        argTypes: List<Type>, isStatic: Boolean
+    ): ScopeResult =
+        resolveFunc(
+            name = operator.fullName,
+            from = from,
+            argTypes = argTypes,
+            isStatic = isStatic
+        )
 
     fun defineFunc(
         node: FuncDeclStmtNode,
@@ -343,7 +441,7 @@ open class Scope(
             return it.err()
         }
 
-        return when (val definedSymResult = resolve(funcSym.name)) {
+        return when (val definedSymResult = resolve(name = funcSym.name, from = this, asMember = true)) {
             is ScopeResult.Success<*> ->
                 defineOrOverloadFunction(funcSym = funcSym, existingSym = definedSymResult.sym)
 
@@ -446,10 +544,10 @@ open class Scope(
         return defineIfNotExist(sym)
     }
 
-    fun defineFuncNameIfNotExist(name: String, isOperator: Boolean): ScopeResult {
+    fun defineFuncNameIfNotExist(name: String, kind: FuncKind): ScopeResult {
         val sym = OverloadedFuncSymbol(
             name = name,
-            isOperator = isOperator,
+            kind = kind,
             overloads = mutableListOf()
         )
 
@@ -477,5 +575,21 @@ open class Scope(
             if (curr is T) return curr
             curr = curr.parent ?: return null
         }
+    }
+
+    fun getAccessibleConstructors(from: Scope): List<ConstructorSymbol> {
+        @Suppress("UNCHECKED_CAST")
+        val all = (symbols.values.find { sym ->
+            sym is OverloadedFuncSymbol &&
+                    sym.overloads.getOrNull(0) is ConstructorSymbol
+        } as? OverloadedFuncSymbol)?.overloads
+            ?: return emptyList()
+
+        val accessible = all.filter { sym ->
+            isSymVisibleFrom(sym, scope = from, asMember = false) && sym is ConstructorSymbol
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        return accessible as List<ConstructorSymbol>
     }
 }

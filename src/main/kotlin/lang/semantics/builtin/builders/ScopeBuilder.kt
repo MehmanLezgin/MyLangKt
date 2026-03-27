@@ -23,7 +23,7 @@ class ScopeBuilder(
     internal fun addOperFunc(oper: OperatorType, block: FuncBuilder.() -> Unit): FuncSymbol {
         val builder = FuncBuilder(oper)
         val sym = builder.apply(block).build()
-        scope.define(sym).handle()
+        val a = scope.define(sym).handle()
         return sym
     }
 

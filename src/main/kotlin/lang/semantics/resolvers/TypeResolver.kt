@@ -12,6 +12,7 @@ import lang.semantics.types.*
 import lang.core.operators.OperatorType
 import lang.core.SourceRange
 import lang.semantics.scopes.FuncScope
+import lang.semantics.scopes.Scope
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class TypeResolver(
@@ -67,8 +68,7 @@ class TypeResolver(
     }
 
     private fun resolve(target: DotAccessNode): Type {
-        val baseType = resolve(target.base)
-        val targetScope = baseType.declaration?.staticScope//?.instanceScope
+        var baseType = resolve(target.base)
 
         if (!baseType.isExprType) {
             if (baseType != ErrorType)
@@ -76,8 +76,20 @@ class TypeResolver(
             return ErrorType
         }
 
+        if (baseType is PointerType) {
+            if (baseType.level != 1) {
+                target.base.error(Msg.CANNOT_DOT_ACCESS_MULTI_LEVEL_POINTER)
+                return ErrorType
+            }
+
+            baseType = baseType.base.setFlags(isExprType = true)
+        }
+
+        val targetScope = baseType.declaration?.staticScope?.instanceScope
+
+
         if (targetScope == null) {
-            target.base.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(Terms.SYMBOL))
+            target.base.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(baseType.toString()))
             return ErrorType
         }
 
@@ -137,28 +149,6 @@ class TypeResolver(
         return target.map { resolve(it) }
     }
 
-    private fun pickSingleFuncSym(
-        name: String,
-        argTypes: List<Type>,
-        funcReceiverExpr: ExprNode,
-        overloads: List<FuncSymbol>?,
-    ): FuncSymbol? {
-        if (overloads.isNullOrEmpty())
-            funcReceiverExpr.error(
-                Msg.NoFuncOverload.format(
-                    name,
-                    argTypes.joinToString(", "),
-                    scope.absoluteScopePath
-                )
-            )
-        else if (overloads.size > 1)
-            funcReceiverExpr.error(Msg.AMBIGUOUS_OVERLOADED_FUNCTION)
-        else
-            return overloads[0]
-
-        return null
-    }
-
     private fun resolve(target: FuncCallNode): Type {
         val receiver = target.receiver
 
@@ -178,31 +168,7 @@ class TypeResolver(
         }
 
         val sym = when (receiverType) {
-            is FuncType -> {
-                val decl = receiverType.funcDeclaration
-                paramTypes = receiverType.paramTypes
-                params = decl?.params
-                returnType = receiverType.returnType
-                decl
-            }
-
-            is OverloadedFuncType -> {
-                val costOverloads = scope.resolveBestOverloads(receiverType.overloads, argTypes)
-                val sym = pickSingleFuncSym(
-                    name = receiverType.name,
-                    argTypes = argTypes,
-                    funcReceiverExpr = receiver,
-                    overloads = costOverloads
-                )
-
-                if (sym != null) {
-                    paramTypes = sym.paramTypes
-                    params = sym.params
-                    returnType = sym.returnType
-                }
-
-                sym
-            }
+            is ErrorType -> null
 
             is PointerType -> {
                 if (receiverType.level == 1 && receiverType.base is FuncType) {
@@ -217,11 +183,50 @@ class TypeResolver(
                 }
             }
 
-            is ErrorType -> null
+            is OverloadedFuncType -> {
+                var funcSym: FuncSymbol? = null
+
+                scope.resolveFunc(
+                    overloadedFunc = receiverType.overloadedFuncSym,
+                    from = scope,
+                    argTypes = argTypes
+                ).handle(target.range) {
+                    funcSym = sym as? FuncSymbol
+                    PrimitivesScope.void
+                }
+
+                if (funcSym != null) {
+                    paramTypes = funcSym!!.paramTypes
+                    params = funcSym!!.params
+                    returnType = receiverType
+                }
+
+                funcSym
+            }
 
             else -> {
-                receiver.error(Msg.SYM_NOT_A_FUNC)
-                null
+                val decl = receiverType.declaration
+                    ?: return receiver.error(Msg.SYM_NOT_A_FUNC)
+
+                val typeScope = decl.staticScope.instanceScope
+
+                var funcSym: FuncSymbol? = null
+
+                typeScope.resolveConstructor(
+                    from = scope,
+                    argTypes = argTypes
+                ).handle(target.range) {
+                    funcSym = sym as? FuncSymbol
+                    PrimitivesScope.void
+                }
+
+                if (funcSym != null) {
+                    paramTypes = funcSym!!.paramTypes
+                    params = funcSym!!.params
+                    returnType = receiverType
+                }
+
+                funcSym
             }
         }
 
@@ -313,7 +318,7 @@ class TypeResolver(
             is FuncSymbol -> toFuncType()
             is OverloadedFuncSymbol -> OverloadedFuncType(
                 name = name,
-                overloads = overloads,
+                overloadedFuncSym = this,
                 flags = TypeFlags(isExprType = true)
             )
 
@@ -432,7 +437,12 @@ class TypeResolver(
         val operator = target.tokenOperatorType
         val argTypes = listOf(operandType)
 
-        return resolveOperFunc(target, argTypes, operator)
+        return resolveOperFunc(
+            target = target,
+            from = scope,
+            argTypes = argTypes,
+            operator = operator
+        )
     }
 
     private fun resolve(target: BinOpNode): Type {
@@ -466,11 +476,18 @@ class TypeResolver(
         val operator = target.tokenOperatorType
 
         val argTypes = listOf(leftType, rightType)
-        return resolveOperFunc(target, argTypes, operator)
+
+        return resolveOperFunc(
+            target = target,
+            from = scope,
+            argTypes = argTypes,
+            operator = operator
+        )
     }
 
     private fun resolveOperFunc(
         target: ExprNode,
+        from: Scope,
         argTypes: List<Type>,
         operator: OperatorType,
     ): Type {
@@ -494,7 +511,12 @@ class TypeResolver(
             return target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(leftType.toString()))
         }
 
-        val result = operScope.resolveOperFunc(operator = operator, argTypes = argTypes, isStatic = isStatic)
+        val result = operScope.resolveOperFunc(
+            operator = operator,
+            from = scope,
+            argTypes = argTypes,
+            isStatic = isStatic
+        )
 
         return result.handle(target.range) {
             val operFunc = sym as? FuncSymbol
@@ -717,7 +739,9 @@ class TypeResolver(
         return type
     }
 
-    fun resolveBestOverloadForType(target: ExprNode, type: FuncType, overloads: List<FuncSymbol>): FuncSymbol? {
+    fun resolveBestOverloadForType(target: ExprNode, type: FuncType, overloadedFuncSym: OverloadedFuncSymbol): FuncSymbol? {
+        val overloads = overloadedFuncSym.overloads
+
         val bestFunc = scope.resolveExactOverload(
             overloads = overloads,
             types = type.paramTypes,
@@ -743,7 +767,11 @@ class TypeResolver(
                 return target.error(Msg.AMBIGUOUS_OVERLOADED_FUNCTION)
             }
 
-            val bestFuncSym = resolveBestOverloadForType(target, type, initializerType.overloads)
+            val bestFuncSym = resolveBestOverloadForType(
+                target = target,
+                type = type,
+                overloadedFuncSym = initializerType.overloadedFuncSym
+            )
 
             target bind bestFuncSym
 

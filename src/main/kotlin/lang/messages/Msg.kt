@@ -1,10 +1,14 @@
 package lang.messages
 
 import lang.messages.Terms.ordinal
+import lang.semantics.symbols.FuncKind
 
 interface FormattableMsg
 
 object Msg {
+    const val CANNOT_DOT_ACCESS_MULTI_LEVEL_POINTER =
+        "cannot access member with '.' through a multi-level pointer"
+
     const val WILDCARD_IS_NOT_ALLOWED_HERE = "Wildcard is not allowed here"
 
     const val SRC_CAN_CONTAIN_ONE_FILE_MODULE_DECL =
@@ -128,34 +132,15 @@ object Msg {
             "Cannot cast type '$typeName1' to '$typeName2'"
     }
 
-    interface NoBaseOperOverload : FormattableMsg {
-        fun format(funcName: String, paramsStr: String, scopeName: String?): String
-    }
-
     object CannotCalcPropOf : FormattableMsg {
         fun format(propName: String, typeName: String) =
             "Cannot calculate $propName of '$typeName'"
     }
 
-    object CannotRegisterModule {
-        fun format(moduleName: String) =
-            "cannot register a module '$moduleName'"
-    }
-
-
-    object NoOperOverload : NoBaseOperOverload {
-        override fun format(funcName: String, paramsStr: String, scopeName: String?) =
+    object NoFuncOverload : FormattableMsg {
+        fun format(kind: FuncKind, funcName: String, paramsStr: String, scopeName: String?) =
             SymbolNotDefinedIn.format(
-                Terms.OPERATOR,
-                "$funcName($paramsStr)",
-                scopeName
-            )
-    }
-
-    object NoFuncOverload : NoBaseOperOverload {
-        override fun format(funcName: String, paramsStr: String, scopeName: String?) =
-            SymbolNotDefinedIn.format(
-                Terms.FUNCTION,
+                kind.kindName,
                 "$funcName($paramsStr)",
                 scopeName
             )

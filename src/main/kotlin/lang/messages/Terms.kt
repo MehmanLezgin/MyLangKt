@@ -1,6 +1,8 @@
 package lang.messages
 
 object Terms {
+    const val DESTRUCTOR = "destructor"
+    const val CONSTRUCTOR = "constructor"
     const val FIELD = "field"
     const val SIZE = "size"
     const val ALIGN = "align"

@@ -1,11 +1,10 @@
 package lang.semantics.types
 
-import lang.semantics.symbols.FuncSymbol
-import lang.semantics.symbols.TypeSymbol
+import lang.semantics.symbols.OverloadedFuncSymbol
 
 class OverloadedFuncType(
     val name: String,
-    val overloads: List<FuncSymbol>,
+    val overloadedFuncSym: OverloadedFuncSymbol,
     override var flags: TypeFlags = TypeFlags(),
 ) : Type(
     flags = flags,
@@ -14,7 +13,7 @@ class OverloadedFuncType(
     override fun copyWithFlags(flags: TypeFlags) =
         OverloadedFuncType(
             name = name,
-            overloads = overloads,
+            overloadedFuncSym = overloadedFuncSym,
             flags = flags
         )
 
@@ -26,7 +25,7 @@ class OverloadedFuncType(
         other as OverloadedFuncType
 
         if (name != other.name) return false
-        if (overloads != other.overloads) return false
+        if (overloadedFuncSym != other.overloadedFuncSym) return false
 
         return true
     }

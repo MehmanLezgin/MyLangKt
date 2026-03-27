@@ -37,14 +37,11 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
             ScopeError.InvalidConstValue -> Msg.INVALID_CONST_VALUE
 
             is ScopeError.NoFuncOverload -> {
-                val msg = if (a.isOperator)
-                    Msg.NoOperOverload
-                else Msg.NoFuncOverload
-
-                msg.format(
-                    a.symName,
-                    a.argTypes.joinToString(", "),
-                    a.scopeName,
+                Msg.NoFuncOverload.format(
+                    kind = a.kind,
+                    funcName = a.symName,
+                    paramsStr = a.argTypes.joinToString(", "),
+                    scopeName = a.scopeName,
                 )
             }
 

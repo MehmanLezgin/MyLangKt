@@ -98,7 +98,6 @@ object PrimitivesScope : Scope(
 
     init {
         try {
-
             val msgHandler = MsgHandler()
 
             primitives(allPrimitives)

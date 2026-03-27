@@ -36,7 +36,7 @@ object SymbolSerializer {
 
             is OverloadedFuncSymbol -> mapOf(
                 "name" to sym.name,
-                "isOperator" to sym.isOperator,
+                "kind" to sym.kind,
                 "overloads" to sym.overloads,
                 "modifiers" to sym.modifiers
             )

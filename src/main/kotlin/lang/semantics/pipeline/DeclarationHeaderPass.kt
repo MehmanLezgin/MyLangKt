@@ -6,7 +6,6 @@ import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.resolvers.BaseResolver
-import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.Scope
 import lang.semantics.symbols.*
 import lang.semantics.types.ErrorType
@@ -104,69 +103,9 @@ class DeclarationHeaderPass(
         sym.type = type
     }
 
-    private fun resolveFuncKind(target: FuncDeclStmtNode): FuncKind {
-        return FuncKind.Default(target.name)
-        /*
-        fun resolveBase(base: ExprNode): Type? {
-            val type = analyzer.typeResolver.resolve(base)
-            if (type == ErrorType) return null
-            if (type.isExprType) {
-                base.error(Msg.EXPECTED_TYPE_NAME)
-                return null
-            }
-            return type
-        }
-
-        return when (val funcNameExpr = node.name) {
-            is IdentifierNode -> {
-                FuncKind.Default(funcNameExpr)
-            }
-
-            is DotAccessNode -> {
-                val base = funcNameExpr.base
-                val nameId = funcNameExpr.member
-                val type = resolveBase(base) ?: return null
-                FuncKind.Extension(nameId, type)
-            }
-
-            is ScopedDatatypeNode -> {
-                val base = funcNameExpr.base
-                if (!funcNameExpr.member.isSimple()) {
-                    funcNameExpr.member.error(Msg.EXPECTED_X_NAME.format(Terms.FUNCTION))
-                    return null
-                }
-
-                val nameId = funcNameExpr.member.identifier
-                val type = resolveBase(base) ?: return null
-                FuncKind.Qualified(nameId, type)
-            }
-
-            else -> {
-                funcNameExpr.error(Msg.EXPECTED_X_NAME.format(Terms.FUNCTION))
-                null
-            }
-        }*/
-
-    }
-
 
     fun resolve(target: FuncDeclStmtNode) {
         val modifiers = modResolver.resolveFuncModifiers(target.modifiers)
-
-        val funcKind = resolveFuncKind(target)
-
-        fun checkInfix() {
-            if (!modifiers.isInfix) return
-            val infixAllowed = funcKind is FuncKind.Extension || scope.isTypeScope()
-            if (infixAllowed) return
-            val modNode = target.modifiers?.get(ModifierNode.Infix::class) ?: return
-            val msg = Msg.F_MODIFIER_IS_NOT_INAPPLICABLE_ON_THIS_X.format(
-                modNode.keyword.value, Terms.FUNCTION
-            )
-            modNode.error(msg)
-        }
-
-        checkInfix()
 
         val returnType = analyzer.typeResolver.resolve(target.returnType)
 
@@ -211,8 +150,7 @@ class DeclarationHeaderPass(
         val sym = FuncParamSymbol(
             name = target.name.value,
             type = type,
-            range = target.range,
-            defaultValue = target.initializer
+            range = target.range
         )
 
         target bind sym

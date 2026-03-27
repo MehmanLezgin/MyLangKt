@@ -1,6 +1,7 @@
 package lang.nodes
 
 import lang.core.SourceRange
+import lang.semantics.symbols.FuncKind
 
 sealed interface StmtNode : ExprNode
 
@@ -147,6 +148,15 @@ open class FuncDeclStmtNode(
     open val body: BlockNode?,
     override val range: SourceRange
 ) : DeclStmtNamedNode(modifiers, range, name) {
+    val kind by lazy {
+        when {
+            this is ConstructorDeclStmtNode -> FuncKind.CONSTRUCTOR
+            this is DestructorDeclStmtNode -> FuncKind.DESTRUCTOR
+            this.name is OperNode -> FuncKind.OPERATOR
+            else -> FuncKind.FUNCTION
+        }
+    }
+
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = FuncDeclStmtNode(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,

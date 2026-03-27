@@ -1,10 +1,10 @@
 package lang.semantics.symbols
 
-import lang.nodes.IdentifierNode
-import lang.semantics.types.Type
+import lang.messages.Terms
 
-sealed class FuncKind(open val nameId: IdentifierNode) {
-    data class Default(override val nameId: IdentifierNode) : FuncKind(nameId)
-    data class Extension(override val nameId: IdentifierNode, val type: Type) : FuncKind(nameId)
-    data class Qualified(override val nameId: IdentifierNode, val type: Type) : FuncKind(nameId)
+enum class FuncKind(val kindName: String) {
+    FUNCTION(Terms.FUNCTION),
+    OPERATOR(Terms.OPERATOR),
+    CONSTRUCTOR(Terms.CONSTRUCTOR),
+    DESTRUCTOR(Terms.DESTRUCTOR)
 }

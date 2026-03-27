@@ -1,17 +1,14 @@
 package lang.semantics.symbols
 
 import lang.core.SourceRange
-import lang.nodes.ExprNode
+import lang.core.operators.OperatorType
 import lang.semantics.types.FuncType
 import lang.semantics.types.Type
 import lang.semantics.types.TypeFlags
-import lang.core.operators.OperatorType
-import lang.messages.Terms
 
 open class FuncParamSymbol(
     override val name: String,
     override var type: Type,
-    val defaultValue: ExprNode? = null,
     val range: SourceRange? = null
 ) : VarSymbol(
     name = name,
@@ -51,7 +48,7 @@ data class FuncParamListSymbol(
 
 data class OverloadedFuncSymbol(
     override val name: String,
-    val isOperator: Boolean,
+    val kind: FuncKind,
     val overloads: MutableList<FuncSymbol> = mutableListOf(),
 ) : Symbol(name = name, modifiers = Modifiers()) {
     fun hasOverload(funcSym: FuncSymbol?): Boolean {
@@ -67,12 +64,14 @@ open class FuncSymbol(
     val isExtension: Boolean = false,
     override val modifiers: Modifiers = Modifiers()
 ) : Symbol(name = name, modifiers = modifiers) {
+    open val kind: FuncKind = FuncKind.FUNCTION
+
     val paramTypes: List<Type>
         get() = params.list.map { it.type }
 
     fun toOverloadedFuncSymbol() = OverloadedFuncSymbol(
         name = name,
-        isOperator = this is OperatorFuncSymbol,
+        kind = kind,
         overloads = mutableListOf(this)
     )
 
@@ -83,7 +82,6 @@ open class FuncSymbol(
         other as FuncSymbol
 
         if (name != other.name) return false
-//        if (typeNames != other.typeNames) return false
         if (params != other.params) return false
         if (returnType != other.returnType) return false
 
@@ -92,7 +90,6 @@ open class FuncSymbol(
 
     override fun hashCode(): Int {
         var result = name.hashCode()
-//        result = 31 * result + (typeNames?.hashCode() ?: 0)
         result = 31 * result + params.hashCode()
         result = 31 * result + returnType.hashCode()
         return result
@@ -114,17 +111,17 @@ open class FuncSymbol(
 }
 
 open class OperatorFuncSymbol(
-//    override val typeNames: TypeNameListNode?,
     open val operator: OperatorType,
     override val params: FuncParamListSymbol,
     override val returnType: Type,
     override val modifiers: Modifiers = Modifiers()
 ) : FuncSymbol(
     name = operator.fullName,
-//    typeNames = typeNames,
     params = params,
     returnType = returnType,
-)
+) {
+    override val kind: FuncKind = FuncKind.OPERATOR
+}
 
 data class BuiltInOperatorFuncSymbol(
     override val operator: OperatorType,
@@ -132,7 +129,6 @@ data class BuiltInOperatorFuncSymbol(
     override val returnType: Type,
     override val modifiers: Modifiers = Modifiers()
 ) : OperatorFuncSymbol(
-//    typeNames = null,
     operator = operator,
     params = params,
     returnType = returnType,
@@ -147,17 +143,19 @@ data class ConstructorSymbol(
     override val modifiers: Modifiers = Modifiers()
 ) : FuncSymbol(
     name = name,
-//    typeNames = null,
     params = params,
     returnType = returnType,
-)
+) {
+    override val kind: FuncKind = FuncKind.CONSTRUCTOR
+}
 
 data class DestructorSymbol(
     override val name: String,
     override val returnType: Type
 ) : FuncSymbol(
     name = name,
-//    typeNames = null,
     params = FuncParamListSymbol(list = emptyList()),
     returnType = returnType,
-)
+) {
+    override val kind: FuncKind = FuncKind.DESTRUCTOR
+}

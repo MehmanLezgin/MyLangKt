@@ -2,6 +2,8 @@ package lang.semantics.pipeline
 
 import lang.nodes.BlockNode
 import lang.nodes.ClassDeclStmtNode
+import lang.nodes.ConstructorDeclStmtNode
+import lang.nodes.DestructorDeclStmtNode
 import lang.nodes.EnumDeclStmtNode
 import lang.nodes.FuncDeclStmtNode
 import lang.nodes.InterfaceDeclStmtNode
@@ -15,6 +17,7 @@ import lang.semantics.ISemanticAnalyzer
 import lang.semantics.resolvers.BaseResolver
 import lang.semantics.symbols.ClassSymbol
 import lang.semantics.symbols.EnumSymbol
+import lang.semantics.symbols.FuncKind
 import lang.semantics.symbols.InterfaceSymbol
 import lang.semantics.symbols.ModuleSymbol
 import lang.semantics.symbols.TypeSymbol
@@ -62,18 +65,19 @@ class NameCollectionPass(
     }
 
     fun resolve(target: FuncDeclStmtNode) {
-        scope.defineFuncNameIfNotExist(
-            name = target.name.value,
-            isOperator = target.name is OperNode
-        )
+        val modifiers = modResolver.resolveFuncModifiers(target.modifiers)
+
+        withEffectiveScope(isStatic = modifiers.isStatic) {
+            scope.defineFuncNameIfNotExist(
+                name = target.name.value,
+                kind = target.kind
+            )
+        }
     }
 
     fun resolve(target: ModuleStmtNode) {
-        val modifiers = analyzer.modResolver.resolveModuleModifiers(target.modifiers)
-
         val moduleSym = target.getResolvedSymbol() as? ModuleSymbol
             ?: return
-//            target.error(Msg.SymbolIsNotRegistered.format(target.name.value))
 
         analyzer.withScope(targetScope = moduleSym.scope) {
             resolveBody(moduleSym, target.body)

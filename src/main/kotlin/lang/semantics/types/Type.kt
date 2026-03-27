@@ -65,15 +65,15 @@ abstract class Type(
         if (!from.canCastTo(to)) return null
         if (from == to) return 0
 
-        return when {
-            from is PrimitiveType && to is PrimitiveType ->
+        return when (from) {
+            is PrimitiveType if to is PrimitiveType ->
                 when {
                     from.prec == to.prec -> 0
                     from.prec < to.prec -> 1
                     else -> 2
                 }
 
-            from is PointerType && to is PointerType ->
+            is PointerType if to is PointerType ->
                 if (to.isVoidPtr()) 10 else 0
 
             else -> 100
