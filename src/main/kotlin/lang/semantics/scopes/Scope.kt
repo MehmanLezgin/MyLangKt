@@ -211,6 +211,9 @@ open class Scope(
         else if (overloads.size > 1) {
             val accessibleOverloads = filterIsAccessible(list = overloads, from = from, asMember = false)
 
+            if (accessibleOverloads.size > 1)
+                return ScopeError.AmbiguousOverloadedFunc(list = accessibleOverloads).err()
+
             pickSingleFuncSym(
                 name = name,
                 from = from,

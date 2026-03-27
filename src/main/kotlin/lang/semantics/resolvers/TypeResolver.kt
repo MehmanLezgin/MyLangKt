@@ -185,7 +185,6 @@ class TypeResolver(
             }
 
             is OverloadedFuncType -> {
-
                 val typeScope = receiverType.overloadedFuncSym.accessScope
 
                 val funcSym = typeScope.resolveFunc(
@@ -199,7 +198,7 @@ class TypeResolver(
                 if (funcSym != null) {
                     paramTypes = funcSym.paramTypes
                     params = funcSym.params
-                    returnType = receiverType
+                    returnType = funcSym.returnType
                 }
 
                 funcSym
@@ -219,9 +218,9 @@ class TypeResolver(
                 }
 
                 if (funcSym != null) {
-                    paramTypes = funcSym!!.paramTypes
-                    params = funcSym!!.params
-                    returnType = receiverType
+                    paramTypes = funcSym.paramTypes
+                    params = funcSym.params
+                    returnType = funcSym.returnType
                 }
 
                 funcSym
@@ -251,9 +250,9 @@ class TypeResolver(
             if (argType != ErrorType && !argType.canCastTo(paramType)) {
                 val msg = Msg.MismatchExpectedActual
                     .format(
-                        Terms.ARGUMENT_TYPE,
-                        paramType.toString(),
-                        argType.toString()
+                        mismatchKind = Terms.ARGUMENT_TYPE,
+                        typeName1 = paramType.toString(),
+                        typeName2 = argType.toString()
                     )
                 argNodes.getOrNull(i)?.error(msg)
                 continue
@@ -261,6 +260,7 @@ class TypeResolver(
         }
 
         target bind sym
+
         return returnType.setFlags(
             isExprType = true,
         ).also { target attach it }
