@@ -2,6 +2,7 @@ package lang.semantics.symbols
 
 import lang.core.SourceRange
 import lang.core.operators.OperatorType
+import lang.semantics.scopes.Scope
 import lang.semantics.types.FuncType
 import lang.semantics.types.Type
 import lang.semantics.types.TypeFlags
@@ -50,10 +51,15 @@ data class OverloadedFuncSymbol(
     override val name: String,
     val kind: FuncKind,
     val overloads: MutableList<FuncSymbol> = mutableListOf(),
+    val accessScope: Scope
 ) : Symbol(name = name, modifiers = Modifiers()) {
     fun hasOverload(funcSym: FuncSymbol?): Boolean {
         if (funcSym == null) return false
         return overloads.find { it == funcSym } != null
+    }
+
+    override fun toString(): String {
+        return "OverloadedFuncSymbol(name='$name', kind=$kind, overloads=$overloads)"
     }
 }
 
@@ -69,10 +75,27 @@ open class FuncSymbol(
     val paramTypes: List<Type>
         get() = params.list.map { it.type }
 
-    fun toOverloadedFuncSymbol() = OverloadedFuncSymbol(
+    fun stringifyAsFunc() = buildString {
+        append(name)
+        append("(")
+        val params = params.list
+
+        for (param in params) {
+            append(param.name)
+            append(": ")
+            append(param.type)
+            if (params.last() != param)
+                append(", ")
+        }
+        append(") : ")
+        append(returnType.toString())
+    }
+
+    fun toOverloadedFuncSymbol(accessScope: Scope) = OverloadedFuncSymbol(
         name = name,
         kind = kind,
-        overloads = mutableListOf(this)
+        overloads = mutableListOf(this),
+        accessScope = accessScope
     )
 
     override fun equals(other: Any?): Boolean {

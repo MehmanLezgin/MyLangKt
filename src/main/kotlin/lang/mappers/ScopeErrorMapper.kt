@@ -32,7 +32,9 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
             is ScopeError.NotDefined ->
                 Msg.SymbolNotDefinedIn.format(name = a.symName, scopeName = a.scopeName)
 
-            ScopeError.AmbiguousOverloadedFunc -> Msg.AMBIGUOUS_OVERLOADED_FUNCTION
+            is ScopeError.AmbiguousOverloadedFunc ->
+                Msg.AmbiguousOverloadedFunc.format(list = a.list)
+
             ScopeError.ConflictingOverloads -> Msg.CONFLICTING_OVERLOADS
             ScopeError.InvalidConstValue -> Msg.INVALID_CONST_VALUE
 

@@ -1,7 +1,5 @@
 package lang.semantics.scopes
 
-import lang.semantics.symbols.Symbol
-
 data class ModuleScope(
     override val parent: Scope?,
     override val scopeName: String,

@@ -2,6 +2,8 @@ package lang.messages
 
 import lang.messages.Terms.ordinal
 import lang.semantics.symbols.FuncKind
+import lang.semantics.symbols.FuncSymbol
+import lang.semantics.symbols.OverloadedFuncSymbol
 
 interface FormattableMsg
 
@@ -171,6 +173,18 @@ object Msg {
             "Repeated modifier '$modifierName'"
     }
 
+    object AmbiguousOverloadedFunc : FormattableMsg {
+        fun format(list: List<FuncSymbol>) = buildString {
+            append("Ambiguous overloaded function:\n")
+
+            list.forEach { sym ->
+                append("\t\t\t")
+                append(sym.stringifyAsFunc())
+                append('\n')
+            }
+        }
+    }
+
     const val MODULE_CANNOT_IMPORT_ITSELF = "A module cannot import itself"
     const val IMPORT_CYCLE_NOT_ALLOWED = "Import cycle not allowed"
     const val MODULE_NOT_DEFINED = "Module is not defined"
@@ -191,7 +205,6 @@ object Msg {
     const val CLASS_CAN_EXTEND_INTERFACE_OR_CLASS = "A class can only extend an interface or another class"
     const val EXPECTED_VALUE_OR_REF = "Expected a value or reference"
     const val EXPECTED_MODULE_NAME = "Expected a module name"
-    const val AMBIGUOUS_OVERLOADED_FUNCTION = "Ambiguous overloaded function"
     const val EXPECTED_VARIABLE_ACTUAL_VALUE = "Expected a variable, actual: a value"
     const val EXPECTED_A_POINTER_VALUE = "Expected a pointer value"
     const val EXPECTED_VARIABLE_ACTUAL_TYPE_NAME = "Expected a variable, actual: a type name"

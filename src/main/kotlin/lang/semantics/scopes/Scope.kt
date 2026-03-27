@@ -65,8 +65,8 @@ open class Scope(
         return defineRaw(sym)
     }
 
-    fun isSymVisibleFrom(sym: Symbol, scope: Scope, asMember: Boolean = false): Boolean {
-        val fromEnclosing = scope.getEnclosingScope<BaseTypeScope>()
+    fun isSymAccessibleFrom(sym: Symbol, from: Scope, asMember: Boolean = false): Boolean {
+        val fromEnclosing = from.getEnclosingScope<BaseTypeScope>()
         val thisEnclosing = this.getEnclosingScope<BaseTypeScope>()
 
         return when (sym.modifiers.visibility) {
@@ -91,7 +91,7 @@ open class Scope(
 
     internal fun prepareResult(sym: Symbol, from: Scope, asMember: Boolean): ScopeResult {
         return when {
-            !isSymVisibleFrom(sym = sym, scope = from, asMember = asMember) ->
+            !isSymAccessibleFrom(sym = sym, from = from, asMember = asMember) ->
                 ScopeError.Inaccessible(
                     symName = sym.name
                 ).err()
@@ -173,7 +173,7 @@ open class Scope(
             val params = func.params.list
             var totalCost = 0
 
-            if (!isSymVisibleFrom(func, from))
+            if (!isSymAccessibleFrom(func, from))
                 totalCost += 100
 
             for (i in types.indices) {
@@ -208,14 +208,37 @@ open class Scope(
                 argTypes = argTypes,
                 scopeName = absoluteScopePath
             ).err()
-        else if (overloads.size > 1)
-            ScopeError.AmbiguousOverloadedFunc.err()
-        else {
-            val best = overloads[0]
-            if (!isSymVisibleFrom(sym = best, scope = from, asMember = false))
+        else if (overloads.size > 1) {
+            val accessibleOverloads = filterIsAccessible(list = overloads, from = from, asMember = false)
+
+            pickSingleFuncSym(
+                name = name,
+                from = from,
+                argTypes = argTypes,
+                kind = kind,
+                overloads = accessibleOverloads
+            )
+        } else {
+            val best = overloads.firstOrNull()
+                ?: return ScopeError.NotDefined(
+                    symName = name,
+                    scopeName = absoluteScopePath
+                ).err()
+
+            if (!isSymAccessibleFrom(sym = best, from = from, asMember = false))
                 return ScopeError.Inaccessible(best.name).err()
 
             best.ok()
+        }
+    }
+
+    fun <T : Symbol> filterIsAccessible(list: List<T>, from: Scope, asMember: Boolean = false): List<T> {
+        return list.filter { sym ->
+            isSymAccessibleFrom(
+                sym = sym,
+                from = from,
+                asMember = asMember
+            )
         }
     }
 
@@ -285,6 +308,7 @@ open class Scope(
 
     fun resolveFunc(
         name: String,
+        kind: FuncKind,
         from: Scope,
         argTypes: List<Type>,
         isStatic: Boolean = false
@@ -295,7 +319,6 @@ open class Scope(
 
             is ScopeResult.Success<*> -> {
                 val overloads = when (val sym = result.sym) {
-                    is FuncSymbol -> listOf(sym)
                     is OverloadedFuncSymbol -> {
                         val effectiveArgTypes = if (isStatic) argTypes else argTypes.drop(1)
 
@@ -322,12 +345,13 @@ open class Scope(
                     ).err()
                 }
 
-                if (overloads.size > 1)
-                    return ScopeError.AmbiguousOverloadedFunc.err()
-
-                val funcSym = overloads[0]
-
-                funcSym.ok()
+                pickSingleFuncSym(
+                    name = name,
+                    from = from,
+                    argTypes = argTypes,
+                    kind = kind,
+                    overloads = overloads
+                )
             }
         }
     }
@@ -339,6 +363,7 @@ open class Scope(
     ): ScopeResult =
         resolveFunc(
             name = operator.fullName,
+            kind = FuncKind.OPERATOR,
             from = from,
             argTypes = argTypes,
             isStatic = isStatic
@@ -447,7 +472,7 @@ open class Scope(
 
             is ScopeResult.ResultList,
             is ScopeResult.Error ->
-                defineRaw(sym = funcSym.toOverloadedFuncSymbol()) // always store as overloaded
+                defineRaw(sym = funcSym.toOverloadedFuncSymbol(accessScope = this)) // always store as overloaded
         }
     }
 
@@ -457,7 +482,7 @@ open class Scope(
                 if (existingSym.params == funcSym.params)
                     return ScopeError.ConflictingOverloads.err()
 
-                val overloadedFunc = existingSym.toOverloadedFuncSymbol().apply {
+                val overloadedFunc = existingSym.toOverloadedFuncSymbol(accessScope = this).apply {
                     overloads.add(funcSym)
                 }
 
@@ -548,7 +573,8 @@ open class Scope(
         val sym = OverloadedFuncSymbol(
             name = name,
             kind = kind,
-            overloads = mutableListOf()
+            overloads = mutableListOf(),
+            accessScope = this
         )
 
         return defineIfNotExist(sym)
@@ -575,21 +601,5 @@ open class Scope(
             if (curr is T) return curr
             curr = curr.parent ?: return null
         }
-    }
-
-    fun getAccessibleConstructors(from: Scope): List<ConstructorSymbol> {
-        @Suppress("UNCHECKED_CAST")
-        val all = (symbols.values.find { sym ->
-            sym is OverloadedFuncSymbol &&
-                    sym.overloads.getOrNull(0) is ConstructorSymbol
-        } as? OverloadedFuncSymbol)?.overloads
-            ?: return emptyList()
-
-        val accessible = all.filter { sym ->
-            isSymVisibleFrom(sym, scope = from, asMember = false) && sym is ConstructorSymbol
-        }
-
-        @Suppress("UNCHECKED_CAST")
-        return accessible as List<ConstructorSymbol>
     }
 }

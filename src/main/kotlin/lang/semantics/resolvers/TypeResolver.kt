@@ -129,14 +129,15 @@ class TypeResolver(
             return ErrorType
         }
 
-        return analyzer.withScope(targetScope) {
-            val member = target.member.identifier
+        val member = target.member.identifier
 
-            val result = targetScope.resolve(name = member.value, from = scope, asMember = true)
+        val result = targetScope.resolve(name = member.value, from = scope, asMember = true)
 
-            result.handle(member.range) {
-                target bind sym
-                target.member bind sym
+        return result.handle(member.range) {
+            target bind sym
+            target.member bind sym
+
+            analyzer.withScope(targetScope) {
                 resolveIdentifierWithSym(member, sym, isNamespaceCtx)
             }
         }.also {
@@ -184,20 +185,20 @@ class TypeResolver(
             }
 
             is OverloadedFuncType -> {
-                var funcSym: FuncSymbol? = null
 
-                scope.resolveFunc(
+                val typeScope = receiverType.overloadedFuncSym.accessScope
+
+                val funcSym = typeScope.resolveFunc(
                     overloadedFunc = receiverType.overloadedFuncSym,
                     from = scope,
                     argTypes = argTypes
-                ).handle(target.range) {
-                    funcSym = sym as? FuncSymbol
-                    PrimitivesScope.void
+                ).handle<FuncSymbol>(target.range) {
+                    sym as? FuncSymbol
                 }
 
                 if (funcSym != null) {
-                    paramTypes = funcSym!!.paramTypes
-                    params = funcSym!!.params
+                    paramTypes = funcSym.paramTypes
+                    params = funcSym.params
                     returnType = receiverType
                 }
 
@@ -210,14 +211,11 @@ class TypeResolver(
 
                 val typeScope = decl.staticScope.instanceScope
 
-                var funcSym: FuncSymbol? = null
-
-                typeScope.resolveConstructor(
+                val funcSym = typeScope.resolveConstructor(
                     from = scope,
                     argTypes = argTypes
-                ).handle(target.range) {
-                    funcSym = sym as? FuncSymbol
-                    PrimitivesScope.void
+                ).handle<FuncSymbol>(target.range) {
+                    sym as? FuncSymbol
                 }
 
                 if (funcSym != null) {
@@ -739,7 +737,11 @@ class TypeResolver(
         return type
     }
 
-    fun resolveBestOverloadForType(target: ExprNode, type: FuncType, overloadedFuncSym: OverloadedFuncSymbol): FuncSymbol? {
+    fun resolveBestOverloadForType(
+        target: ExprNode,
+        type: FuncType,
+        overloadedFuncSym: OverloadedFuncSymbol
+    ): FuncSymbol? {
         val overloads = overloadedFuncSym.overloads
 
         val bestFunc = scope.resolveExactOverload(
@@ -763,19 +765,51 @@ class TypeResolver(
         val initializerType = analyzer.typeResolver.resolve(target)
 
         if (initializerType is OverloadedFuncType) {
-            if (type !is FuncType) {
-                return target.error(Msg.AMBIGUOUS_OVERLOADED_FUNCTION)
+            val overloaded = initializerType.overloadedFuncSym
+            val overloadsList: List<FuncSymbol> = overloaded.overloads
+            val accessScope = overloaded.accessScope
+
+            when (type) {
+                is UnresolvedType -> {
+                    val accessible = accessScope.filterIsAccessible(
+                        list = overloadsList,
+                        from = scope,
+                        asMember = true
+                    )
+
+                    return when {
+                        accessible.isEmpty() -> target.error(
+                            Msg.SymbolNotDefinedIn.format(
+                                itemKind = Terms.FUNCTION,
+                                name = overloaded.name,
+                                scopeName = null
+                            )
+                        )
+
+                        accessible.size > 1 -> target.error(
+                            Msg.AmbiguousOverloadedFunc.format(list = overloadsList)
+                        )
+
+                        else -> accessible.first().toFuncType()
+                    }
+                }
+
+                is FuncType -> {
+                    val typeScope = overloaded.accessScope
+
+                    val bestFuncSym = typeScope.resolveFunc(
+                        overloadedFunc = overloaded,
+                        from = scope,
+                        argTypes = type.paramTypes
+                    ).handle<FuncSymbol>(target.range) {
+                        sym as? FuncSymbol
+                    }
+
+                    target bind bestFuncSym
+
+                    return bestFuncSym?.toFuncType() ?: ErrorType
+                }
             }
-
-            val bestFuncSym = resolveBestOverloadForType(
-                target = target,
-                type = type,
-                overloadedFuncSym = initializerType.overloadedFuncSym
-            )
-
-            target bind bestFuncSym
-
-            return bestFuncSym?.toFuncType() ?: ErrorType
         }
 
         if (type is UnresolvedType)
@@ -796,6 +830,7 @@ class TypeResolver(
     fun ScopeResult.handle(range: SourceRange?, onSuccess: ScopeResult.Success<*>.() -> Type): Type {
         return handle<Type?>(range, onSuccess) ?: ErrorType
     }
+
     /*
         fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Type) =
             this.handle(null, onSuccess)

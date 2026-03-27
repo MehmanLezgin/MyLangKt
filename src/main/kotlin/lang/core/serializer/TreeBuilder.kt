@@ -1,5 +1,7 @@
 package lang.core.serializer
 
+import java.util.Collections
+import java.util.IdentityHashMap
 import kotlin.reflect.KClass
 
 typealias ChildrenMapRaw = Map<String, Any?>
@@ -17,6 +19,7 @@ class TreeBuilder<T : Any>(
     private val nameProvider: (Any) -> String = { it::class.simpleName ?: "?" }
 ) {
     private val sb = StringBuilder(256)
+    private val visited = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
 
     private fun branch(last: Boolean) = if (last) "└── " else "├── "
     private fun indent(last: Boolean) = if (last) "    " else "│   "
@@ -59,7 +62,7 @@ class TreeBuilder<T : Any>(
         val nextIndent = "$indent    "
 
         return when (root) {
-            is Tree.Node -> {
+            /*is Tree.Node -> {
 
                 sb.apply {
                     append('\n')
@@ -75,6 +78,32 @@ class TreeBuilder<T : Any>(
                         buildChildren(children, nextIndent)
                     }
                 }
+                sb
+            }*/
+            is Tree.Node -> {
+
+                if (!visited.add(root.value)) {
+                    sb.append('\n')
+                        .append(indent)
+                        .append(branch)
+                        .append(nameProvider(root.value))
+                        .append(" (↻)")
+                    return sb.toString()
+                }
+
+                sb.append('\n')
+                    .append(indent)
+                    .append(branch)
+                    .append(nameProvider(root.value))
+
+                if (klass.isInstance(root.value)) {
+                    @Suppress("UNCHECKED_CAST")
+                    val children = getChildren(root.value as T, indent(isLast), nextIndent)
+                    if (children.isNotEmpty()) {
+                        buildChildren(children, nextIndent)
+                    }
+                }
+
                 sb
             }
 
