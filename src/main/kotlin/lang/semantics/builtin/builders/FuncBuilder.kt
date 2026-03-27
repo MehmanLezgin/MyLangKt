@@ -1,42 +1,43 @@
 package lang.semantics.builtin.builders
 
-import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.symbols.BuiltInOperatorFuncSymbol
-import lang.semantics.symbols.FuncParamListSymbol
-import lang.semantics.symbols.FuncSymbol
-import lang.semantics.symbols.Modifiers
-import lang.semantics.types.Type
 import lang.core.operators.OperatorType
+import lang.semantics.builtin.PrimitivesScope
+import lang.semantics.symbols.*
+import lang.semantics.types.Type
 
-class FuncBuilder(val name: String) {
-    private var oper: OperatorType? = null
-    private var funcParams: FuncParamListSymbol = FuncParamListSymbol()
-    private var returnType: Type = PrimitivesScope.void
-    private var modifiers: Modifiers = Modifiers()
-
-    constructor(oper: OperatorType) : this(oper.fullName) {
-        this.oper = oper
+class OperFuncBuilder(val oper: OperatorType) : FuncBuilder(name = oper.fullName) {
+    override fun build(): FuncSymbol {
+        return BuiltInOperatorFuncSymbol(
+            operator = oper,
+            params = funcParams,
+            returnType = returnType,
+            modifiers = modifiers,
+        )
     }
+}
 
-    fun build(): FuncSymbol {
-        val paramList = funcParams
+class ConstructorBuilder : FuncBuilder(name = FuncKind.CONSTRUCTOR.kindName) {
+    override fun build(): FuncSymbol {
+        return ConstructorSymbol(
+            params = funcParams,
+            returnType = returnType,
+            modifiers = modifiers,
+        )
+    }
+}
 
-        val func = if (oper == null)
-            FuncSymbol(
-                name = name,
-                params = paramList,
-                returnType = returnType,
-                modifiers = modifiers,
-            )
-        else
-            BuiltInOperatorFuncSymbol(
-                operator = oper!!,
-                params = paramList,
-                returnType = returnType,
-                modifiers = modifiers,
-            )
+open class FuncBuilder(val name: String) {
+    internal var funcParams: FuncParamListSymbol = FuncParamListSymbol()
+    internal var returnType: Type = PrimitivesScope.void
+    internal var modifiers: Modifiers = Modifiers()
 
-        return func
+    open fun build(): FuncSymbol {
+        return FuncSymbol(
+            name = name,
+            params = funcParams,
+            returnType = returnType,
+            modifiers = modifiers,
+        )
     }
 
     fun FuncBuilder.modifiers(modifiers: Modifiers) {
@@ -53,4 +54,3 @@ class FuncBuilder(val name: String) {
         ).apply(block).build()
     }
 }
-

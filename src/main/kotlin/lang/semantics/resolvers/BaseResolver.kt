@@ -1,12 +1,10 @@
 package lang.semantics.resolvers
 
 import lang.core.SourceRange
-import lang.messages.Msg
 import lang.messages.MsgHandler
 import lang.nodes.ExprNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.scopes.BaseTypeScope
-import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.Symbol
@@ -23,24 +21,6 @@ abstract class BaseResolver<T, TResult>(
         get() = analyzer.msgHandler
 
     abstract fun resolve(target: T): TResult
-
-    internal fun symNotDefinedError(name: String, range: SourceRange) =
-        semanticError(Msg.SymbolNotDefinedIn.format(name = name, scopeName = scope.scopeName), range)
-
-    internal fun symNotDefinedInError(name: String, scopeName: String?, range: SourceRange): ErrorType {
-        return when {
-            scopeName.isNullOrEmpty() ->
-                symNotDefinedError(name, range)
-
-            else ->
-                semanticError(
-                    Msg.SymbolNotDefinedIn.format(
-                        name = name,
-                        scopeName = scopeName
-                    ), range
-                )
-        }
-    }
 
     fun ExprNode.error(msg: String) = semanticError(msg, range)
 

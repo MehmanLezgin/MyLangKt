@@ -1,6 +1,10 @@
 package lang.messages
 
 object Terms {
+    const val MIN_VALUE = "MIN_VALUE"
+    const val MAX_VALUE = "MAX_VALUE"
+    const val OTHER = "other"
+    const val VALUE = "value"
     const val DESTRUCTOR = "destructor"
     const val CONSTRUCTOR = "constructor"
     const val FIELD = "field"

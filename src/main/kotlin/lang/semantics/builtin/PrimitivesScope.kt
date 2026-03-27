@@ -78,6 +78,8 @@ object PrimitivesScope : Scope(
     internal val allPrimitives: List<PrimitiveType> =
         ints + floats + void + char + uchar + bool
 
+    internal val convertiblePrimitives: List<PrimitiveType> =
+        ints + floats + char + uchar + bool
 
     val ptrOperPlus = ptrOperPlus()
     val ptrOperMinus = ptrOperMinus()

@@ -16,20 +16,7 @@ import lang.semantics.builtin.PrimitivesScope.uint16Const
 import lang.semantics.builtin.PrimitivesScope.uint32Const
 import lang.semantics.builtin.PrimitivesScope.uint64Const
 import lang.semantics.builtin.PrimitivesScope.uint8Const
-import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.builtin.types.BoolPrimitive
-import lang.semantics.builtin.types.CharPrimitive
-import lang.semantics.builtin.types.Float32Primitive
-import lang.semantics.builtin.types.Float64Primitive
-import lang.semantics.builtin.types.Int16Primitive
-import lang.semantics.builtin.types.Int32Primitive
-import lang.semantics.builtin.types.Int64Primitive
-import lang.semantics.builtin.types.Int8Primitive
-import lang.semantics.builtin.types.UCharPrimitive
-import lang.semantics.builtin.types.UInt16Primitive
-import lang.semantics.builtin.types.UInt32Primitive
-import lang.semantics.builtin.types.UInt64Primitive
-import lang.semantics.builtin.types.UInt8Primitive
+import lang.semantics.builtin.types.*
 
 
 @OptIn(ExperimentalStdlibApi::class)
@@ -62,9 +49,10 @@ data class ConstValue<T : Any>(
 
     private fun promoteType(other: ConstValue<*>): PrimitiveType? {
         if (this.type !is PrimitiveType || other.type !is PrimitiveType) return null
-        val t1 = if (this.type == PrimitivesScope.bool) PrimitivesScope.int32 else this.type
-        val t2 = if (other.type == PrimitivesScope.bool) PrimitivesScope.int32 else other.type
-        return highest(t1, t2)
+        if (this.type == other) return this.type
+//        val t1 = if (this.type == PrimitivesScope.bool) PrimitivesScope.int32 else this.type
+//        val t2 = if (other.type == PrimitivesScope.bool) PrimitivesScope.int32 else other.type
+        return null
     }
 
     // Arithmetic
@@ -115,8 +103,6 @@ data class ConstValue<T : Any>(
     }
 
     companion object {
-        fun highest(a: PrimitiveType, b: PrimitiveType) = if (a.prec >= b.prec) a else b
-
         @OptIn(ExperimentalUnsignedTypes::class)
         fun fromValue(value: Any): Type? = when (value) {
             is Boolean -> boolConst

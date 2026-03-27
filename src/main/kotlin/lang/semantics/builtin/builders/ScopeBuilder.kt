@@ -2,6 +2,7 @@ package lang.semantics.builtin.builders
 
 import lang.core.operators.OperatorType
 import lang.mappers.ScopeErrorMapper
+import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.FuncSymbol
@@ -9,7 +10,17 @@ import lang.semantics.symbols.VarSymbol
 import lang.semantics.types.ConstValue
 import lang.semantics.types.Type
 
-class ScopeBuilder(
+class TypeScopeBuilder(val typeScope: BaseTypeScope) : ScopeBuilder(
+    scope = typeScope
+) {
+    internal fun addConstructor(block: FuncBuilder.() -> Unit): FuncSymbol {
+        val sym = ConstructorBuilder().apply(block).build()
+        typeScope.instanceScope.define(sym).handle()
+        return sym
+    }
+}
+
+open class ScopeBuilder(
     private val scope: Scope
 ) {
     fun build(): Scope = scope
@@ -21,9 +32,9 @@ class ScopeBuilder(
     }
 
     internal fun addOperFunc(oper: OperatorType, block: FuncBuilder.() -> Unit): FuncSymbol {
-        val builder = FuncBuilder(oper)
+        val builder = OperFuncBuilder(oper)
         val sym = builder.apply(block).build()
-        val a = scope.define(sym).handle()
+        scope.define(sym).handle()
         return sym
     }
 
@@ -38,7 +49,7 @@ class ScopeBuilder(
         return sym
     }
 
-    private fun ScopeResult.handle() {
+    internal fun ScopeResult.handle() {
         when (this) {
             is ScopeResult.Success<*> -> return
             is ScopeResult.Error -> error(ScopeErrorMapper.toSecond(this.error))

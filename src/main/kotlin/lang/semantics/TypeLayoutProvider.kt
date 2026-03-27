@@ -22,7 +22,7 @@ class TypeLayoutProvider(
 
         val layout = when (type) {
             is PrimitiveType -> {
-                val size = type.primitiveSize.size
+                val size = type.primitiveSize.bytes
 
                 PrimitiveLayout(
                     size = size,

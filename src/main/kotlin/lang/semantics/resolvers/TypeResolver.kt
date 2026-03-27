@@ -1,18 +1,18 @@
 package lang.semantics.resolvers
 
+import lang.core.SourceRange
+import lang.core.operators.OperatorType
 import lang.messages.Msg
 import lang.messages.Terms
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.builtin.isBuiltInFuncReturnsPtr
+import lang.semantics.scopes.FuncScope
+import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.*
 import lang.semantics.types.*
-import lang.core.operators.OperatorType
-import lang.core.SourceRange
-import lang.semantics.scopes.FuncScope
-import lang.semantics.scopes.Scope
 
 @OptIn(ExperimentalUnsignedTypes::class)
 class TypeResolver(
@@ -54,7 +54,7 @@ class TypeResolver(
 
         val funcRetType = funcScope.funcSymbol.returnType
 
-        if (!exprType.canCastTo(funcRetType)) {
+        if (convert(exprType, funcRetType).notExists()) {
             return target.expr.error(
                 Msg.MismatchExpectedActual.format(
                     mismatchKind = Terms.RETURN_TYPE,
@@ -186,13 +186,16 @@ class TypeResolver(
 
             is OverloadedFuncType -> {
                 val typeScope = receiverType.overloadedFuncSym.accessScope
+                val fromScope = scope
 
-                val funcSym = typeScope.resolveFunc(
-                    overloadedFunc = receiverType.overloadedFuncSym,
-                    from = scope,
-                    argTypes = argTypes
-                ).handle<FuncSymbol>(target.range) {
-                    sym as? FuncSymbol
+                val funcSym = analyzer.withScope(typeScope) {
+                    analyzer.overloadResolver.resolveFunc(
+                        overloadedFunc = receiverType.overloadedFuncSym,
+                        from = fromScope,
+                        argTypes = argTypes
+                    ).handle<FuncSymbol>(target.range) {
+                        sym as? FuncSymbol
+                    }
                 }
 
                 if (funcSym != null) {
@@ -209,18 +212,21 @@ class TypeResolver(
                     ?: return receiver.error(Msg.SYM_NOT_A_FUNC)
 
                 val typeScope = decl.staticScope.instanceScope
+                val fromScope = scope
 
-                val funcSym = typeScope.resolveConstructor(
-                    from = scope,
-                    argTypes = argTypes
-                ).handle<FuncSymbol>(target.range) {
-                    sym as? FuncSymbol
+                val funcSym = analyzer.withScope(typeScope) {
+                    analyzer.overloadResolver.resolveConstructor(
+                        from = fromScope,
+                        argTypes = argTypes
+                    ).handle<FuncSymbol>(target.range) {
+                        sym as? FuncSymbol
+                    }
                 }
 
                 if (funcSym != null) {
                     paramTypes = funcSym.paramTypes
                     params = funcSym.params
-                    returnType = funcSym.returnType
+                    returnType = receiverType
                 }
 
                 funcSym
@@ -247,7 +253,7 @@ class TypeResolver(
                 continue
             }
 
-            if (argType != ErrorType && !argType.canCastTo(paramType)) {
+            if (argType != ErrorType && convert(argType, paramType).notExists()) {
                 val msg = Msg.MismatchExpectedActual
                     .format(
                         mismatchKind = Terms.ARGUMENT_TYPE,
@@ -320,7 +326,14 @@ class TypeResolver(
                 flags = TypeFlags(isExprType = true)
             )
 
-            else -> symNotDefinedInError(this.name, scope.absoluteScopePath, target.range)
+            else ->
+                target.error(
+                    Msg.SymbolNotDefinedIn.format(
+                        name = this.name,
+                        scopeName = scope.absoluteScopePath
+                    )
+                )
+
         }.also { target attach it }
     }
 
@@ -437,7 +450,6 @@ class TypeResolver(
 
         return resolveOperFunc(
             target = target,
-            from = scope,
             argTypes = argTypes,
             operator = operator
         )
@@ -477,7 +489,6 @@ class TypeResolver(
 
         return resolveOperFunc(
             target = target,
-            from = scope,
             argTypes = argTypes,
             operator = operator
         )
@@ -485,7 +496,6 @@ class TypeResolver(
 
     private fun resolveOperFunc(
         target: ExprNode,
-        from: Scope,
         argTypes: List<Type>,
         operator: OperatorType,
     ): Type {
@@ -505,16 +515,19 @@ class TypeResolver(
             }
         }
 
-        if (operScope == null) {
+        if (operScope == null)
             return target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(leftType.toString()))
-        }
 
-        val result = operScope.resolveOperFunc(
-            operator = operator,
-            from = scope,
-            argTypes = argTypes,
-            isStatic = isStatic
-        )
+        val fromScope = scope
+
+        val result = analyzer.withScope(operScope) {
+            analyzer.overloadResolver.resolveOperFunc(
+                operator = operator,
+                from = fromScope,
+                argTypes = argTypes,
+                isStatic = isStatic
+            )
+        }
 
         return result.handle(target.range) {
             val operFunc = sym as? FuncSymbol
@@ -570,10 +583,8 @@ class TypeResolver(
                 resolveForType(target.left, rightType)
             }
 
-            leftType.canCastTo(rightType) -> rightType
-
             else -> {
-                if (!leftType.canCastTo(rightType)) {
+                if (convert(rightType, leftType).notExists()) {
                     val msg = Msg.CannotCastType.format(
                         leftType.toString(),
                         rightType.toString()
@@ -616,7 +627,7 @@ class TypeResolver(
         handleVarChange(target.left, leftType)
             ?.let { return it }
 
-        if (!rightType.canCastTo(leftType)) {
+        if (convert(rightType, leftType).notExists()) {
             target.error(
                 Msg.MismatchExpectedActual.format(
                     Terms.TYPE,
@@ -737,28 +748,18 @@ class TypeResolver(
         return type
     }
 
-    fun resolveBestOverloadForType(
-        target: ExprNode,
-        type: FuncType,
-        overloadedFuncSym: OverloadedFuncSymbol
-    ): FuncSymbol? {
-        val overloads = overloadedFuncSym.overloads
-
-        val bestFunc = scope.resolveExactOverload(
-            overloads = overloads,
-            types = type.paramTypes,
-            returnType = type.returnType
-        )
-
-        if (bestFunc == null) {
-            val msg = Msg.F_NONE_OF_N_CANDIDATES_APPLICABLE_FOR_TYPE
-                .format(overloads.size, type.toString())
-
-            target.error(msg)
-            return null
+    private fun <T : Symbol> List<T>.filterIsAccessible(
+        targetScope: Scope,
+        fromScope: Scope,
+        asMember: Boolean = false
+    ): List<T> {
+        return filter { sym ->
+            targetScope.isSymAccessibleFrom(
+                sym = sym,
+                from = fromScope,
+                asMember = asMember
+            )
         }
-
-        return bestFunc
     }
 
     fun resolveForType(target: ExprNode, type: Type): Type {
@@ -771,9 +772,9 @@ class TypeResolver(
 
             when (type) {
                 is UnresolvedType -> {
-                    val accessible = accessScope.filterIsAccessible(
-                        list = overloadsList,
-                        from = scope,
+                    val accessible = overloadsList.filterIsAccessible(
+                        targetScope = accessScope,
+                        fromScope = scope,
                         asMember = true
                     )
 
@@ -796,13 +797,16 @@ class TypeResolver(
 
                 is FuncType -> {
                     val typeScope = overloaded.accessScope
+                    val fromScope = scope
 
-                    val bestFuncSym = typeScope.resolveFunc(
-                        overloadedFunc = overloaded,
-                        from = scope,
-                        argTypes = type.paramTypes
-                    ).handle<FuncSymbol>(target.range) {
-                        sym as? FuncSymbol
+                    val bestFuncSym = analyzer.withScope(typeScope) {
+                        analyzer.overloadResolver.resolveFunc(
+                            overloadedFunc = overloaded,
+                            from = fromScope,
+                            argTypes = type.paramTypes
+                        ).handle<FuncSymbol>(target.range) {
+                            sym as? FuncSymbol
+                        }
                     }
 
                     target bind bestFuncSym
@@ -815,7 +819,7 @@ class TypeResolver(
         if (type is UnresolvedType)
             return initializerType
 
-        if (initializerType != ErrorType && !initializerType.canCastTo(type))
+        if (initializerType != ErrorType && convert(initializerType, type).notExists())
             target.error(
                 Msg.MismatchExpectedActual.format(
                     Terms.TYPE,
@@ -827,12 +831,10 @@ class TypeResolver(
         return type
     }
 
+    private fun convert(fromType: Type, toType: Type) =
+        analyzer.convertResolver.convert(fromType, toType)
+
     fun ScopeResult.handle(range: SourceRange?, onSuccess: ScopeResult.Success<*>.() -> Type): Type {
         return handle<Type?>(range, onSuccess) ?: ErrorType
     }
-
-    /*
-        fun ScopeResult.handle(onSuccess: ScopeResult.Success<*>.() -> Type) =
-            this.handle(null, onSuccess)
-    */
 }

@@ -1,9 +1,9 @@
 package lang.semantics.types
 
-enum class PrimitiveSize(val size: Int) {
-    NO_SIZE(size = 0),
-    BYTE(size = 1),
-    WORD(size = 2),
-    DWORD(size = 4),
-    QWORD(size = 8)
+enum class PrimitiveSize(val bytes: Int) {
+    NO_SIZE(bytes = 0),
+    BYTE(bytes = 1),
+    WORD(bytes = 2),
+    DWORD(bytes = 4),
+    QWORD(bytes = 8)
 }

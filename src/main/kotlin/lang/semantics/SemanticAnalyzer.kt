@@ -8,14 +8,10 @@ import lang.messages.MsgHandler
 import lang.nodes.BaseDeclStmtNode
 import lang.nodes.BaseImportStmtNode
 import lang.nodes.BlockNode
-import lang.nodes.DeclStmtNamedNode
 import lang.nodes.ExprNode
 import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.pipeline.*
-import lang.semantics.resolvers.ConstResolver
-import lang.semantics.resolvers.DeclarationResolver
-import lang.semantics.resolvers.ModifierResolver
-import lang.semantics.resolvers.TypeResolver
+import lang.semantics.resolvers.*
 import lang.semantics.scopes.FileScope
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
@@ -31,6 +27,8 @@ class SemanticAnalyzer(
     override val constResolver = ConstResolver(analyzer = this)
     override val typeResolver = TypeResolver(analyzer = this)
     override val modResolver = ModifierResolver(analyzer = this)
+    override val convertResolver = ConvertResolver(analyzer = this)
+    override val overloadResolver = OverloadResolver(analyzer = this, convertResolver = convertResolver)
 
     override val semanticContext = SemanticContext()
 

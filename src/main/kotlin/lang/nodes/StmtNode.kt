@@ -178,17 +178,13 @@ data class ConstructorDeclStmtNode(
     override val range: SourceRange
 ) : FuncDeclStmtNode(
     modifiers = modifiers,
-    name = IdentifierNode(value = getName(), range = range),
+    name = IdentifierNode(value = FuncKind.CONSTRUCTOR.kindName, range = range),
     typeNames = null,
     params = params,
     returnType = VoidDatatypeNode(range),
     body = body,
     range = range,
 ) {
-    companion object {
-        fun getName() = $$"$constructor"
-    }
-
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             modifiers = (modifiers?.mapRecursive(mapper) as? ModifierSetNode? ?: modifiers),
@@ -205,17 +201,13 @@ data class DestructorDeclStmtNode(
     override val range: SourceRange
 ) : FuncDeclStmtNode(
     modifiers = modifiers,
-    name = IdentifierNode(value = getName(), range = range),
+    name = IdentifierNode(value = FuncKind.DESTRUCTOR.kindName, range = range),
     typeNames = null,
     params = emptyList(),
     returnType = VoidDatatypeNode(range),
     body = body,
     range = range,
 ) {
-    companion object {
-        fun getName() = $$"$destructor"
-    }
-
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             modifiers = modifiers?.mapRecursive(mapper) as? ModifierSetNode ?: modifiers,

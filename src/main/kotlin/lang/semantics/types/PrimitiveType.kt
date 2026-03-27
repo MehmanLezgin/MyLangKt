@@ -1,16 +1,25 @@
 package lang.semantics.types
 
 import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.builtin.builders.constVar
 import lang.semantics.builtin.builders.init
+import lang.semantics.builtin.builders.registerImplicitCasts
 import lang.semantics.scopes.BaseTypeScope
-import lang.semantics.scopes.Scope
 import lang.semantics.symbols.PrimitiveTypeSymbol
+
+enum class PrimitiveFamily() {
+    BOOL,
+    CHAR,
+    INT,
+    UINT,
+    FLOAT,
+    VOID,
+}
 
 open class PrimitiveType(
     val name: String,
+    val family: PrimitiveFamily = PrimitiveFamily.INT,
+    val signed: Boolean = true,
     val primitiveSize: PrimitiveSize,
-    val prec: Int,
     override var flags: TypeFlags = TypeFlags()
 ) : Type(
     flags = flags,
@@ -37,14 +46,19 @@ open class PrimitiveType(
 
         this.declaration = sym
         PrimitivesScope.define(sym)
+
+        scope.init {
+            registerImplicitCasts()
+        }
     }
 
     protected open fun recreate(flags: TypeFlags): PrimitiveType =
         PrimitiveType(
             name = name,
             primitiveSize = primitiveSize,
-            prec = prec,
-            flags = flags
+            flags = flags,
+            family = family,
+            signed = signed
         )
 
     override fun copyWithFlags(flags: TypeFlags): PrimitiveType {
@@ -55,7 +69,6 @@ open class PrimitiveType(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-//        if (javaClass != other?.javaClass) return false
         if (!super.equals(other)) return false
 
         other as PrimitiveType

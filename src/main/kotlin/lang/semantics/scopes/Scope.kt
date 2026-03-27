@@ -1,14 +1,10 @@
 package lang.semantics.scopes
 
-import lang.core.operators.OperatorType
-import lang.messages.Terms
 import lang.nodes.*
 import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isUnaryOperator
 import lang.semantics.symbols.*
-import lang.semantics.types.ErrorType.castCost
 import lang.semantics.types.Type
-import kotlin.collections.find
 
 typealias SymbolMap = MutableMap<String, Symbol>
 typealias SymbolIMap = Map<String, Symbol>
@@ -159,219 +155,6 @@ open class Scope(
         }
     }
 
-    fun resolveBestOverloads(
-        overloads: List<FuncSymbol>,
-        from: Scope,
-        types: List<Type>,
-        returnType: Type? = null
-    ): List<FuncSymbol> {
-        // compute (func, cost) for all valid overloads
-        val costs = overloads.mapNotNull { func ->
-
-            if (func.params.list.size != types.size) return@mapNotNull null
-
-            val params = func.params.list
-            var totalCost = 0
-
-            if (!isSymAccessibleFrom(func, from))
-                totalCost += 100
-
-            for (i in types.indices) {
-                val cost = types[i].castCost(params[i].type) ?: return@mapNotNull null
-                totalCost += cost
-            }
-
-            if (returnType != null) {
-                val retCost = func.returnType.castCost(returnType) ?: return@mapNotNull null
-                totalCost += retCost
-            }
-
-            func to totalCost
-        }
-
-        val minCost = costs.minOfOrNull { it.second } ?: return emptyList()
-
-        return costs.filter { it.second == minCost }.map { it.first }
-    }
-
-    private fun pickSingleFuncSym(
-        name: String,
-        from: Scope,
-        argTypes: List<Type>,
-        kind: FuncKind,
-        overloads: List<FuncSymbol>?
-    ): ScopeResult {
-        return if (overloads.isNullOrEmpty())
-            ScopeError.NoFuncOverload(
-                kind = kind,
-                symName = name,
-                argTypes = argTypes,
-                scopeName = absoluteScopePath
-            ).err()
-        else if (overloads.size > 1) {
-            val accessibleOverloads = filterIsAccessible(list = overloads, from = from, asMember = false)
-
-            if (accessibleOverloads.size > 1)
-                return ScopeError.AmbiguousOverloadedFunc(list = accessibleOverloads).err()
-
-            pickSingleFuncSym(
-                name = name,
-                from = from,
-                argTypes = argTypes,
-                kind = kind,
-                overloads = accessibleOverloads
-            )
-        } else {
-            val best = overloads.firstOrNull()
-                ?: return ScopeError.NotDefined(
-                    symName = name,
-                    scopeName = absoluteScopePath
-                ).err()
-
-            if (!isSymAccessibleFrom(sym = best, from = from, asMember = false))
-                return ScopeError.Inaccessible(best.name).err()
-
-            best.ok()
-        }
-    }
-
-    fun <T : Symbol> filterIsAccessible(list: List<T>, from: Scope, asMember: Boolean = false): List<T> {
-        return list.filter { sym ->
-            isSymAccessibleFrom(
-                sym = sym,
-                from = from,
-                asMember = asMember
-            )
-        }
-    }
-
-    fun resolveFunc(
-        overloadedFunc: OverloadedFuncSymbol,
-        from: Scope,
-        argTypes: List<Type>,
-    ): ScopeResult {
-        val constOverloads = resolveBestOverloads(
-            overloadedFunc.overloads,
-            from,
-            argTypes
-        )
-
-        return pickSingleFuncSym(
-            name = overloadedFunc.name,
-            from = from,
-            argTypes = argTypes,
-            kind = overloadedFunc.kind,
-            overloads = constOverloads
-        )
-    }
-
-    fun resolveConstructor(
-        argTypes: List<Type>,
-        from: Scope
-    ): ScopeResult {
-        val overloadedFunc = (symbols.values.find { sym ->
-            sym is OverloadedFuncSymbol && sym.kind == FuncKind.CONSTRUCTOR
-        } as? OverloadedFuncSymbol)
-            ?: return ScopeError.NoFuncOverload(
-                symName = Terms.CONSTRUCTOR,
-                kind = FuncKind.CONSTRUCTOR,
-                argTypes = argTypes,
-                scopeName = absoluteScopePath
-            ).err()
-
-        return resolveFunc(
-            overloadedFunc = overloadedFunc,
-            from = from,
-            argTypes = argTypes
-        )
-    }
-
-    fun resolveExactOverload(
-        overloads: List<FuncSymbol>,
-        types: List<Type>,
-        returnType: Type? = null
-    ): FuncSymbol? {
-        return overloads
-            .find { func ->
-                if (func.params.list.size != types.size)
-                    return@find false
-
-                val params = func.params.list
-
-                for (i in types.indices)
-                    if (types[i] != params[i].type)
-                        return@find false
-
-                if (returnType != null && func.returnType != returnType)
-                    return@find false
-
-                true
-            }
-    }
-
-    fun resolveFunc(
-        name: String,
-        kind: FuncKind,
-        from: Scope,
-        argTypes: List<Type>,
-        isStatic: Boolean = false
-    ): ScopeResult {
-        return when (val result = resolve(name)) {
-            is ScopeResult.ResultList,
-            is ScopeResult.Error -> result
-
-            is ScopeResult.Success<*> -> {
-                val overloads = when (val sym = result.sym) {
-                    is OverloadedFuncSymbol -> {
-                        val effectiveArgTypes = if (isStatic) argTypes else argTypes.drop(1)
-
-                        val bestOverloads = resolveBestOverloads(
-                            overloads = sym.overloads,
-                            from = from,
-                            types = effectiveArgTypes
-                        )
-
-                        if (bestOverloads.isEmpty())
-                            return ScopeError.NoFuncOverload(
-                                symName = name,
-                                kind = sym.kind,
-                                argTypes = argTypes,
-                                scopeName = absoluteScopePath
-                            ).err()
-
-                        bestOverloads
-                    }
-
-                    else -> return ScopeError.NotDefined(
-                        symName = name,
-                        scopeName = absoluteScopePath
-                    ).err()
-                }
-
-                pickSingleFuncSym(
-                    name = name,
-                    from = from,
-                    argTypes = argTypes,
-                    kind = kind,
-                    overloads = overloads
-                )
-            }
-        }
-    }
-
-    fun resolveOperFunc(
-        operator: OperatorType,
-        from: Scope,
-        argTypes: List<Type>, isStatic: Boolean
-    ): ScopeResult =
-        resolveFunc(
-            name = operator.fullName,
-            kind = FuncKind.OPERATOR,
-            from = from,
-            argTypes = argTypes,
-            isStatic = isStatic
-        )
-
     fun defineFunc(
         node: FuncDeclStmtNode,
         nameId: IdentifierNode,
@@ -390,14 +173,12 @@ open class Scope(
         else {
             when (node) {
                 is ConstructorDeclStmtNode -> ConstructorSymbol(
-                    name = name,
                     params = params,
                     returnType = returnType,
                     modifiers = modifiers
                 )
 
                 is DestructorDeclStmtNode -> DestructorSymbol(
-                    name = name,
                     returnType = returnType
                 )
 
@@ -498,7 +279,6 @@ open class Scope(
                     return ScopeError.AlreadyDefined(funcSym.name, scopeName).err()
                 }
 
-                // add anyway, for error: multiple declarations (on call)
                 existingSym.overloads.add(funcSym)
                 return funcSym.ok()
             }

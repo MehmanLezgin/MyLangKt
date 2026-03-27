@@ -1,21 +1,16 @@
 package lang.semantics.builtin.types
 
 import lang.core.operators.OperatorType
+import lang.messages.Terms
 import lang.semantics.builtin.builders.constVar
 import lang.semantics.builtin.builders.init
 import lang.semantics.builtin.builders.operFunc
 import lang.semantics.scopes.BaseTypeScope
-import lang.semantics.scopes.Scope
+import lang.semantics.types.PrimitiveFamily
 import lang.semantics.types.PrimitiveSize
 import lang.semantics.types.PrimitiveType
 import lang.semantics.types.TypeFlags
 
-private object SymNames {
-    const val MIN_VALUE = "MIN_VALUE"
-    const val MAX_VALUE = "MAX_VALUE"
-    const val OTHER = "other"
-
-}
 
 class VoidPrimitive(
     override var flags: TypeFlags = TypeFlags()
@@ -23,7 +18,7 @@ class VoidPrimitive(
     flags = flags,
     name = "void",
     primitiveSize = PrimitiveSize.NO_SIZE,
-    prec = Int.MIN_VALUE
+    family = PrimitiveFamily.VOID
 ) {
     override fun recreate(flags: TypeFlags) = VoidPrimitive(flags = flags)
 }
@@ -34,7 +29,7 @@ class BoolPrimitive(
     flags = flags,
     name = "bool",
     primitiveSize = PrimitiveSize.BYTE,
-    prec = 0
+    family = PrimitiveFamily.BOOL
 ) {
     override fun recreate(flags: TypeFlags) = BoolPrimitive(flags = flags)
 }
@@ -45,7 +40,7 @@ class CharPrimitive(
     flags = flags,
     name = "char",
     primitiveSize = PrimitiveSize.BYTE,
-    prec = 1
+    family = PrimitiveFamily.CHAR
 ) {
     override fun recreate(flags: TypeFlags) = CharPrimitive(flags = flags)
 
@@ -54,16 +49,16 @@ class CharPrimitive(
         val charType = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, charType, Char.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, charType, Char.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, charType, Char.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, charType, Char.MAX_VALUE)
 
             operFunc(OperatorType.PLUS) {
-                params { SymNames.OTHER ofType charType }
+                params { Terms.OTHER ofType charType }
                 returns(charType)
             }
 
             operFunc(OperatorType.MINUS) {
-                params { SymNames.OTHER ofType charType }
+                params { Terms.OTHER ofType charType }
                 returns(charType)
             }
 
@@ -88,7 +83,8 @@ class UCharPrimitive(
     flags = flags,
     name = "uchar",
     primitiveSize = PrimitiveSize.BYTE,
-    prec = 1
+    family = PrimitiveFamily.CHAR,
+    signed = false
 ) {
     override fun recreate(flags: TypeFlags) = UCharPrimitive(flags = flags)
 
@@ -98,8 +94,8 @@ class UCharPrimitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, UByte.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, UByte.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, UByte.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, UByte.MAX_VALUE)
         }
     }
 }
@@ -110,7 +106,7 @@ class Int8Primitive(
     flags = flags,
     name = "byte",
     primitiveSize = PrimitiveSize.BYTE,
-    prec = 2
+    family = PrimitiveFamily.INT
 ) {
     override fun recreate(flags: TypeFlags) = Int8Primitive(flags = flags)
 
@@ -119,8 +115,8 @@ class Int8Primitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, Byte.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, Byte.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, Byte.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, Byte.MAX_VALUE)
         }
     }
 }
@@ -131,7 +127,8 @@ class UInt8Primitive(
     flags = flags,
     name = "ubyte",
     primitiveSize = PrimitiveSize.BYTE,
-    prec = 3
+    family = PrimitiveFamily.UINT,
+    signed = false
 ) {
     override fun recreate(flags: TypeFlags) = UInt8Primitive(flags = flags)
 
@@ -141,8 +138,8 @@ class UInt8Primitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, UByte.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, UByte.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, UByte.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, UByte.MAX_VALUE)
         }
     }
 }
@@ -153,7 +150,7 @@ class Int16Primitive(
     flags = flags,
     name = "short",
     primitiveSize = PrimitiveSize.WORD,
-    prec = 4
+    family = PrimitiveFamily.INT
 ) {
     override fun recreate(flags: TypeFlags) = Int16Primitive(flags = flags)
 
@@ -162,8 +159,8 @@ class Int16Primitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, Short.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, Short.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, Short.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, Short.MAX_VALUE)
         }
     }
 }
@@ -174,7 +171,8 @@ class UInt16Primitive(
     flags = flags,
     name = "ushort",
     primitiveSize = PrimitiveSize.WORD,
-    prec = 5
+    family = PrimitiveFamily.UINT,
+    signed = false
 ) {
     override fun recreate(flags: TypeFlags) = UInt16Primitive(flags = flags)
 
@@ -184,8 +182,8 @@ class UInt16Primitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, UShort.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, UShort.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, UShort.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, UShort.MAX_VALUE)
         }
     }
 }
@@ -196,7 +194,7 @@ class Int32Primitive(
     flags = flags,
     name = "int",
     primitiveSize = PrimitiveSize.DWORD,
-    prec = 6
+    family = PrimitiveFamily.INT
 ) {
     override fun recreate(flags: TypeFlags) = Int32Primitive(flags = flags)
 
@@ -205,26 +203,26 @@ class Int32Primitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, Int.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, Int.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, Int.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, Int.MAX_VALUE)
 
             operFunc(OperatorType.PLUS) {
-                params { SymNames.OTHER ofType type }
+                params { Terms.OTHER ofType type }
                 returns(type)
             }
 
             operFunc(OperatorType.MUL) {
-                params { SymNames.OTHER ofType type }
+                params { Terms.OTHER ofType type }
                 returns(type)
             }
 
             operFunc(OperatorType.SHIFT_LEFT) {
-                params { SymNames.OTHER ofType type }
+                params { Terms.OTHER ofType type }
                 returns(type)
             }
 
             operFunc(OperatorType.SHIFT_RIGHT) {
-                params { SymNames.OTHER ofType type }
+                params { Terms.OTHER ofType type }
                 returns(type)
             }
         }
@@ -237,7 +235,8 @@ class UInt32Primitive(
     flags = flags,
     name = "uint",
     primitiveSize = PrimitiveSize.DWORD,
-    prec = 7
+    family = PrimitiveFamily.UINT,
+    signed = false
 ) {
     override fun recreate(flags: TypeFlags) = UInt32Primitive(flags = flags)
 
@@ -247,8 +246,8 @@ class UInt32Primitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, UInt.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, UInt.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, UInt.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, UInt.MAX_VALUE)
         }
     }
 }
@@ -259,7 +258,7 @@ class Int64Primitive(
     flags = flags,
     name = "long",
     primitiveSize = PrimitiveSize.QWORD,
-    prec = 8
+    family = PrimitiveFamily.INT
 ) {
     override fun recreate(flags: TypeFlags) = Int64Primitive(flags = flags)
 
@@ -268,8 +267,8 @@ class Int64Primitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, Long.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, Long.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, Long.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, Long.MAX_VALUE)
         }
     }
 }
@@ -280,7 +279,8 @@ class UInt64Primitive(
     flags = flags,
     name = "ulong",
     primitiveSize = PrimitiveSize.QWORD,
-    prec = 9
+    family = PrimitiveFamily.UINT,
+    signed = false
 ) {
     override fun recreate(flags: TypeFlags) = UInt64Primitive(flags = flags)
 
@@ -290,8 +290,8 @@ class UInt64Primitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, ULong.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, ULong.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, ULong.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, ULong.MAX_VALUE)
         }
     }
 }
@@ -302,7 +302,7 @@ class Float32Primitive(
     flags = flags,
     name = "float",
     primitiveSize = PrimitiveSize.DWORD,
-    prec = 10
+    family = PrimitiveFamily.FLOAT
 ) {
     override fun recreate(flags: TypeFlags) = Float32Primitive(flags = flags)
 
@@ -311,8 +311,8 @@ class Float32Primitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, Float.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, Float.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, Float.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, Float.MAX_VALUE)
         }
     }
 }
@@ -323,7 +323,7 @@ class Float64Primitive(
     flags = flags,
     name = "double",
     primitiveSize = PrimitiveSize.QWORD,
-    prec = 11
+    family = PrimitiveFamily.FLOAT
 ) {
     override fun recreate(flags: TypeFlags) = Float64Primitive(flags = flags)
 
@@ -332,8 +332,8 @@ class Float64Primitive(
         val type = this
 
         scope.init {
-            constVar(SymNames.MIN_VALUE, type, Double.MIN_VALUE)
-            constVar(SymNames.MAX_VALUE, type, Double.MAX_VALUE)
+            constVar(Terms.MIN_VALUE, type, Double.MIN_VALUE)
+            constVar(Terms.MAX_VALUE, type, Double.MAX_VALUE)
         }
     }
 }

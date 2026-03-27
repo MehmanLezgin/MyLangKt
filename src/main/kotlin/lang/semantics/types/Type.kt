@@ -3,7 +3,6 @@ package lang.semantics.types
 import lang.messages.Msg
 import lang.semantics.builtin.PrimitivesScope.void
 import lang.semantics.builtin.PrimitivesScope.voidPtr
-import lang.semantics.builtin.types.VoidPrimitive
 import lang.semantics.symbols.TypeSymbol
 
 abstract class Type(
@@ -19,7 +18,7 @@ abstract class Type(
             this is PointerType &&
             this.level == 1 &&
             this.base is PrimitiveType &&
-            this.base.name == void.name
+            this.base == void
 
     fun setFlags(
         isConst: Boolean = flags.isConst,
@@ -45,9 +44,6 @@ abstract class Type(
 
         other as Type
 
-        if (isConst != other.isConst) return false
-        if (isLvalue != other.isLvalue) return false
-        if (isExprType != other.isExprType) return false
         return true
     }
 
@@ -59,77 +55,6 @@ abstract class Type(
     }
 
     override fun toString() = stringify()
-
-    fun Type.castCost(to: Type): Int? {
-        val from = this
-        if (!from.canCastTo(to)) return null
-        if (from == to) return 0
-
-        return when (from) {
-            is PrimitiveType if to is PrimitiveType ->
-                when {
-                    from.prec == to.prec -> 0
-                    from.prec < to.prec -> 1
-                    else -> 2
-                }
-
-            is PointerType if to is PointerType ->
-                if (to.isVoidPtr()) 10 else 0
-
-            else -> 100
-        }
-    }
-
-    fun canCastTo(to: Type): Boolean {
-        val from = this
-        if (from == to) return true
-        if (from.isVoidPtr()) {
-            if (to is PointerType) return true
-            if (to is FuncType) return true
-            return false
-        }
-
-        if (from == void || to == void) return false
-        if (!from.isConst && to.isConst) return false
-
-
-        when (from) {
-            is PrimitiveType -> {
-                if (to !is PrimitiveType) return false
-                if (to is VoidPrimitive) return false
-//                if (to == BuiltInTypes.) return false
-//                if (from.isConst && from.isExprType)
-//                    return true
-
-                return from.prec <= to.prec
-            }
-
-            is PointerType -> {
-                return when {
-                    to.isVoidPtr() -> true
-                    to is PointerType -> to.isVoidPtr() || from.level == to.level
-                    else -> false
-                }
-            }
-
-            is FuncType -> {
-                if (to.isVoidPtr()) return true
-                if (to !is FuncType) return false
-                if (from.returnType != to.returnType) return false
-                if (from.paramTypes != to.paramTypes) return false
-                return true
-            }
-
-            is UserType -> {
-                if (to !is UserType) return false
-                if (from.name != to.name) return false
-                if (from.declaration != to.declaration) return false
-                return from.templateArgs == to.templateArgs
-            }
-        }
-
-        return false
-    }
 
     fun stringify(pointerLevel: Int = 0): String {
         val type = this
@@ -175,17 +100,6 @@ abstract class Type(
                     }
                 }
             }
-
-//            if (type.isLvalue && withBase && type !is FuncType)
-//                append('&')
         }
     }
-
 }
-
-/*fun <T: Type> T.attachType(vararg nodes: ExprNode): T {
-    nodes.forEach { node -> node.type = this }
-    return this
-}*/
-
-

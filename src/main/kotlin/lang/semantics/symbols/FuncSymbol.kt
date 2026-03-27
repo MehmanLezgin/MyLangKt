@@ -160,12 +160,11 @@ data class BuiltInOperatorFuncSymbol(
 
 
 data class ConstructorSymbol(
-    override val name: String,
     override val params: FuncParamListSymbol,
     override val returnType: Type,
     override val modifiers: Modifiers = Modifiers()
 ) : FuncSymbol(
-    name = name,
+    name = FuncKind.CONSTRUCTOR.kindName,
     params = params,
     returnType = returnType,
 ) {
@@ -173,10 +172,9 @@ data class ConstructorSymbol(
 }
 
 data class DestructorSymbol(
-    override val name: String,
     override val returnType: Type
 ) : FuncSymbol(
-    name = name,
+    name = FuncKind.CONSTRUCTOR.kindName,
     params = FuncParamListSymbol(list = emptyList()),
     returnType = returnType,
 ) {

@@ -7,8 +7,10 @@ import lang.nodes.BlockNode
 import lang.semantics.pipeline.AnalysisPipeline
 import lang.semantics.pipeline.LocalDeclPipeline
 import lang.semantics.resolvers.ConstResolver
+import lang.semantics.resolvers.ConvertResolver
 import lang.semantics.resolvers.DeclarationResolver
 import lang.semantics.resolvers.ModifierResolver
+import lang.semantics.resolvers.OverloadResolver
 import lang.semantics.resolvers.TypeResolver
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
@@ -21,6 +23,8 @@ interface ISemanticAnalyzer {
     val constResolver: ConstResolver
     val typeResolver: TypeResolver
     val modResolver: ModifierResolver
+    val convertResolver: ConvertResolver
+    val overloadResolver: OverloadResolver
 
     val semanticContext: SemanticContext
     val pipeline: AnalysisPipeline
