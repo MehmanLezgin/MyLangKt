@@ -71,9 +71,8 @@ class OverloadResolver(
         else if (overloads.size > 1) {
             val accessibleOverloads = filterIsAccessible(list = overloads, from = from, asMember = false)
 
-            if (accessibleOverloads.size > 1) {
+            if (accessibleOverloads.size > 1)
                 return ScopeError.AmbiguousOverloadedFunc(list = accessibleOverloads).err()
-            }
 
             pickSingleFuncSym(
                 name = name,
@@ -109,14 +108,15 @@ class OverloadResolver(
         argTypes: List<Type>,
         isStatic: Boolean = false
     ): ScopeResult {
-        return when (val result = scope.resolve(name)) {
+        return when (val result = scope.resolve(name, from, !isStatic)) {
             is ScopeResult.ResultList,
             is ScopeResult.Error -> result
 
             is ScopeResult.Success<*> -> {
                 val overloads = when (val sym = result.sym) {
                     is OverloadedFuncSymbol -> {
-                        val effectiveArgTypes = if (isStatic) argTypes else argTypes.drop(1)
+                        val effectiveArgTypes =
+                            if (isStatic) argTypes else argTypes.drop(1)
 
                         val bestOverloads = resolveBestOverloads(
                             overloads = sym.overloads,

@@ -100,8 +100,11 @@ open class Scope(
     }
 
     fun resolve(name: String, from: Scope = this, asMember: Boolean = false): ScopeResult {
-        if (asMember && this is BaseTypeScope)
-            return this.resolveMember(name, from)
+        if (asMember)
+            when (this) {
+                is BaseTypeScope -> return this.resolveMember(name, from)
+                is InstanceScope -> return this.resolveMember(name, from)
+            }
 
         var sym = resolveRaw(name)
 

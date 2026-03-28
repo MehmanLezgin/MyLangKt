@@ -1,6 +1,7 @@
 package lang.semantics.resolvers
 
 import lang.core.SourceRange
+import lang.core.Utils.toInt
 import lang.core.operators.OperatorType
 import lang.messages.Msg
 import lang.messages.Terms
@@ -21,13 +22,13 @@ class TypeResolver(
     override fun resolve(target: ExprNode): Type {
         return when (target) {
             is LiteralNode<*> -> resolve(target)
+            is IdentifierNode -> resolve(target)
             is NullLiteralNode -> PrimitivesScope.voidPtr.setFlags(
                 isExprType = true
             )
 
             is VoidNode -> PrimitivesScope.void
 
-            is IdentifierNode -> resolve(target)
             is BaseDatatypeNode -> resolve(target)
             is BinOpNode -> resolve(target)
             is UnaryOpNode -> resolve(target)
@@ -131,7 +132,11 @@ class TypeResolver(
 
         val member = target.member.identifier
 
-        val result = targetScope.resolve(name = member.value, from = scope, asMember = true)
+        val result = targetScope.resolve(
+            name = member.value,
+            from = scope,
+            asMember = true
+        )
 
         return result.handle(member.range) {
             target bind sym
@@ -159,7 +164,6 @@ class TypeResolver(
         val receiverType = resolve(receiver)
 
         var params: FuncParamListSymbol? = null
-        var paramTypes: List<Type> = listOf()
         var returnType: Type = ErrorType
 
         if (argTypes.any { it == ErrorType }) {
@@ -174,7 +178,6 @@ class TypeResolver(
             is PointerType -> {
                 if (receiverType.level == 1 && receiverType.base is FuncType) {
                     val decl = receiverType.base.funcDeclaration
-                    paramTypes = receiverType.base.paramTypes
                     params = decl?.params
                     returnType = receiverType.base.returnType
                     decl
@@ -199,7 +202,7 @@ class TypeResolver(
                 }
 
                 if (funcSym != null) {
-                    paramTypes = funcSym.paramTypes
+                    funcSym.paramTypes
                     params = funcSym.params
                     returnType = funcSym.returnType
                 }
@@ -224,7 +227,6 @@ class TypeResolver(
                 }
 
                 if (funcSym != null) {
-                    paramTypes = funcSym.paramTypes
                     params = funcSym.params
                     returnType = receiverType
                 }
@@ -233,13 +235,37 @@ class TypeResolver(
             }
         }
 
+        validateFuncArgs(
+            receiver = receiver,
+            argNodes = argNodes,
+            argTypes = argTypes,
+            params = params,
+        )
+
+
+        target bind sym
+
+        return returnType.setFlags(
+            isExprType = true,
+        ).also { target attach it }
+    }
+
+    private fun validateFuncArgs(
+        receiver: ExprNode,
+        argNodes: List<ExprNode>,
+        argTypes: List<Type>,
+        applyOffset: Boolean = false,
+        params: FuncParamListSymbol?,
+    ) {
+        val paramTypes = params?.list ?: return
+        val argOffset = applyOffset.toInt()
 
         for (i in paramTypes.indices) {
-            val param = params?.list?.getOrNull(i)
-            val paramType = paramTypes[i]
+            val param = params.list.getOrNull(i)
+            val paramType = paramTypes[i].type
             val paramName = param?.name
 
-            val argType = argTypes.getOrNull(i)
+            val argType = argTypes.getOrNull(i + argOffset)
 
 
             if (argType == null) {
@@ -264,12 +290,6 @@ class TypeResolver(
                 continue
             }
         }
-
-        target bind sym
-
-        return returnType.setFlags(
-            isExprType = true,
-        ).also { target attach it }
     }
 
     fun resolve(target: BaseDatatypeNode, isNamespaceCtx: Boolean = false): Type {
@@ -451,6 +471,7 @@ class TypeResolver(
         return resolveOperFunc(
             target = target,
             argTypes = argTypes,
+            args = listOf(target.operand),
             operator = operator
         )
     }
@@ -490,6 +511,7 @@ class TypeResolver(
         return resolveOperFunc(
             target = target,
             argTypes = argTypes,
+            args = listOf(target.right),
             operator = operator
         )
     }
@@ -497,6 +519,7 @@ class TypeResolver(
     private fun resolveOperFunc(
         target: ExprNode,
         argTypes: List<Type>,
+        args: List<ExprNode>,
         operator: OperatorType,
     ): Type {
         val leftType = argTypes.getOrNull(0) ?: return ErrorType
@@ -532,6 +555,14 @@ class TypeResolver(
         return result.handle(target.range) {
             val operFunc = sym as? FuncSymbol
                 ?: return@handle target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(operator.name))
+
+            validateFuncArgs(
+                receiver = target,
+                argNodes = args,
+                argTypes = argTypes,
+                applyOffset = !isStatic,
+                params = operFunc.params
+            )
 
             val returnType = when {
                 operFunc.isBuiltInFuncReturnsPtr() -> leftType
@@ -584,7 +615,7 @@ class TypeResolver(
             }
 
             else -> {
-                if (convert(rightType, leftType).notExists()) {
+                if (convert(leftType, rightType).notExists()) {
                     val msg = Msg.CannotCastType.format(
                         leftType.toString(),
                         rightType.toString()

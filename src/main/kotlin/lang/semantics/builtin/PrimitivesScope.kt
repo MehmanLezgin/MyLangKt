@@ -5,6 +5,7 @@ import lang.semantics.builtin.modules.mathModule
 import lang.semantics.builtin.modules.stdModule
 import lang.semantics.builtin.types.*
 import lang.semantics.scopes.Scope
+import lang.semantics.symbols.ModuleSymbol
 import lang.semantics.types.*
 
 object PrimitivesScope : Scope(
@@ -90,9 +91,9 @@ object PrimitivesScope : Scope(
     val ptrOperGrEqThan = ptrOperGrEqThan()
     val ptrOperLessEqThan = ptrOperLessEqThan()
 
-    val builtInModules = listOf(
-        mathModule(),
-        stdModule()
+    val builtInModules = listOf<ModuleSymbol>(
+//        mathModule(),
+//        stdModule()
     )
 
     fun lazyConst(type: PrimitiveType) = lazy { type.toConst() }

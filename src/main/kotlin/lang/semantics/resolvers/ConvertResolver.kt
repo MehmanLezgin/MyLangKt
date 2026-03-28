@@ -3,6 +3,8 @@ package lang.semantics.resolvers
 import lang.nodes.ExprNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
+import lang.semantics.builtin.types.CharPrimitive
+import lang.semantics.builtin.types.UCharPrimitive
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.ConstructorSymbol
 import lang.semantics.types.ConversionInfo
@@ -12,6 +14,9 @@ import lang.semantics.types.PointerType
 import lang.semantics.types.PrimitiveFamily
 import lang.semantics.types.PrimitiveType
 import lang.semantics.types.Type
+import lang.semantics.types.UserType
+import lang.semantics.types.exists
+import lang.semantics.types.notExists
 
 class ConvertResolver(
     override val analyzer: ISemanticAnalyzer
@@ -32,10 +37,22 @@ class ConvertResolver(
             )
         }
 
-        if (funcSym is ScopeResult.Success<*>)
-            return funcSym.sym as? ConstructorSymbol
+        val constructorSym = if (funcSym is ScopeResult.Success<*>)
+            funcSym.sym as? ConstructorSymbol
+        else null
 
-        return null
+        constructorSym ?: return null
+
+        val param = constructorSym.params.list.getOrNull(0)
+            ?: return null
+
+        if (param.type == toType) // prevent cycle
+            return null
+
+        if (convert(fromType, param.type).notExists())
+            return null
+
+        return constructorSym
     }
 
     private fun cast(fromType: Type, toType: Type) =
@@ -88,6 +105,8 @@ class ConvertResolver(
             fromType == toType ->
                 ConversionKind.IDENTITY
 
+            toType is UserType -> ConversionKind.CONSTRUCTOR
+
             fromType.isVoidPtr() ->
                 ConversionKind.VOID_PTR
 
@@ -97,7 +116,11 @@ class ConvertResolver(
 
                 ConversionKind.INVALID
 
-            fromType is PointerType -> ConversionKind.POINTER
+            fromType is PointerType && toType is PointerType ->
+                ConversionKind.POINTER
+
+            fromType is PointerType && toType.isVoidPtr() ->
+                ConversionKind.VOID_PTR
 
             fromType is FuncType -> ConversionKind.FUNCTION
 
@@ -131,6 +154,8 @@ class ConvertResolver(
     }
 
     private fun primitiveConversionCost(from: PrimitiveType, to: PrimitiveType): Int {
+        if (to is CharPrimitive || to is UCharPrimitive)
+            1
         if (from == to) return ConversionInfo.COST_IDENTITY
 
         val familyCost = when (from.family) {
@@ -146,9 +171,7 @@ class ConvertResolver(
         )
 
         val signedCost =
-            if (from.family == PrimitiveFamily.INT &&
-                from.signed != to.signed
-            ) 1 else 0
+            if (from.signed != to.signed) 1 else 0
 
         return familyCost * 10 + sizeCost + signedCost
     }

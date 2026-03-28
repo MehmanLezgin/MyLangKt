@@ -22,7 +22,7 @@ class DeclarationHeaderPass(
                 is ClassDeclStmtNode -> resolve(target = node)
                 is InterfaceDeclStmtNode -> resolve(target = node)
                 is EnumDeclStmtNode -> resolve(target = node)
-                is ModuleStmtNode ->  resolve(target = node)
+                is ModuleStmtNode -> resolve(target = node)
                 is VarDeclStmtNode -> resolve(target = node)
                 is FuncDeclStmtNode -> resolve(target = node)
                 else -> Unit
@@ -115,8 +115,7 @@ class DeclarationHeaderPass(
             FuncParamListSymbol(list = it.toList())
         }
 
-        withEffectiveScope(modifiers.isStatic)
-        {
+        withEffectiveScope(modifiers.isStatic) {
             val result = scope.defineFunc(target, target.name, params, returnType, modifiers)
 
             result.handle(target.range) {

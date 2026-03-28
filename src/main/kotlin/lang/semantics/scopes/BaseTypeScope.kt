@@ -12,8 +12,8 @@ open class BaseTypeScope(
 ) {
     var superTypeScope: BaseTypeScope? = null
 
-    val instanceScope: Scope by lazy {
-        Scope(
+    val instanceScope by lazy {
+        InstanceScope(
             parent = this,
             scopeName = null
         )
