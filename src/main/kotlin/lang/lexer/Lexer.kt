@@ -175,6 +175,7 @@ class Lexer(
                 LexSymbols.TRUE -> TokenType.TRUE
                 LexSymbols.FALSE -> TokenType.FALSE
                 LexSymbols.NULL -> TokenType.NULL
+                LexSymbols.THIS -> TokenType.THIS
                 else -> TokenType.IDENTIFIER
             }
         }
@@ -297,7 +298,7 @@ class Lexer(
     private var requiredSemicolon: Token? = null
 
     private fun skipWhitespacesAndComments(): Boolean {
-        var preLine = state.endLine
+        val preLine = state.endLine
 
         skipWhitespaces()
 

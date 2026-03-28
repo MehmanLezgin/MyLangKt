@@ -3,12 +3,14 @@ package lang.semantics.symbols
 import lang.semantics.scopes.*
 import lang.semantics.types.PrimitiveType
 import lang.semantics.types.Type
+import lang.semantics.types.UserType
 
 abstract class TypeSymbol(
     override val name: String,
     val staticScope: BaseTypeScope,
     override val modifiers: Modifiers
 ) : Symbol(name = name, modifiers = modifiers) {
+    var cachedType: UserType? = null
     var superType: Type? = null
 
     override fun equals(other: Any?): Boolean {
@@ -85,3 +87,20 @@ data class AliasSymbol(
     val visibility: Visibility,
     var sym: Symbol?,
 ) : Symbol(name)
+
+/*
+data class LazyAliasSymbol(
+    override val name: String,
+    val bindImportPass: BindImportPass,
+    val qualifiedName: QualifiedName,
+    val clause: NameClause
+) : Symbol(name) {
+    private val cachedSym: Symbol? = null
+
+    val sym: Symbol?
+        get() {
+            cachedSym?.let { return it }
+            bindImportPass.resolve(node)
+            cachedSym
+        }
+}*/

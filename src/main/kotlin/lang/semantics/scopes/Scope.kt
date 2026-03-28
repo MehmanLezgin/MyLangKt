@@ -6,9 +6,6 @@ import lang.parser.ParserUtils.isUnaryOperator
 import lang.semantics.symbols.*
 import lang.semantics.types.Type
 
-typealias SymbolMap = MutableMap<String, Symbol>
-typealias SymbolIMap = Map<String, Symbol>
-
 open class Scope(
     open val parent: Scope?,
     open val scopeName: String? = null
@@ -22,10 +19,11 @@ open class Scope(
 //            ?: parent?.absoluteScopePath
     }
 
-    open val symbols: SymbolMap = mutableMapOf()
+    open val symbols: MutableMap<String, Symbol> = mutableMapOf()
 
     fun Symbol.ok() = ScopeResult.Success(sym = this)
     fun ScopeError.err() = ScopeResult.Error(error = this)
+    fun List<ScopeResult>.asResultList() = ScopeResult.ResultList(list = this)
 
     fun isTypeScope() = this is BaseTypeScope && this !is ModuleScope
 
@@ -236,11 +234,9 @@ open class Scope(
     private fun defineFuncOverload(funcSym: OverloadedFuncSymbol): ScopeResult {
         return when (val definedSymResult = resolve(funcSym.name)) {
             is ScopeResult.Success<*> -> {
-                val results = funcSym.overloads.map { overload ->
+                funcSym.overloads.map { overload ->
                     defineOrOverloadFunction(funcSym = overload, existingSym = definedSymResult.sym)
-                }
-
-                ScopeResult.ResultList(list = results)
+                }.asResultList()
             }
 
             is ScopeResult.ResultList,

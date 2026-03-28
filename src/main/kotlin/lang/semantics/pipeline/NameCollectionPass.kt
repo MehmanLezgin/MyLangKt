@@ -1,27 +1,9 @@
 package lang.semantics.pipeline
 
-import lang.nodes.BlockNode
-import lang.nodes.ClassDeclStmtNode
-import lang.nodes.ConstructorDeclStmtNode
-import lang.nodes.DestructorDeclStmtNode
-import lang.nodes.EnumDeclStmtNode
-import lang.nodes.FuncDeclStmtNode
-import lang.nodes.InterfaceDeclStmtNode
-import lang.nodes.ModuleStmtNode
-import lang.nodes.NameClause
-import lang.nodes.NameSpecifier
-import lang.nodes.OperNode
-import lang.nodes.UsingDirectiveNode
-import lang.nodes.VarDeclStmtNode
+import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.resolvers.BaseResolver
-import lang.semantics.symbols.ClassSymbol
-import lang.semantics.symbols.EnumSymbol
-import lang.semantics.symbols.FuncKind
-import lang.semantics.symbols.InterfaceSymbol
-import lang.semantics.symbols.ModuleSymbol
-import lang.semantics.symbols.TypeSymbol
-import lang.semantics.symbols.VarSymbol
+import lang.semantics.symbols.*
 
 class NameCollectionPass(
     override val analyzer: ISemanticAnalyzer

@@ -180,6 +180,10 @@ class ExprParser(
                 ts.next(); NullLiteralNode(range = t.range)
             }
 
+            is Token.This -> {
+                ts.next(); ThisLiteralNode(range = t.range)
+            }
+
             is Token.Str -> {
                 ts.next(); LiteralNode.StringLiteral(value = t.value, range = t.range)
             }

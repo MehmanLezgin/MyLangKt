@@ -1,10 +1,13 @@
 package lang.lexer
 
+import lang.messages.Terms
+
 object LexSymbols {
-    const val INT = "int" // for preventing conflict with 'in' oper: op(in) + id(t)
-    const val TRUE = "true"
-    const val FALSE = "false"
-    const val NULL = "null"
+    const val INT = Terms.INT // for preventing conflict with 'in' oper: op(in) + id(t)
+    const val TRUE = Terms.TRUE
+    const val FALSE = Terms.FALSE
+    const val NULL = Terms.NULL
+    const val THIS = Terms.THIS
     const val DOT = '.'
     const val LPAREN = '('
     const val RPAREN = ')'

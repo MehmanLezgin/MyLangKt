@@ -1,8 +1,5 @@
 package lang.semantics.scopes
 
-import lang.semantics.symbols.Symbol
-import lang.semantics.symbols.Visibility
-
 open class BaseTypeScope(
     override val parent: Scope?,
     override val scopeName: String,

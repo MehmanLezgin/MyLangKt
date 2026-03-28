@@ -139,7 +139,7 @@ class Parser(
         }
 
         while (true) {
-            val item = parseNameSpecifier() ?: continue
+            val item = parseNameSpecifier() ?: break
 
             items.add(item)
 

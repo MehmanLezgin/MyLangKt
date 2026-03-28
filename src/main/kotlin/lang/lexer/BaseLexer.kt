@@ -215,6 +215,7 @@ open class BaseLexer(
             TokenType.TRUE -> Token.Bool(true, value, range)
             TokenType.FALSE -> Token.Bool(false, value, range)
             TokenType.NULL -> Token.Null(value, range)
+            TokenType.THIS -> Token.This(value, range)
 
             TokenType.KEYWORD -> {
                 val keywordType = langSpec.keywords[value]?.type ?: return Token.Unknown(raw = value, range = range)

@@ -3,9 +3,9 @@ package lang.semantics.scopes
 import lang.semantics.symbols.Symbol
 import lang.semantics.types.Type
 import lang.core.operators.OperatorType
+import lang.messages.Terms
 import lang.semantics.symbols.FuncKind
 import lang.semantics.symbols.FuncSymbol
-import lang.semantics.symbols.OverloadedFuncSymbol
 
 sealed class ScopeResult {
     data class Success<T : Symbol>(val sym: T) : ScopeResult()
@@ -22,7 +22,11 @@ sealed class ScopeError {
         val isStatic: Boolean = false
     ) : ScopeError()
 
-    data class NotDefined(val symName: String, val scopeName: String?) : ScopeError()
+    data class NotDefined(
+        val itemKind: String = Terms.SYMBOL,
+        val symName: String,
+        val scopeName: String?
+    ) : ScopeError()
 
     data class NoFuncOverload(
         val symName: String,

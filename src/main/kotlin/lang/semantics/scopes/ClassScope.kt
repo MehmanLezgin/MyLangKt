@@ -10,4 +10,9 @@ data class ClassScope(
     scopeName = scopeName,
 ) {
     lateinit var classSym: ClassSymbol
+    override fun toString(): String {
+        return ""
+    }
+
+
 }

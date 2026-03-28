@@ -3,20 +3,9 @@ package lang.semantics.resolvers
 import lang.nodes.ExprNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.builtin.types.CharPrimitive
-import lang.semantics.builtin.types.UCharPrimitive
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.ConstructorSymbol
-import lang.semantics.types.ConversionInfo
-import lang.semantics.types.ConversionKind
-import lang.semantics.types.FuncType
-import lang.semantics.types.PointerType
-import lang.semantics.types.PrimitiveFamily
-import lang.semantics.types.PrimitiveType
-import lang.semantics.types.Type
-import lang.semantics.types.UserType
-import lang.semantics.types.exists
-import lang.semantics.types.notExists
+import lang.semantics.types.*
 
 class ConvertResolver(
     override val analyzer: ISemanticAnalyzer
@@ -154,8 +143,6 @@ class ConvertResolver(
     }
 
     private fun primitiveConversionCost(from: PrimitiveType, to: PrimitiveType): Int {
-        if (to is CharPrimitive || to is UCharPrimitive)
-            1
         if (from == to) return ConversionInfo.COST_IDENTITY
 
         val familyCost = when (from.family) {

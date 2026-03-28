@@ -30,6 +30,7 @@ sealed class Token(
     data class Double64(val value: Double, override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Bool(val value: Boolean, override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Null(override val raw: String, override val range: SourceRange) : Token(raw, range)
+    data class This(override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Str(val value: String, override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Character(val value: Char, override val raw: String, override val range: SourceRange) : Token(raw, range)
 

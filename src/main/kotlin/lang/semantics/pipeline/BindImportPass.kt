@@ -2,15 +2,15 @@ package lang.semantics.pipeline
 
 import lang.core.SourceRange
 import lang.messages.Msg
-import lang.messages.Terms.quotes
+import lang.messages.Terms
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope.err
 import lang.semantics.builtin.PrimitivesScope.ok
 import lang.semantics.resolvers.BaseResolver
+import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
 import lang.semantics.scopes.ScopeResult
-import lang.semantics.scopes.SymbolIMap
 import lang.semantics.symbols.ModuleSymbol
 import lang.semantics.symbols.TypeSymbol
 import lang.semantics.symbols.Visibility
@@ -26,6 +26,7 @@ class BindImportPass(
         for (node in target.nodes) {
             when (node) {
                 is BaseImportStmtNode -> resolve(node)
+                is UsingDirectiveNode -> resolve(node)
                 else -> Unit
             }
         }
@@ -39,13 +40,21 @@ class BindImportPass(
 
     fun resolve(node: UsingDirectiveNode) {
         if (checkIsVisited(node)) return
+        val modifiers = analyzer.modResolver.resolve(target = node.modifiers)
+
+        val clause = node.clause
+
+        if (clause !is NameClause.Items) {
+            semanticError(Msg.WILDCARD_IS_NOT_ALLOWED_HERE, node.range)
+            return
+        }
 
         import(
-            clause = node.clause,
-            symbols = scope.symbols,
+            clause = clause,
+            targetScope = moduleRegPass.modulesContainer,
             range = node.range,
-            scopeName = null,
-            wildcardAllowed = false
+            wildcardAllowed = false,
+            visibility = modifiers.visibility
         )
     }
 
@@ -53,101 +62,144 @@ class BindImportPass(
         if (checkIsVisited(node)) return
 
         when (node) {
-            is ImportModulesStmtNode -> resolveModules(node)
+            is ImportModulesStmtNode -> resolveImportModules(node)
             is ImportFromStmtNode -> resolveFrom(node)
         }
     }
 
-    private fun resolveModulePath(parts: List<IdentifierNode>): ModuleSymbol? {
-        var symbols: SymbolIMap = moduleRegPass.allModules
+    private fun resolveModulePath(parts: List<IdentifierNode>): ScopeResult {
         var module: ModuleSymbol? = null
 
+        var currScope = moduleRegPass.modulesContainer
+
+        var name = ""
+
         for (part in parts) {
-            val sym = symbols[part.value]
-                ?: return part.error(Msg.MODULE_NOT_DEFINED).let { null }
+            name = part.value
 
-            if (sym !is ModuleSymbol)
-                return part.error(Msg.EXPECTED_MODULE_NAME).let { null }
+            val result = currScope.resolveModule(
+                name = name,
+                fromScope = scope
+            )
 
-            module = sym
-            symbols = sym.scope.symbols
+            if (result is ScopeResult.Success<*>) {
+                val sym = result.sym as ModuleSymbol
+                module = sym
+                currScope = sym.scope
+            }
+
+            continue
         }
 
-        return module
+        if (module == null) {
+            return ScopeError.NotDefined(
+                itemKind = Terms.MODULE,
+                symName = name,
+                scopeName = currScope.absoluteScopePath
+            ).err()
+        }
+
+        return module.ok()
     }
 
-    private fun getModule(name: QualifiedName): ModuleSymbol? =
+    private fun getModule(name: QualifiedName): ScopeResult =
         resolveModulePath(name.parts)
-
 
     private fun resolveSymbol(
         name: QualifiedName,
-        root: SymbolIMap,
-        scopeName: String? = null
+        targetScope: Scope,
     ): ScopeResult? {
 
         val parts = name.parts
         val last = parts.last()
 
-        val symbols = if (parts.size == 1) {
-            root
+        val finalScope = if (parts.size == 1) {
+            targetScope
         } else {
             val module = resolveModulePath(parts.subList(0, parts.lastIndex))
-                ?: return null
-            module.scope.symbols
+                .handle(name.range) {
+                    sym as ModuleSymbol
+                } ?: return null
+
+            module.scope
         }
 
-        val sym = symbols[last.value]
-            ?: return ScopeError.NotDefined(
-                symName = last.value,
-                scopeName = scopeName?.quotes()
-            ).err()
-
-        return sym.ok()
+        return finalScope.resolve(
+            name = last.value,
+            from = scope,
+            asMember = true
+        )
     }
 
-    private fun importAll(symbols: SymbolIMap, range: SourceRange) {
-        for (sym in symbols.values)
+    private fun importAll(targetScope: Scope, range: SourceRange) {
+        val symbols = targetScope.symbols
+
+        for (sym in symbols.values) {
+            val isAccessible = targetScope.isSymAccessibleFrom(
+                sym = sym,
+                from = scope,
+                asMember = true
+            )
+
+            if (!isAccessible) continue
+
             scope.define(sym).handle(range) {}
+        }
     }
 
-    private fun importItems(items: List<NameSpecifier>, symbols: SymbolIMap, scopeName: String?) {
-        for (item in items) {
-            val target: QualifiedName = item.target
-            var alias: IdentifierNode? = null
-            var allFrom = false
+    fun importItem(
+        item: NameSpecifier,
+        targetScope: Scope,
+        visibility: Visibility
+    ) {
+        val target: QualifiedName = item.target
+        var alias: IdentifierNode? = null
+        var allFrom = false
 
-            when (item) {
-                is NameSpecifier.Direct -> Unit
+        when (item) {
+            is NameSpecifier.Direct -> Unit
 
-                is NameSpecifier.Alias -> {
-                    alias = item.alias
-                }
-
-                is NameSpecifier.AllFrom -> {
-                    alias = null
-                    allFrom = true
-                }
+            is NameSpecifier.Alias -> {
+                alias = item.alias
             }
 
-            importOne(
-                target = target,
-                alias = alias,
-                allFrom = allFrom,
-                symbols = symbols,
-                scopeName = scopeName
+            is NameSpecifier.AllFrom -> {
+                alias = null
+                allFrom = true
+            }
+        }
+
+        return importItem(
+            target = target,
+            alias = alias,
+            allFrom = allFrom,
+            targetScope = targetScope,
+            visibility = visibility
+        )
+    }
+
+    private fun importItems(
+        items: List<NameSpecifier>,
+        targetScope: Scope,
+        visibility: Visibility
+    ) {
+        for (item in items) {
+            importItem(
+                item = item,
+                targetScope = targetScope,
+                visibility = visibility
             )
         }
     }
 
-    private fun importOne(
+    private fun importItem(
         target: QualifiedName,
         alias: IdentifierNode? = null,
         allFrom: Boolean = false,
-        symbols: SymbolIMap,
-        scopeName: String?
+        targetScope: Scope,
+        visibility: Visibility
     ) {
-        val result = resolveSymbol(target, symbols, scopeName)
+        val result = resolveSymbol(target, targetScope)
 
         result?.handle(target.range) {
             when {
@@ -158,7 +210,7 @@ class BindImportPass(
                     }
 
                     importAll(
-                        symbols = sym.staticScope.symbols,
+                        targetScope = sym.staticScope,
                         range = target.range ?: return@handle
                     )
                 }
@@ -171,7 +223,7 @@ class BindImportPass(
                     scope.defineAlias(
                         name = alias.value,
                         sym = sym,
-                        visibility = Visibility.PRIVATE
+                        visibility = visibility
                     ).handle(target.range) {}
                 }
             }
@@ -180,40 +232,50 @@ class BindImportPass(
 
     private fun import(
         clause: NameClause,
-        symbols: SymbolIMap,
+        targetScope: Scope,
         range: SourceRange,
-        scopeName: String?,
-        wildcardAllowed: Boolean
+        wildcardAllowed: Boolean,
+        visibility: Visibility
     ) {
         when (clause) {
             NameClause.Wildcard ->
                 if (wildcardAllowed)
-                    importAll(symbols, range)
+                    importAll(
+                        targetScope = targetScope,
+                        range = range
+                    )
                 else
                     semanticError(Msg.WILDCARD_IS_NOT_ALLOWED_HERE, range)
 
-            is NameClause.Items -> importItems(clause.items, symbols, scopeName)
+            is NameClause.Items -> importItems(
+                items = clause.items,
+                targetScope = targetScope,
+                visibility = visibility
+            )
         }
     }
 
-    private fun resolveModules(node: ImportModulesStmtNode) =
+    private fun resolveImportModules(node: ImportModulesStmtNode) =
         import(
             clause = node.items,
-            symbols = moduleRegPass.allModulesAsSymbols,
+            targetScope = moduleRegPass.modulesContainer,
             range = node.range,
-            scopeName = null,
-            wildcardAllowed = false
+            wildcardAllowed = false,
+            visibility = Visibility.PRIVATE
         )
 
     private fun resolveFrom(node: ImportFromStmtNode) {
-        val module = getModule(node.sourceName.target) ?: return
+        val module = getModule(node.sourceName.target)
+            .handle(node.range) {
+                sym as ModuleSymbol
+            } ?: return
 
         import(
             clause = node.items,
-            symbols = module.scope.symbols,
+            targetScope = module.scope,
             range = node.range,
-            scopeName = node.sourceName.target.toString(),
-            wildcardAllowed = true
+            wildcardAllowed = true,
+            visibility = Visibility.PRIVATE
         )
     }
 }

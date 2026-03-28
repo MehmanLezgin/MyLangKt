@@ -9,9 +9,7 @@ import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.builtin.PrimitivesScope
 import lang.semantics.builtin.isBuiltInFuncReturnsPtr
-import lang.semantics.scopes.FuncScope
-import lang.semantics.scopes.Scope
-import lang.semantics.scopes.ScopeResult
+import lang.semantics.scopes.*
 import lang.semantics.symbols.*
 import lang.semantics.types.*
 
@@ -23,9 +21,9 @@ class TypeResolver(
         return when (target) {
             is LiteralNode<*> -> resolve(target)
             is IdentifierNode -> resolve(target)
-            is NullLiteralNode -> PrimitivesScope.voidPtr.setFlags(
-                isExprType = true
-            )
+            is NullLiteralNode -> resolveNullLiteral()
+
+            is ThisLiteralNode -> resolve(target)
 
             is VoidNode -> PrimitivesScope.void
 
@@ -47,6 +45,35 @@ class TypeResolver(
         val a = target.constFoldAndBind()
         return a?.type ?: ErrorType
     }
+
+    private fun resolve(target: ThisLiteralNode): Type {
+        val typeScope = scope.getEnclosingScope<InstanceScope>()
+            ?.parent
+            ?.takeIf { it is ClassScope }
+            ?: return target.error(
+                Msg.SymbolNotDefinedIn.format(
+                    name = Terms.THIS,
+                    scopeName = null
+                )
+            )
+
+        val baseType = createUserType((typeScope as ClassScope).classSym)
+
+        return PointerType(
+            base = baseType,
+            level = 1,
+            flags = TypeFlags(
+                isConst = true,
+                isLvalue = false,
+                isExprType = true
+            )
+        )
+    }
+
+    private fun resolveNullLiteral() =
+        PrimitivesScope.voidPtr.setFlags(
+            isExprType = true
+        )
 
     private fun resolve(target: ReturnStmtNode): Type {
         val exprType = resolve(target.expr)
@@ -393,13 +420,19 @@ class TypeResolver(
     private fun createUserType(
         sym: TypeSymbol,
         templateArgs: List<TemplateArg> = emptyList()
-    ) =
+    ): UserType {
+        sym.cachedType?.let { return it }
+
         UserType(
             name = sym.name,
             templateArgs = templateArgs,
             declaration = sym,
             flags = TypeFlags(isExprType = false)
-        )
+        ).let {
+            sym.cachedType = it
+            return it
+        }
+    }
 
     fun ExprNode.constFoldAndBind(): ConstValueSymbol? {
         val constValue = analyzer.constResolver.resolve(this)
@@ -658,6 +691,9 @@ class TypeResolver(
         handleVarChange(target.left, leftType)
             ?.let { return it }
 
+        if (leftType == ErrorType || rightType == ErrorType)
+            return leftType
+
         if (convert(rightType, leftType).notExists()) {
             target.error(
                 Msg.MismatchExpectedActual.format(
@@ -850,7 +886,10 @@ class TypeResolver(
         if (type is UnresolvedType)
             return initializerType
 
-        if (initializerType != ErrorType && convert(initializerType, type).notExists())
+        if (initializerType == ErrorType || type == ErrorType)
+            return type
+
+        if (convert(initializerType, type).notExists())
             target.error(
                 Msg.MismatchExpectedActual.format(
                     Terms.TYPE,

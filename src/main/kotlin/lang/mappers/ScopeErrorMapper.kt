@@ -30,7 +30,7 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
                 operatorParamMsg(a.oper.raw, a.expected, a.isStatic)
 
             is ScopeError.NotDefined ->
-                Msg.SymbolNotDefinedIn.format(name = a.symName, scopeName = a.scopeName)
+                Msg.SymbolNotDefinedIn.format(itemKind = a.itemKind, name = a.symName, scopeName = a.scopeName)
 
             is ScopeError.AmbiguousOverloadedFunc ->
                 Msg.AmbiguousOverloadedFunc.format(list = a.list)

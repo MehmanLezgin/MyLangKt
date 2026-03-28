@@ -23,6 +23,7 @@ enum class TokenType {
     TRUE,
     FALSE,
     NULL,
+    THIS,
 
     IDENTIFIER,
     QUOTES_STR,
