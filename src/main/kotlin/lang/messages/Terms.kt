@@ -26,6 +26,7 @@ object Terms {
     const val INTERFACE = "interface"
     const val ENUM = "enum"
     const val FUNCTION = "function"
+    const val METHOD = "method"
     const val VARIABLE = "variable"
     const val SYMBOL = "symbol"
     const val PARAM = "parameter"

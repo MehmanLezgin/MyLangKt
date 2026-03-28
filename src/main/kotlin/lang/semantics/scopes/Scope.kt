@@ -65,9 +65,7 @@ open class Scope(
 
         return when (sym.modifiers.visibility) {
             Visibility.PUBLIC -> true
-            Visibility.PRIVATE -> {
-                !asMember && thisEnclosing == fromEnclosing
-            }
+            Visibility.PRIVATE -> !asMember && thisEnclosing == fromEnclosing
             Visibility.INTERNAL -> {
                 if (thisEnclosing == null) return false
                 if (!asMember && thisEnclosing == fromEnclosing) return true
@@ -185,12 +183,24 @@ open class Scope(
                     returnType = returnType
                 )
 
-                else -> FuncSymbol(
-                    name = name,
-                    params = params,
-                    returnType = returnType,
-                    modifiers = modifiers
-                )
+                else -> when {
+                    this is InstanceScope -> {
+                        MethodFuncSymbol(
+                            accessScope = this,
+                            name = name,
+                            params = params,
+                            returnType = returnType,
+                            modifiers = modifiers
+                        )
+                    }
+
+                    else -> FuncSymbol(
+                        name = name,
+                        params = params,
+                        returnType = returnType,
+                        modifiers = modifiers
+                    )
+                }
             }
         }
 
@@ -295,14 +305,19 @@ open class Scope(
         node: InterfaceDeclStmtNode,
         modifiers: Modifiers,
     ): ScopeResult {
+        val interfaceScope = InterfaceScope(
+            parent = this,
+            scopeName = node.name.value,
+        )
+
         val sym = InterfaceSymbol(
             name = node.name.value,
-            scope = InterfaceScope(
-                parent = this,
-                scopeName = node.name.value,
-            ),
+            scope = interfaceScope,
             modifiers = modifiers
         )
+
+        interfaceScope.ownerSymbol = sym
+
         return defineRaw(sym)
     }
 
@@ -321,17 +336,24 @@ open class Scope(
             modifiers = modifiers
         )
 
-        classScope.classSym = sym
+        classScope.ownerSymbol = sym
 
         return defineRaw(sym)
     }
 
     fun defineEnum(node: EnumDeclStmtNode, modifiers: Modifiers): ScopeResult {
+        val enumScope = EnumScope(
+            parent = this,
+            scopeName = node.name.value
+        )
+
         val sym = EnumSymbol(
             name = node.name.value,
-            scope = EnumScope(parent = this, scopeName = node.name.value),
+            scope = enumScope,
             modifiers = modifiers
         )
+
+        enumScope.ownerSymbol = sym
 
         return defineRaw(sym)
     }
@@ -354,12 +376,22 @@ open class Scope(
     }
 
     fun defineFuncNameIfNotExist(name: String, kind: FuncKind): ScopeResult {
-        val sym = OverloadedFuncSymbol(
-            name = name,
-            kind = kind,
-            overloads = mutableListOf(),
-            accessScope = this
-        )
+        val sym = when {
+            this is InstanceScope ->
+                OverloadedMethodSymbol(
+                    name = name,
+                    overloads = mutableListOf(),
+                    accessScope = this
+                )
+
+            else ->
+                OverloadedFuncSymbol(
+                    name = name,
+                    kind = kind,
+                    overloads = mutableListOf(),
+                    accessScope = this
+                )
+        }
 
         return defineIfNotExist(sym)
     }

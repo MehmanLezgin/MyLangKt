@@ -1,11 +1,12 @@
 package lang.semantics.types
 
 import lang.semantics.symbols.FuncSymbol
+import lang.semantics.symbols.MethodFuncSymbol
 
-class FuncType(
-    val paramTypes: List<Type>,
-    val returnType: Type,
-    val funcDeclaration: FuncSymbol? = null,
+open class FuncType(
+    open val paramTypes: List<Type>,
+    open val returnType: Type,
+    open val funcDeclaration: FuncSymbol? = null,
     override var flags: TypeFlags = TypeFlags()
 ) : Type(
     flags = flags,
@@ -40,3 +41,19 @@ class FuncType(
 
     override fun toString() = stringify()
 }
+
+data class MethodType(
+    val ownerType: Type,
+    override val paramTypes: List<Type>,
+    override val returnType: Type,
+    override val funcDeclaration: MethodFuncSymbol? = null,
+    override var flags: TypeFlags = TypeFlags()
+) : FuncType(
+    paramTypes = paramTypes,
+    returnType = returnType,
+    funcDeclaration = funcDeclaration,
+    flags = flags
+) {
+    override fun toString() = stringify()
+}
+

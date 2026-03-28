@@ -66,6 +66,10 @@ class ConvertResolver(
 
     private fun FuncType.castFuncType(toType: Type) =
         when {
+            this is MethodType && toType !is MethodType ||
+            this !is MethodType && toType is MethodType
+                -> ConversionInfo.None
+
             toType.isVoidPtr() -> cast(this, toType)
 
             toType !is FuncType ||

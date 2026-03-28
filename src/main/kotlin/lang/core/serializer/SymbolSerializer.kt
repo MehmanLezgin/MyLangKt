@@ -26,11 +26,28 @@ object SymbolSerializer {
 
                 )
 
+            is MethodFuncSymbol -> mapOf(
+                "name" to sym.name,
+                "[ownerType]" to sym.accessScope.parent.ownerSymbol.type,
+                "params" to sym.params.list,
+                "returnType" to sym.returnType,
+                "isExtension" to sym.isExtension,
+                "modifiers" to sym.modifiers
+            )
+
             is FuncSymbol -> mapOf(
                 "name" to sym.name,
                 "params" to sym.params.list,
                 "returnType" to sym.returnType,
                 "isExtension" to sym.isExtension,
+                "modifiers" to sym.modifiers
+            )
+
+            is OverloadedMethodSymbol -> mapOf(
+                "name" to sym.name,
+                "[ownerType]" to sym.accessScope.parent.ownerSymbol.type,
+                "kind" to sym.kind,
+                "overloads" to sym.overloads,
                 "modifiers" to sym.modifiers
             )
 

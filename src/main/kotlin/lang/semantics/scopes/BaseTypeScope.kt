@@ -1,5 +1,7 @@
 package lang.semantics.scopes
 
+import lang.semantics.symbols.TypeSymbol
+
 open class BaseTypeScope(
     override val parent: Scope?,
     override val scopeName: String,
@@ -7,6 +9,8 @@ open class BaseTypeScope(
     parent = parent,
     scopeName = scopeName
 ) {
+    open lateinit var ownerSymbol: TypeSymbol
+
     var superTypeScope: BaseTypeScope? = null
 
     val instanceScope by lazy {

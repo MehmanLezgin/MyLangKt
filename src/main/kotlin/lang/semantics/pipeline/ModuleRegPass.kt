@@ -43,15 +43,22 @@ class ModuleRegPass(
     private fun createModule(
         name: String,
         sharedSymbols: MutableMap<String, Symbol> = mutableMapOf(),
-    ) =
-        ModuleSymbol(
-            name = name,
-            scope = ModuleScope(
-                parent = curScope,
-                scopeName = name,
-                sharedSymbols = sharedSymbols
-            )
+    ): ModuleSymbol {
+        val moduleScope = ModuleScope(
+            parent = curScope,
+            scopeName = name,
+            sharedSymbols = sharedSymbols
         )
+
+        val moduleSym = ModuleSymbol(
+            name = name,
+            scope = moduleScope
+        )
+
+        moduleScope.ownerSymbol = moduleSym
+
+        return moduleSym
+    }
 
 
     fun getOrCreateModule(name: String): ModuleSymbol {

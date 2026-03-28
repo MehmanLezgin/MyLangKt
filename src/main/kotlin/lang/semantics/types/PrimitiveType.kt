@@ -40,7 +40,7 @@ open class PrimitiveType(
 
     open fun initWith(scope: BaseTypeScope) {
         val sym = PrimitiveTypeSymbol(
-            type = this,
+            primitiveType = this,
             scope = scope
         )
 

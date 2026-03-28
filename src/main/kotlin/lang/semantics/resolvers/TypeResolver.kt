@@ -57,7 +57,7 @@ class TypeResolver(
                 )
             )
 
-        val baseType = createUserType((typeScope as ClassScope).classSym)
+        val baseType = (typeScope as ClassScope).ownerSymbol.type
 
         return PointerType(
             base = baseType,
@@ -86,8 +86,8 @@ class TypeResolver(
             return target.expr.error(
                 Msg.MismatchExpectedActual.format(
                     mismatchKind = Terms.RETURN_TYPE,
-                    typeName1 = funcRetType.toString(),
-                    typeName2 = exprType.toString()
+                    expected = funcRetType.toString(),
+                    actual = exprType.toString()
                 )
             )
         }
@@ -310,8 +310,8 @@ class TypeResolver(
                 val msg = Msg.MismatchExpectedActual
                     .format(
                         mismatchKind = Terms.ARGUMENT_TYPE,
-                        typeName1 = paramType.toString(),
-                        typeName2 = argType.toString()
+                        expected = paramType.toString(),
+                        actual = argType.toString()
                     )
                 argNodes.getOrNull(i)?.error(msg)
                 continue
@@ -358,20 +358,29 @@ class TypeResolver(
             }
 
             is ConstValueSymbol -> type.setFlags(isExprType = true, isLvalue = true)
-            is PrimitiveTypeSymbol -> type.setFlags(isExprType = false)
+            is PrimitiveTypeSymbol -> primitiveType.setFlags(isExprType = false)
             is ModuleSymbol -> if (isNamespaceCtx) {
                 NamespaceType(name = name, declaration = this)
             } else {
                 target.error(Msg.F_SYM_NOT_ALLOWED_HERE.format(name))
             }
 
-            is TypeSymbol -> createUserType(sym = this).setFlags(isExprType = isNamespaceCtx)
+            is TypeSymbol -> this.type.setFlags(isExprType = isNamespaceCtx)
             is FuncSymbol -> toFuncType()
+
+            is OverloadedMethodSymbol -> OverloadedMethodType(
+                ownerType = this.accessScope.parent.ownerSymbol.type,
+                name = name,
+                overloadedFuncSym = this,
+                flags = TypeFlags(isExprType = true)
+            )
+
             is OverloadedFuncSymbol -> OverloadedFuncType(
                 name = name,
                 overloadedFuncSym = this,
                 flags = TypeFlags(isExprType = true)
             )
+
 
             else ->
                 target.error(
@@ -414,23 +423,6 @@ class TypeResolver(
 
         return result.handle(target.range) {
             resolveIdentifierWithSym(target, sym, isNamespace)
-        }
-    }
-
-    private fun createUserType(
-        sym: TypeSymbol,
-        templateArgs: List<TemplateArg> = emptyList()
-    ): UserType {
-        sym.cachedType?.let { return it }
-
-        UserType(
-            name = sym.name,
-            templateArgs = templateArgs,
-            declaration = sym,
-            flags = TypeFlags(isExprType = false)
-        ).let {
-            sym.cachedType = it
-            return it
         }
     }
 
@@ -858,7 +850,11 @@ class TypeResolver(
                             Msg.AmbiguousOverloadedFunc.format(list = overloadsList)
                         )
 
-                        else -> accessible.first().toFuncType()
+                        else -> {
+                            val sym = accessible.first()
+                            target bind sym
+                            sym.toFuncType()
+                        }
                     }
                 }
 
@@ -876,9 +872,22 @@ class TypeResolver(
                         }
                     }
 
+                    val funcType = bestFuncSym?.toFuncType()
+                        ?: return ErrorType
+
+
+                    if (convert(funcType, type).notExists())
+                        return target.error(
+                            Msg.CannotCastType.format(
+                                from = funcType.toString(),
+                                to = type.toString()
+                            )
+                        )
+
+
                     target bind bestFuncSym
 
-                    return bestFuncSym?.toFuncType() ?: ErrorType
+                    return funcType
                 }
             }
         }

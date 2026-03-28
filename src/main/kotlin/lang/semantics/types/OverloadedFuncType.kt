@@ -2,9 +2,9 @@ package lang.semantics.types
 
 import lang.semantics.symbols.OverloadedFuncSymbol
 
-class OverloadedFuncType(
-    val name: String,
-    val overloadedFuncSym: OverloadedFuncSymbol,
+open class OverloadedFuncType(
+    open val name: String,
+    open val overloadedFuncSym: OverloadedFuncSymbol,
     override var flags: TypeFlags = TypeFlags(),
 ) : Type(
     flags = flags,
@@ -39,3 +39,15 @@ class OverloadedFuncType(
 
     override fun toString() = stringify()
 }
+
+
+data class OverloadedMethodType(
+    val ownerType: Type,
+    override val name: String,
+    override val overloadedFuncSym: OverloadedFuncSymbol,
+    override var flags: TypeFlags = TypeFlags(),
+) : OverloadedFuncType(
+    name = name,
+    overloadedFuncSym = overloadedFuncSym,
+    flags = flags,
+)

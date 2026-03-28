@@ -23,7 +23,7 @@ class ClassBuilder(
             scope = classScope
         )
 
-        classScope.classSym = clazz
+        classScope.ownerSymbol = clazz
 
         return clazz
     }

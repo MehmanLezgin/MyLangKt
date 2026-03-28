@@ -2,8 +2,10 @@ package lang.semantics.symbols
 
 import lang.core.SourceRange
 import lang.core.operators.OperatorType
+import lang.semantics.scopes.InstanceScope
 import lang.semantics.scopes.Scope
 import lang.semantics.types.FuncType
+import lang.semantics.types.MethodType
 import lang.semantics.types.Type
 import lang.semantics.types.TypeFlags
 
@@ -47,11 +49,11 @@ data class FuncParamListSymbol(
     }
 }
 
-data class OverloadedFuncSymbol(
+open class OverloadedFuncSymbol(
     override val name: String,
     val kind: FuncKind,
-    val overloads: MutableList<FuncSymbol> = mutableListOf(),
-    val accessScope: Scope
+    open val overloads: MutableList<FuncSymbol> = mutableListOf(),
+    open val accessScope: Scope
 ) : Symbol(name = name, modifiers = Modifiers()) {
     fun hasOverload(funcSym: FuncSymbol?): Boolean {
         if (funcSym == null) return false
@@ -62,6 +64,17 @@ data class OverloadedFuncSymbol(
         return "OverloadedFuncSymbol(name='$name', kind=$kind, overloads=$overloads)"
     }
 }
+
+data class OverloadedMethodSymbol(
+    override val name: String,
+    override val overloads: MutableList<FuncSymbol> = mutableListOf(),
+    override val accessScope: InstanceScope
+) : OverloadedFuncSymbol(
+    name = name,
+    kind = FuncKind.METHOD,
+    overloads = overloads,
+    accessScope = accessScope
+)
 
 open class FuncSymbol(
     override val name: String,
@@ -91,12 +104,13 @@ open class FuncSymbol(
         append(returnType.toString())
     }
 
-    fun toOverloadedFuncSymbol(accessScope: Scope) = OverloadedFuncSymbol(
-        name = name,
-        kind = kind,
-        overloads = mutableListOf(this),
-        accessScope = accessScope
-    )
+    open fun toOverloadedFuncSymbol(accessScope: Scope) =
+        OverloadedFuncSymbol(
+            name = name,
+            kind = kind,
+            overloads = mutableListOf(this),
+            accessScope = accessScope
+        )
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -118,7 +132,7 @@ open class FuncSymbol(
         return result
     }
 
-    fun toFuncType() =
+    open fun toFuncType() =
         FuncType(
             paramTypes = paramTypes,
             returnType = returnType,
@@ -144,6 +158,39 @@ open class OperatorFuncSymbol(
     returnType = returnType,
 ) {
     override val kind: FuncKind = FuncKind.OPERATOR
+}
+
+open class MethodFuncSymbol(
+    override val name: String,
+    override val params: FuncParamListSymbol,
+    override val returnType: Type,
+    override val modifiers: Modifiers = Modifiers(),
+    val accessScope: InstanceScope
+) : FuncSymbol(
+    name = name,
+    params = params,
+    returnType = returnType,
+) {
+    override val kind: FuncKind = FuncKind.METHOD
+
+    override fun toFuncType() =
+        MethodType(
+            ownerType = accessScope.parent.ownerSymbol.type,
+            paramTypes = paramTypes,
+            returnType = returnType,
+            funcDeclaration = this,
+            flags = TypeFlags(
+                isExprType = true
+            )
+        )
+
+
+    override fun toOverloadedFuncSymbol(accessScope: Scope) =
+        OverloadedMethodSymbol(
+            name = name,
+            overloads = mutableListOf(this),
+            accessScope = accessScope as InstanceScope
+        )
 }
 
 data class BuiltInOperatorFuncSymbol(

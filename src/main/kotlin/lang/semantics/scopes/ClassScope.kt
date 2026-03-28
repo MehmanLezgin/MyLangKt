@@ -1,7 +1,5 @@
 package lang.semantics.scopes
 
-import lang.semantics.symbols.ClassSymbol
-
 data class ClassScope(
     override val parent: Scope?,
     override val scopeName: String
@@ -9,10 +7,7 @@ data class ClassScope(
     parent = parent,
     scopeName = scopeName,
 ) {
-    lateinit var classSym: ClassSymbol
     override fun toString(): String {
         return ""
     }
-
-
 }

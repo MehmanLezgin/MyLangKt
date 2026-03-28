@@ -3,7 +3,6 @@ package lang.messages
 import lang.messages.Terms.ordinal
 import lang.semantics.symbols.FuncKind
 import lang.semantics.symbols.FuncSymbol
-import lang.semantics.symbols.OverloadedFuncSymbol
 
 interface FormattableMsg
 
@@ -125,13 +124,13 @@ object Msg {
 
 
     object MismatchExpectedActual : FormattableMsg {
-        fun format(mismatchKind: String, typeName1: String, typeName2: String) =
-            "$mismatchKind mismatch: expected '$typeName1', actual '$typeName2'"
+        fun format(mismatchKind: String, expected: String, actual: String) =
+            "$mismatchKind mismatch: expected '$expected', actual '$actual'"
     }
 
     object CannotCastType : FormattableMsg {
-        fun format(typeName1: String, typeName2: String) =
-            "Cannot cast type '$typeName1' to '$typeName2'"
+        fun format(from: String, to: String) =
+            "Cannot cast type '$from' to '$to'"
     }
 
     object CannotCalcPropOf : FormattableMsg {

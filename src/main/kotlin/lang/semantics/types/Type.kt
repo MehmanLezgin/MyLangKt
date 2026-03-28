@@ -82,6 +82,11 @@ abstract class Type(
                 }
 
                 is FuncType -> {
+                    if (type is MethodType) {
+                        append(type.ownerType)
+                        append("::")
+                    }
+
                     append("func")
                     append(ptrStr)
                     append('(')

@@ -3,6 +3,7 @@ package lang.semantics.symbols
 import lang.semantics.scopes.*
 import lang.semantics.types.PrimitiveType
 import lang.semantics.types.Type
+import lang.semantics.types.TypeFlags
 import lang.semantics.types.UserType
 
 abstract class TypeSymbol(
@@ -10,7 +11,14 @@ abstract class TypeSymbol(
     val staticScope: BaseTypeScope,
     override val modifiers: Modifiers
 ) : Symbol(name = name, modifiers = modifiers) {
-    var cachedType: UserType? = null
+    val type: UserType by lazy {
+        UserType(
+            name = name,
+            templateArgs = emptyList(),
+            declaration = this,
+            flags = TypeFlags(isExprType = false)
+        )
+    }
     var superType: Type? = null
 
     override fun equals(other: Any?): Boolean {
@@ -33,11 +41,11 @@ abstract class TypeSymbol(
 }
 
 data class PrimitiveTypeSymbol(
-    val type: PrimitiveType,
+    val primitiveType: PrimitiveType,
     val scope: BaseTypeScope,
     override val modifiers: Modifiers = Modifiers()
 ) : TypeSymbol(
-    name = type.name,
+    name = primitiveType.name,
     staticScope = scope,
     modifiers = modifiers
 )
