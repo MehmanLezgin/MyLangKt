@@ -14,12 +14,12 @@ class NameCollectionPass(
         target?.nodes?.forEach { node ->
             when (node) {
                 is ModuleStmtNode -> resolve(node)
-                is ClassDeclStmtNode -> resolve(target = node)
-                is InterfaceDeclStmtNode -> resolve(target = node)
-                is EnumDeclStmtNode -> resolve(target = node)
-                is UsingDirectiveNode -> resolve(target = node)
-                is VarDeclStmtNode -> resolve(target = node)
-                is FuncDeclStmtNode -> resolve(target = node)
+                is ClassDeclStmtNode -> resolve(node = node)
+                is InterfaceDeclStmtNode -> resolve(node = node)
+                is EnumDeclStmtNode -> resolve(node = node)
+//                is UsingDirectiveNode -> resolve(node = node)
+                is VarDeclStmtNode -> resolve(node = node)
+                is FuncDeclStmtNode -> resolve(node = node)
                 else -> Unit
             }
         }
@@ -31,79 +31,79 @@ class NameCollectionPass(
         }
     }
 
-    fun resolve(target: VarDeclStmtNode) {
-        val modifiers = modResolver.resolveVarModifiers(target.modifiers)
+    fun resolve(node: VarDeclStmtNode) {
+        val modifiers = modResolver.resolveVarModifiers(node.modifiers)
 
         withEffectiveScope(isStatic = modifiers.isStatic) {
             scope.defineVarName(
-                name = target.name.value,
-                isMutable = target.isMutable,
+                name = node.name.value,
+                isMutable = node.isMutable,
                 modifiers = modifiers
-            ).handle(target.name.range) {
+            ).handle(node.name.range) {
                 val sym = sym as VarSymbol
-                target bind sym
+                node bind sym
             }
         }
     }
 
-    fun resolve(target: FuncDeclStmtNode) {
-        val modifiers = modResolver.resolveFuncModifiers(target.modifiers)
+    fun resolve(node: FuncDeclStmtNode) {
+        val modifiers = modResolver.resolveFuncModifiers(node.modifiers)
 
         withEffectiveScope(isStatic = modifiers.isStatic) {
             scope.defineFuncNameIfNotExist(
-                name = target.name.value,
-                kind = target.kind
+                name = node.name.value,
+                kind = node.kind
             )
         }
     }
 
-    fun resolve(target: ModuleStmtNode) {
-        val moduleSym = target.getResolvedSymbol() as? ModuleSymbol
+    fun resolve(node: ModuleStmtNode) {
+        val moduleSym = node.getResolvedSymbol() as? ModuleSymbol
             ?: return
 
         analyzer.withScope(targetScope = moduleSym.scope) {
-            resolveBody(moduleSym, target.body)
+            resolveBody(moduleSym, node.body)
         }
     }
 
-    fun resolve(target: InterfaceDeclStmtNode) {
-        val modifiers = modResolver.resolveInterfaceModifiers(target.modifiers)
+    fun resolve(node: InterfaceDeclStmtNode) {
+        val modifiers = modResolver.resolveInterfaceModifiers(node.modifiers)
 
-        scope.defineInterface(target, modifiers = modifiers)
-            .handle(target.name.range) {
+        scope.defineInterface(node, modifiers = modifiers)
+            .handle(node.name.range) {
                 val sym = sym as InterfaceSymbol
-                target bind sym
+                node bind sym
 
-                resolveBody(sym, target.body)
+                resolveBody(sym, node.body)
             }
     }
 
-    fun resolve(target: ClassDeclStmtNode) {
-        val modifiers = modResolver.resolveClassModifiers(target.modifiers)
+    fun resolve(node: ClassDeclStmtNode) {
+        val modifiers = modResolver.resolveClassModifiers(node.modifiers)
 
-        scope.defineClass(node = target, modifiers = modifiers)
-            .handle(target.name.range) {
+        scope.defineClass(node = node, modifiers = modifiers)
+            .handle(node.name.range) {
                 val sym = sym as ClassSymbol
-                target bind sym
+                node bind sym
 
-                resolveBody(sym, target.body)
+                resolveBody(sym, node.body)
             }
     }
 
-    fun resolve(target: EnumDeclStmtNode) {
-        val modifiers = modResolver.resolveEnumModifiers(target.modifiers)
-        scope.defineEnum(target, modifiers = modifiers)
-            .handle(target.name.range) {
+    fun resolve(node: EnumDeclStmtNode) {
+        val modifiers = modResolver.resolveEnumModifiers(node.modifiers)
+        scope.defineEnum(node, modifiers = modifiers)
+            .handle(node.name.range) {
                 val sym = sym as EnumSymbol
-                target bind sym
+                node bind sym
 
-                resolveBody(sym, target.body)
+                resolveBody(sym, node.body)
             }
     }
 
-    fun resolve(target: UsingDirectiveNode) {
-        val clause = target.clause
-        val modifiers = modResolver.resolveUsingModifiers(target.modifiers)
+    /*fun resolve(node: UsingDirectiveNode) {
+        val clause = node.clause
+        val modifiers = modResolver.resolveUsingModifiers(node.modifiers)
 
         when (clause) {
             is NameClause.Items -> {
@@ -115,7 +115,7 @@ class NameCollectionPass(
                                 sym = null,
                                 visibility = modifiers.visibility
                             ).handle(item.alias.range) {
-                                target bind sym
+                                node bind sym
                             }
                         }
 
@@ -126,5 +126,5 @@ class NameCollectionPass(
 
             NameClause.Wildcard -> Unit
         }
-    }
+    }*/
 }

@@ -26,7 +26,6 @@ class BindImportPass(
         for (node in target.nodes) {
             when (node) {
                 is BaseImportStmtNode -> resolve(node)
-                is UsingDirectiveNode -> resolve(node)
                 else -> Unit
             }
         }
@@ -147,7 +146,7 @@ class BindImportPass(
         }
     }
 
-    fun importItem(
+    private fun importItem(
         item: NameSpecifier,
         targetScope: Scope,
         visibility: Visibility

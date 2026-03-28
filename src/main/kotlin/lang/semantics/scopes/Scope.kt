@@ -65,7 +65,9 @@ open class Scope(
 
         return when (sym.modifiers.visibility) {
             Visibility.PUBLIC -> true
-            Visibility.PRIVATE -> !asMember && thisEnclosing == fromEnclosing
+            Visibility.PRIVATE -> {
+                !asMember && thisEnclosing == fromEnclosing
+            }
             Visibility.INTERNAL -> {
                 if (thisEnclosing == null) return false
                 if (!asMember && thisEnclosing == fromEnclosing) return true

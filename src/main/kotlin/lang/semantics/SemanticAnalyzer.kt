@@ -42,14 +42,18 @@ class SemanticAnalyzer(
         val moduleRegPass = ModuleRegPass(analyzer = this)
         val nameCollectionPass = NameCollectionPass(analyzer = this)
         val bindImportPass = BindImportPass(analyzer = this, moduleRegPass = moduleRegPass)
+        val bindAliasPass = BindAliasPass(analyzer = this, bindImportPass = bindImportPass)
         val declarationHeaderPass = DeclarationHeaderPass(analyzer = this)
         val varInitPass = VarInitPass(analyzer = this)
+
+        // names -> alias -> import -> decl -> var init
 
         pipeline = AnalysisPipeline(
             analyzer = this,
             moduleRegPass = moduleRegPass,
             passes = listOf(
                 nameCollectionPass,
+                bindAliasPass,
                 bindImportPass,
                 declarationHeaderPass,
                 varInitPass,
@@ -58,6 +62,7 @@ class SemanticAnalyzer(
 
         localDeclPipeline = LocalDeclPipeline(
             nameCollectionPass = nameCollectionPass,
+            bindAliasPass = bindAliasPass,
             bindImportPass = bindImportPass,
             declarationHeaderPass = declarationHeaderPass,
             varInitPass = varInitPass,

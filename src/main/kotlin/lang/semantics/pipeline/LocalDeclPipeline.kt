@@ -4,6 +4,7 @@ import lang.nodes.*
 
 class LocalDeclPipeline(
     val nameCollectionPass: NameCollectionPass,
+    val bindAliasPass: BindAliasPass,
     val bindImportPass: BindImportPass,
     val declarationHeaderPass: DeclarationHeaderPass,
     val varInitPass: VarInitPass
@@ -22,8 +23,8 @@ class LocalDeclPipeline(
     }
 
     fun execute(node: UsingDirectiveNode) {
-        nameCollectionPass.resolve(node)
-        bindImportPass.resolve(node)
+//        nameCollectionPass.resolve(node)
+        bindAliasPass.resolve(node)
     }
 
     fun execute(node: BaseImportStmtNode) {
