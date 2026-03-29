@@ -29,11 +29,17 @@ class OverloadResolver(
         from: Scope,
         argTypes: List<Type>
     ): List<FuncSymbol> {
-        val ranks = overloads.map { func ->
-            if (func.params.list.size != argTypes.size) {
-                val sizeDiff = abs(func.params.list.size - argTypes.size)
-                val cost = sizeDiff  * 1000
-                return@map func to cost
+        val ranks = overloads.mapNotNull { func ->
+            val paramCount = func.params.list.size
+            val argCount = argTypes.size
+
+            if (paramCount < argCount)
+                return@mapNotNull null
+
+            if (paramCount > argCount) {
+                val sizeDiff = paramCount - argCount
+                val cost = sizeDiff * 1000
+                return@mapNotNull func to cost
             }
 
             val params = func.params.list

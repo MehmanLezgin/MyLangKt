@@ -8,6 +8,7 @@ import lang.semantics.types.FuncType
 import lang.semantics.types.MethodType
 import lang.semantics.types.Type
 import lang.semantics.types.TypeFlags
+import lang.semantics.types.lazyType
 
 open class FuncParamSymbol(
     override val name: String,
@@ -32,7 +33,7 @@ open class FuncParamSymbol(
     }
 }
 
-data class FuncParamListSymbol(
+class FuncParamListSymbol(
     val list: List<FuncParamSymbol> = listOf()
 ) {
     override fun equals(other: Any?): Boolean {
@@ -65,7 +66,7 @@ open class OverloadedFuncSymbol(
     }
 }
 
-data class OverloadedMethodSymbol(
+class OverloadedMethodSymbol(
     override val name: String,
     override val overloads: MutableList<FuncSymbol> = mutableListOf(),
     override val accessScope: InstanceScope
@@ -79,10 +80,19 @@ data class OverloadedMethodSymbol(
 open class FuncSymbol(
     override val name: String,
     open val params: FuncParamListSymbol,
-    open val returnType: Type,
     val isExtension: Boolean = false,
+    initialReturnType: Type,
     override val modifiers: Modifiers = Modifiers()
 ) : Symbol(name = name, modifiers = modifiers) {
+    private var lazyReturnType = lazyType { initialReturnType }
+
+    var returnType: Type
+        get() = lazyReturnType.type
+        set(value) {
+            lazyReturnType = lazyType { value }
+        }
+
+
     open val kind: FuncKind = FuncKind.FUNCTION
 
     val paramTypes: List<Type>
@@ -150,12 +160,12 @@ open class FuncSymbol(
 open class OperatorFuncSymbol(
     open val operator: OperatorType,
     override val params: FuncParamListSymbol,
-    override val returnType: Type,
+    initialReturnType: Type,
     override val modifiers: Modifiers = Modifiers()
 ) : FuncSymbol(
     name = operator.fullName,
     params = params,
-    returnType = returnType,
+    initialReturnType = initialReturnType,
 ) {
     override val kind: FuncKind = FuncKind.OPERATOR
 }
@@ -163,13 +173,13 @@ open class OperatorFuncSymbol(
 open class MethodFuncSymbol(
     override val name: String,
     override val params: FuncParamListSymbol,
-    override val returnType: Type,
+    initialReturnType: Type,
     override val modifiers: Modifiers = Modifiers(),
     val accessScope: InstanceScope
 ) : FuncSymbol(
     name = name,
     params = params,
-    returnType = returnType,
+    initialReturnType = initialReturnType,
 ) {
     override val kind: FuncKind = FuncKind.METHOD
 
@@ -193,37 +203,37 @@ open class MethodFuncSymbol(
         )
 }
 
-data class BuiltInOperatorFuncSymbol(
+class BuiltInOperatorFuncSymbol(
     override val operator: OperatorType,
     override val params: FuncParamListSymbol,
-    override val returnType: Type,
+    returnType: Type,
     override val modifiers: Modifiers = Modifiers()
 ) : OperatorFuncSymbol(
     operator = operator,
     params = params,
-    returnType = returnType,
+    initialReturnType = returnType,
     modifiers = modifiers
 )
 
 
-data class ConstructorSymbol(
+class ConstructorSymbol(
     override val params: FuncParamListSymbol,
-    override val returnType: Type,
+    returnType: Type,
     override val modifiers: Modifiers = Modifiers()
 ) : FuncSymbol(
     name = FuncKind.CONSTRUCTOR.kindName,
     params = params,
-    returnType = returnType,
+    initialReturnType = returnType,
 ) {
     override val kind: FuncKind = FuncKind.CONSTRUCTOR
 }
 
-data class DestructorSymbol(
-    override val returnType: Type
+class DestructorSymbol(
+    returnType: Type
 ) : FuncSymbol(
     name = FuncKind.CONSTRUCTOR.kindName,
     params = FuncParamListSymbol(list = emptyList()),
-    returnType = returnType,
+    initialReturnType = returnType,
 ) {
     override val kind: FuncKind = FuncKind.DESTRUCTOR
 }

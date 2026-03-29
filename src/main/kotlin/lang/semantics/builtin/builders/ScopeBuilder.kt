@@ -18,6 +18,13 @@ class TypeScopeBuilder(val typeScope: BaseTypeScope) : ScopeBuilder(
         typeScope.instanceScope.define(sym).handle()
         return sym
     }
+
+    override fun addOperFunc(oper: OperatorType, block: FuncBuilder.() -> Unit): FuncSymbol {
+        val builder = OperFuncBuilder(oper)
+        val sym = builder.apply(block).build()
+        typeScope.instanceScope.define(sym).handle()
+        return sym
+    }
 }
 
 open class ScopeBuilder(
@@ -31,7 +38,7 @@ open class ScopeBuilder(
         return sym
     }
 
-    internal fun addOperFunc(oper: OperatorType, block: FuncBuilder.() -> Unit): FuncSymbol {
+    internal open fun addOperFunc(oper: OperatorType, block: FuncBuilder.() -> Unit): FuncSymbol {
         val builder = OperFuncBuilder(oper)
         val sym = builder.apply(block).build()
         scope.define(sym).handle()

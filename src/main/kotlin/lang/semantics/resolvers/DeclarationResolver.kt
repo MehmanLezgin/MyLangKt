@@ -7,6 +7,10 @@ import lang.semantics.scopes.ClassScope
 import lang.semantics.scopes.FuncScope
 import lang.semantics.scopes.Scope
 import lang.semantics.symbols.*
+import lang.semantics.types.LazyType
+import lang.semantics.types.UnresolvedType
+import lang.semantics.types.isNullOrUnresolved
+import lang.semantics.types.lazyType
 
 class DeclarationResolver(
     override val analyzer: ISemanticAnalyzer
@@ -90,7 +94,22 @@ class DeclarationResolver(
                     .handle(range) {}
             }
 
-            analyzer.withScopeResolveBody(targetScope = funcScope, body = target.body)
+            val body = target.body ?: return@withEffectiveScope
+
+            fun resolveBody() =
+                analyzer.withScopeResolveBody(targetScope = funcScope, body = body)
+
+            if (sym.returnType !is UnresolvedType)
+                resolveBody()
+            else
+                sym.returnType = lazyType {
+                    resolveBody()
+                    val bodyType = body.getResolvedType()
+                    if (bodyType.isNullOrUnresolved())
+                        body.error(Msg.CannotResolveFuncType.format(name = sym.name))
+
+                    bodyType ?: UnresolvedType
+                }
         }
     }
 

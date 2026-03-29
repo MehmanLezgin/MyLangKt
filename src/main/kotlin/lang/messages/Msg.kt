@@ -59,7 +59,7 @@ object Msg {
             "Module '$modName' already exists in '$symName'"
     }
 
-    interface DirectoryMsg : FormattableMsg{
+    interface DirectoryMsg : FormattableMsg {
         fun format(path: String): String
     }
 
@@ -124,7 +124,6 @@ object Msg {
     }
 
 
-
     object MismatchExpectedActual : FormattableMsg {
         fun format(mismatchKind: String, expected: String, actual: String) =
             "$mismatchKind mismatch: expected '$expected', actual '$actual'"
@@ -184,6 +183,11 @@ object Msg {
                 append('\n')
             }
         }
+    }
+
+    object CannotResolveFuncType : FormattableMsg {
+        fun format(name: String) =
+            "Cannot infer the return type of function '$name'. Please specify it explicitly."
     }
 
     const val MODULE_CANNOT_IMPORT_ITSELF = "A module cannot import itself"

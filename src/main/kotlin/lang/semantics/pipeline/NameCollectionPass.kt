@@ -51,7 +51,7 @@ class NameCollectionPass(
         withEffectiveScope(isStatic = modifiers.isStatic) {
             scope.defineFuncNameIfNotExist(
                 name = node.name.value,
-                kind = node.kind
+                kind = node.kind,
             )
         }
     }

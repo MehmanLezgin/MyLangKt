@@ -10,6 +10,7 @@ import lang.semantics.scopes.Scope
 import lang.semantics.symbols.*
 import lang.semantics.types.ErrorType
 import lang.semantics.types.Type
+import lang.semantics.types.UnresolvedType
 
 class DeclarationHeaderPass(
     override val analyzer: ISemanticAnalyzer
@@ -107,7 +108,15 @@ class DeclarationHeaderPass(
     fun resolve(target: FuncDeclStmtNode) {
         val modifiers = modResolver.resolveFuncModifiers(target.modifiers)
 
-        val returnType = analyzer.typeResolver.resolve(target.returnType)
+        val returnType = when (target.returnType) {
+            is AutoDatatypeNode -> {
+                when (target.body) {
+                    null -> PrimitivesScope.void
+                    else -> UnresolvedType
+                }
+            }
+            else -> analyzer.typeResolver.resolve(target.returnType)
+        }
 
         val params = target.params.map { decl ->
             resolveFuncParam(target = decl)
@@ -116,7 +125,13 @@ class DeclarationHeaderPass(
         }
 
         withEffectiveScope(modifiers.isStatic) {
-            val result = scope.defineFunc(target, target.name, params, returnType, modifiers)
+            val result = scope.defineFunc(
+                node = target,
+                nameId = target.name,
+                params = params,
+                returnType = returnType,
+                modifiers = modifiers
+            )
 
             result.handle(target.range) {
                 if (sym !is FuncSymbol) return@handle null

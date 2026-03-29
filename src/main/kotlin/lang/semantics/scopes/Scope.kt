@@ -168,7 +168,7 @@ open class Scope(
         val funcSym = if (nameId is OperNode) OperatorFuncSymbol(
             operator = nameId.operatorType,
             params = params,
-            returnType = returnType,
+            initialReturnType = returnType,
             modifiers = modifiers
         )
         else {
@@ -189,7 +189,7 @@ open class Scope(
                             accessScope = this,
                             name = name,
                             params = params,
-                            returnType = returnType,
+                            initialReturnType = returnType,
                             modifiers = modifiers
                         )
                     }
@@ -197,7 +197,7 @@ open class Scope(
                     else -> FuncSymbol(
                         name = name,
                         params = params,
-                        returnType = returnType,
+                        initialReturnType = returnType,
                         modifiers = modifiers
                     )
                 }
@@ -375,7 +375,10 @@ open class Scope(
         return defineIfNotExist(sym)
     }
 
-    fun defineFuncNameIfNotExist(name: String, kind: FuncKind): ScopeResult {
+    fun defineFuncNameIfNotExist(
+        name: String,
+        kind: FuncKind
+    ): ScopeResult {
         val sym = when {
             this is InstanceScope ->
                 OverloadedMethodSymbol(

@@ -2,6 +2,7 @@ package lang.semantics.builtin.types
 
 import lang.core.operators.OperatorType
 import lang.messages.Terms
+import lang.semantics.builtin.PrimitivesScope.float32
 import lang.semantics.builtin.builders.constVar
 import lang.semantics.builtin.builders.init
 import lang.semantics.builtin.builders.operFunc

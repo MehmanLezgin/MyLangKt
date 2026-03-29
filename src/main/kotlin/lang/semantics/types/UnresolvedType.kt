@@ -1,5 +1,8 @@
 package lang.semantics.types
 
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+
 object UnresolvedType : Type(
     flags = TypeFlags(),
     declaration = null
@@ -17,4 +20,13 @@ object UnresolvedType : Type(
     override fun hashCode(): Int {
         return super.hashCode()
     }
+}
+
+@OptIn(ExperimentalContracts::class)
+fun Type?.isNullOrUnresolved(): Boolean {
+    contract {
+        returns(false) implies (this@isNullOrUnresolved != null)
+    }
+
+    return this == null || this == UnresolvedType
 }

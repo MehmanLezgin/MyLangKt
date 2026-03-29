@@ -35,7 +35,7 @@ open class FuncBuilder(val name: String) {
         return FuncSymbol(
             name = name,
             params = funcParams,
-            returnType = returnType,
+            initialReturnType = returnType,
             modifiers = modifiers,
         )
     }

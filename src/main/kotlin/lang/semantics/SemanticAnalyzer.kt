@@ -81,6 +81,7 @@ class SemanticAnalyzer(
 
     override fun resolve(node: BlockNode) {
         node.nodes.forEach { childNode -> resolve(childNode) }
+        typeResolver.resolve(target = node)
     }
 
     private fun resolve(node: BaseImportStmtNode) {

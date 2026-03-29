@@ -36,9 +36,18 @@ class TypeResolver(
             is SizeofNode,
             is AlignofNode,
             is OffsetofNode -> resolveConst(target)
+            is BlockNode -> resolve(target)
 
             else -> ErrorType
         }.also { target attach it }
+    }
+
+    private fun resolve(target: BlockNode): Type {
+        if (target.nodes.isEmpty())
+            return UnresolvedType
+
+        val last = target.nodes.last()
+        return last.getResolvedType() ?: UnresolvedType
     }
 
     private fun resolveConst(target: ExprNode): Type {
@@ -82,7 +91,7 @@ class TypeResolver(
 
         val funcRetType = funcScope.funcSymbol.returnType
 
-        if (convert(exprType, funcRetType).notExists()) {
+        if (funcRetType != UnresolvedType && convert(exprType, funcRetType).notExists()) {
             return target.expr.error(
                 Msg.MismatchExpectedActual.format(
                     mismatchKind = Terms.RETURN_TYPE,
