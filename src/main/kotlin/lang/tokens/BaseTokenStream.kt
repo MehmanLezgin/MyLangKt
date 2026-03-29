@@ -51,8 +51,6 @@ open class BaseTokenStream(
 
     override fun next(): Token = eof
 
-    override fun next222(): Token = eof
-
     override fun match(vararg types: KClass<out Token>): Boolean {
         val t = peek()
         return types.any { it.isInstance(t) }

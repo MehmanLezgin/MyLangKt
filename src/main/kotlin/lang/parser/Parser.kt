@@ -98,6 +98,7 @@ class Parser(
     override fun analiseParams(exprList: List<ExprNode>) = stmtParser.analiseParams(exprList)
     override fun analiseDatatypeList(exprList: List<ExprNode>?) = stmtParser.analiseDatatypeList(exprList)
     override fun parseBlock() = stmtParser.parseBlock()
+    override fun parseMultilineBlock() = stmtParser.parseMultilineBlock()
     override fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean) =
         exprParser.analiseAsDatatype(expr, allowAsExpression)
 

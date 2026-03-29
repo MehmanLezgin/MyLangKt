@@ -15,5 +15,6 @@ interface IStmtParser {
     fun analiseParams(exprList: List<ExprNode>): List<VarDeclStmtNode>?
     fun analiseDatatypeList(exprList: List<ExprNode>?): List<BaseDatatypeNode>?
     fun parseBlock(): BlockNode
+    fun parseMultilineBlock(): BlockNode
     fun buildModuleHierarchy(list: List<IdentifierNode>, body: BlockNode, range: SourceRange): ModuleStmtNode?
 }

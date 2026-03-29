@@ -18,6 +18,9 @@ class TokenStream(
     lexer = lexer,
     msgHandler = msgHandler
 ) {
+    val cur: Token
+        get() = peek()
+
     private var tokens: MutableList<Token> = mutableListOf()
     private var index: Int = 0
     private val savedIndices: ArrayDeque<Int> = ArrayDeque()
@@ -49,10 +52,6 @@ class TokenStream(
     override fun peek() = atIndex(index)
 
     override fun next() = peek().also { index++ }
-
-    override fun next222(): Token {
-        return eof
-    }
 
     private fun atIndex(idx: Int) =
         if (idx in tokens.indices) tokens[idx]

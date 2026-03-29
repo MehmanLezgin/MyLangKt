@@ -14,6 +14,7 @@ interface IParser {
     fun syntaxError(msg: String, range: SourceRange)
     fun warning(msg: String, range: SourceRange)
     fun analiseDatatypeList(exprList: List<ExprNode>?): List<BaseDatatypeNode>?
+    fun parseMultilineBlock(): BlockNode
     fun parseBlock(): BlockNode
     fun parseIdsWithSeparatorOper(separator: OperatorType): List<IdentifierNode>?
     fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean = false): ExprNode?

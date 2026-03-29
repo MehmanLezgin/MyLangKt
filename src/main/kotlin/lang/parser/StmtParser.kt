@@ -132,29 +132,34 @@ class StmtParser(
         }
     }
 
+    override fun parseMultilineBlock(): BlockNode {
+        val list = mutableListOf<ExprNode>()
+
+        return ts.captureRange {
+            if (ts.match(Token.LBrace::class))
+                ts.next()
+
+            while (!ts.match(Token.RBrace::class, Token.EOF::class)) {
+                val expr = parse()
+                if (expr != VoidNode)
+                    list.add(expr)
+                ts.skipTokens(Token.Semicolon::class)
+            }
+
+            ts.expect(Token.RBrace::class, Msg.EXPECTED_RBRACE)
+
+            BlockNode(nodes = list, range = resultRange)
+        }
+    }
+
     override fun parseBlock(): BlockNode {
         if (ts.matchOperator(OperatorType.COLON))
             ts.next()
 
         val isMultilineBody = ts.match(Token.LBrace::class)
 
-        val list = mutableListOf<ExprNode>()
-
         return if (isMultilineBody) {
-            ts.captureRange {
-                ts.next()
-
-                while (!ts.match(Token.RBrace::class, Token.EOF::class)) {
-                    val expr = parse()
-                    if (expr != VoidNode)
-                        list.add(expr)
-                    ts.skipTokens(Token.Semicolon::class)
-                }
-
-                ts.expect(Token.RBrace::class, Msg.EXPECTED_RBRACE)
-
-                BlockNode(nodes = list, range = resultRange)
-            }
+            parseMultilineBlock()
         } else {
             val expr = parse(isSingleLine = true).wrapToBlock()
             ts.skipTokens(Token.Semicolon::class)
@@ -430,6 +435,7 @@ class StmtParser(
         analiseHeader(
             header = header,
             errorMsg = Msg.EXPECTED_FUNC_DECL,
+            datatypeSeparator = BinOpType.ARROW,
             handleName = {
                 if (it !is IdentifierNode) {
                     syntaxError(Msg.EXPECTED_IDENTIFIER, it.range)
@@ -460,6 +466,7 @@ class StmtParser(
             params = params ?: emptyList(),
             typeNames = typeNames,
             returnType = finalReturnType,
+            isExpressionBodied = initializerBody != null,
             body = initializerBody?.wrapToBlock() ?: body,
             range = range
         )
@@ -547,6 +554,7 @@ class StmtParser(
     private fun analiseHeader(
         header: ExprNode,
         errorMsg: String,
+        datatypeSeparator: BinOpType = BinOpType.COLON,
         handleName: (ExprNode) -> Unit,
         handleTypeNames: (TypeNameListNode?) -> Unit,
         handleParams: (List<VarDeclStmtNode>?) -> Unit,
@@ -610,7 +618,7 @@ class StmtParser(
                         handleInitializer(header.right)
                     }
 
-                    BinOpType.COLON -> {
+                    datatypeSeparator -> {
                         handleNameAndParams(header.left)
                         analiseSuperType(header.right)
                     }

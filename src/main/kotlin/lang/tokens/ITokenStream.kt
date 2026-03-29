@@ -18,7 +18,6 @@ interface ITokenStream {
     fun prev(): Token
     fun peek(): Token
     fun next(): Token
-    fun next222(): Token
     fun match(vararg types: KClass<out Token>): Boolean
 
 //    fun <T : Token> expect(clazz: KClass<T>, msg: String): Boolean

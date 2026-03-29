@@ -1,5 +1,6 @@
 package lang.parser
 
+import lang.core.Constants
 import lang.core.KeywordType
 import lang.core.LangSpec
 import lang.core.RangeBuilder
@@ -65,7 +66,7 @@ class ExprParser(
         return first isBinOperator BinOpType.ARROW
     }*/
 
-    private fun blockToLambda(rawBlock: BlockNode): LambdaNode {
+    /*private fun blockToLambda(rawBlock: BlockNode): LambdaNode {
         val range = rawBlock.range
 
         var params: List<VarDeclStmtNode>? = null
@@ -100,10 +101,91 @@ class ExprParser(
         )
 
         return lambda
+    }*/
+
+    private fun matchLambdaParams(): Boolean {
+        ts.save()
+
+        if (ts.next() !is Token.Identifier) {
+            ts.restore()
+            return false
+        }
+
+        val second = ts.next()
+        ts.restore()
+
+        val result = second is Token.Operator &&
+                when (second.type) {
+                    OperatorType.COLON,
+                    OperatorType.COMMA,
+                    OperatorType.ARROW -> true
+
+                    else -> false
+                }
+
+        return result
     }
 
-    private fun parseLambda(): LambdaNode =
-        blockToLambda(rawBlock = parser.parseBlock())
+    private fun parseLambdaParams(): List<VarDeclStmtNode>? {
+        if (!matchLambdaParams()) return null
+
+        val params = mutableListOf<VarDeclStmtNode>()
+
+        while (true) {
+            val identifier = ts.next()
+            if (identifier !is Token.Identifier) {
+                syntaxError(Msg.EXPECTED_IDENTIFIER, identifier.range)
+                break
+            }
+
+            val datatype = if (ts.matchOperator(OperatorType.COLON)) {
+                ts.next()
+                parseDatatype(startIdentifier = null)
+            } else AutoDatatypeNode(
+                range = identifier.range
+            )
+
+            val resultRange = identifier.range.untilEndOf(datatype.range)
+
+            val param = VarDeclStmtNode(
+                modifiers = null,
+                name = identifier.toIdentifierNode(),
+                dataType = datatype,
+                initializer = null,
+                isMutable = false,
+                range = resultRange
+            )
+
+            params += param
+
+            when {
+                ts.matchOperator(OperatorType.COMMA) -> ts.next()
+                ts.matchOperator(OperatorType.ARROW) -> {
+                    ts.next()
+                    break
+                }
+
+                else -> {
+                    syntaxError(Msg.EXPECTED_ARROW_OPERATOR, ts.range)
+                    break
+                }
+            }
+        }
+
+        return params
+    }
+
+    private fun parseLambda(): LambdaNode {
+        ts.next()
+        val params = parseLambdaParams()
+        val body = parser.parseMultilineBlock()
+
+        return LambdaNode(
+            body = body,
+            params = params,
+            range = body.range,
+        )
+    }
 
 
     private fun parseDotChain(startChain: ExprNode, ctx: ParsingContext): ExprNode {
@@ -585,7 +667,7 @@ class ExprParser(
     }
 
     private fun RangeBuilder.parseUnaryOper(type: OperatorType, ctx: ParsingContext): ExprNode {
-        return when(type) {
+        return when (type) {
             OperatorType.PLUS,
             OperatorType.MINUS,
             OperatorType.NOT,
@@ -685,7 +767,7 @@ class ExprParser(
         return InitialiserList(nodes = exprList, range = range)
     }
 
-    private fun parseFuncDatatype(isConst: Boolean = false): BaseDatatypeNode {
+    private fun parseFuncDatatype(isConst: Boolean = false): FuncDatatypeNode {
         val range = ts.next().range
 
         if (ts.matchOperator(OperatorType.MUL))
@@ -699,7 +781,7 @@ class ExprParser(
             parser.analiseDatatypeList(rawParamTypes) ?: emptyList()
         } else emptyList()
 
-        val returnDatatype = if (ts.matchOperator(OperatorType.COLON)) {
+        val returnDatatype = if (ts.matchOperator(Constants.funcRetTypeSeparator)) {
             ts.next()
             parseDatatype(startIdentifier = null)
         } else VoidDatatypeNode(ts.range)
@@ -737,6 +819,16 @@ class ExprParser(
             ts.matchOperator(OperatorType.SCOPE)
         ) {
             ts.next()
+            if (ts.peek() isKeyword KeywordType.FUNC) {
+                val funcDatatype = parseFuncDatatype()
+
+                return MethodDatatypeNode(
+                    ownerDatatype = datatype,
+                    funcDatatype = funcDatatype,
+                    range = datatype.range.untilEndOf(funcDatatype.range)
+                )
+            }
+
             val member = parseSimpleDatatype()
 
             if (member !is DatatypeNode) {
@@ -867,15 +959,9 @@ class ExprParser(
         return when (op.type) {
             OperatorType.ASSIGN -> parser.parseStmt(isSingleLine = true)
 
-            OperatorType.COLON, OperatorType.AS -> parseDatatype(startIdentifier = null)
-
-            OperatorType.ARROW -> {
-                if (ts.match(Token.RBrace::class))
-                    parser.parseBlock()
-//                    BlockNode(nodes = emptyList(), range = op.range)
-                else
-                    parser.parseStmt(isSingleLine = true)
-            }
+            OperatorType.COLON,
+            OperatorType.ARROW,
+            OperatorType.AS -> parseDatatype(startIdentifier = null)
 
             else -> parseBinaryExpr(op.precedence + 1, stopToken, ctx)
         }

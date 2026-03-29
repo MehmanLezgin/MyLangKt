@@ -153,6 +153,7 @@ object AstSerializer {
                 "typeNames" to expr.typeNames,
                 "params" to expr.params,
                 "returnType" to expr.returnType,
+                "isExpressionBodied" to expr.isExpressionBodied,
                 "body" to expr.body,
             )
 

@@ -146,6 +146,7 @@ open class FuncDeclStmtNode(
     open val params: List<VarDeclStmtNode>,
     val returnType: BaseDatatypeNode,
     open val body: BlockNode?,
+    val isExpressionBodied: Boolean = false,
     override val range: SourceRange
 ) : DeclStmtNamedNode(modifiers, range, name) {
     val kind by lazy {
@@ -159,13 +160,14 @@ open class FuncDeclStmtNode(
 
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = FuncDeclStmtNode(
+            modifiers = modifiers,
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
             typeNames = typeNames?.mapRecursive(mapper) as? TypeNameListNode ?: typeNames,
+            params = params,
             returnType = returnType.mapRecursive(mapper) as? BaseDatatypeNode ?: returnType,
             body = body?.mapRecursive(mapper) as? BlockNode ?: body,
-            modifiers = modifiers,
-            params = params,
             range = range,
+            isExpressionBodied = isExpressionBodied
         )
         return mapper(newNode)
     }
@@ -183,7 +185,7 @@ data class ConstructorDeclStmtNode(
     params = params,
     returnType = VoidDatatypeNode(range),
     body = body,
-    range = range,
+    range = range
 ) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
@@ -206,7 +208,7 @@ data class DestructorDeclStmtNode(
     params = emptyList(),
     returnType = VoidDatatypeNode(range),
     body = body,
-    range = range,
+    range = range
 ) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(

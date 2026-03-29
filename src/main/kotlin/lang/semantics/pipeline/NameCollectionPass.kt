@@ -17,7 +17,6 @@ class NameCollectionPass(
                 is ClassDeclStmtNode -> resolve(node = node)
                 is InterfaceDeclStmtNode -> resolve(node = node)
                 is EnumDeclStmtNode -> resolve(node = node)
-//                is UsingDirectiveNode -> resolve(node = node)
                 is VarDeclStmtNode -> resolve(node = node)
                 is FuncDeclStmtNode -> resolve(node = node)
                 else -> Unit
