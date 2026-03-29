@@ -64,11 +64,21 @@ class ConvertResolver(
         }
 
 
+    private fun MethodType.castMethodType(toType: Type) =
+        when {
+            toType is MethodType &&
+            this.ownerType == toType.ownerType
+                -> this.castFuncType(toType)
+
+            else -> ConversionInfo.None
+        }
+
     private fun FuncType.castFuncType(toType: Type) =
         when {
             this is MethodType && toType !is MethodType ||
-            this !is MethodType && toType is MethodType
+                    this !is MethodType && toType is MethodType
                 -> ConversionInfo.None
+
 
             toType.isVoidPtr() -> cast(this, toType)
 
@@ -115,6 +125,7 @@ class ConvertResolver(
             fromType is PointerType && toType.isVoidPtr() ->
                 ConversionKind.VOID_PTR
 
+            fromType is MethodType -> ConversionKind.METHOD
             fromType is FuncType -> ConversionKind.FUNCTION
 
             fromType is PrimitiveType && toType is PrimitiveType ->
@@ -136,6 +147,7 @@ class ConvertResolver(
             ConversionKind.CONSTRUCTOR -> ConversionInfo.COST_CONSTRUCTOR
             ConversionKind.VOID_PTR,
             ConversionKind.POINTER,
+            ConversionKind.METHOD,
             ConversionKind.FUNCTION -> ConversionInfo.COST_CAST
 
             ConversionKind.PRIMITIVE ->
@@ -182,6 +194,9 @@ class ConvertResolver(
 
             ConversionKind.POINTER ->
                 (fromType as PointerType).castPointer(toType)
+
+            ConversionKind.METHOD ->
+                (fromType as MethodType).castMethodType(toType)
 
             ConversionKind.FUNCTION ->
                 (fromType as FuncType).castFuncType(toType)

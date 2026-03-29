@@ -7,6 +7,8 @@ import lang.semantics.symbols.FuncSymbol
 interface FormattableMsg
 
 object Msg {
+    const val EXPECTED_FUNC_TYPE = "Expected function type"
+
     const val CANNOT_DOT_ACCESS_MULTI_LEVEL_POINTER =
         "cannot access member with '.' through a multi-level pointer"
 

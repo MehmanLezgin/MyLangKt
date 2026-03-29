@@ -13,6 +13,7 @@ import lang.semantics.symbols.FuncSymbol
 import lang.semantics.symbols.OverloadedFuncSymbol
 import lang.semantics.symbols.Symbol
 import lang.semantics.types.Type
+import kotlin.math.abs
 
 class OverloadResolver(
     override val analyzer: SemanticAnalyzer,
@@ -28,8 +29,12 @@ class OverloadResolver(
         from: Scope,
         argTypes: List<Type>
     ): List<FuncSymbol> {
-        val ranks = overloads.mapNotNull { func ->
-            if (func.params.list.size != argTypes.size) return@mapNotNull null
+        val ranks = overloads.map { func ->
+            if (func.params.list.size != argTypes.size) {
+                val sizeDiff = abs(func.params.list.size - argTypes.size)
+                val cost = sizeDiff  * 1000
+                return@map func to cost
+            }
 
             val params = func.params.list
             var totalCost = 0

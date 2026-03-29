@@ -328,6 +328,7 @@ class TypeResolver(
             is VoidDatatypeNode -> PrimitivesScope.void
 
             is FuncDatatypeNode -> resolve(target)
+            is MethodDatatypeNode -> resolve(target)
             is ErrorDatatypeNode -> ErrorType
             else -> ErrorType
         }.also { target attach it }
@@ -343,6 +344,41 @@ class TypeResolver(
             isConst = target.isConst,
             isReference = target.isReference
         ).also { target attach it }
+    }
+
+    private fun resolve(target: MethodDatatypeNode): Type {
+        val ownerType = resolve(target.ownerDatatype)
+        val funcType = resolve(target.funcDatatype)
+
+        if (ownerType == ErrorType || funcType == ErrorType)
+            return ErrorType
+//            return target.funcDatatype.error(Msg.EXPECTED_FUNC_TYPE)
+
+        if (funcType is FuncType)
+            return funcType.toMethodType(ownerType = ownerType)
+
+        if (funcType is PointerType) {
+            val base = funcType.base as? FuncType
+                ?: return target.funcDatatype.error(Msg.EXPECTED_FUNC_TYPE)
+
+
+            return PointerType(
+                base = base.toMethodType(ownerType = ownerType),
+                level = funcType.level,
+                flags = funcType.flags
+            )
+        }
+
+        return target.funcDatatype.error(Msg.EXPECTED_FUNC_TYPE)
+//            return FuncType(
+//                paramTypes = target.paramDatatypes
+//                    .map { resolve(it) },
+//                returnType = resolve(target.returnDatatype)
+//            ).applyTypeModifiers(
+//                pointerLevel = target.ptrLvl,
+//                isConst = target.isConst,
+//                isReference = target.isReference
+//            ).also { target attach it }
     }
 
     private fun Symbol.toTypeForNode(

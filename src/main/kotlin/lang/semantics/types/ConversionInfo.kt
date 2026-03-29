@@ -9,7 +9,8 @@ enum class ConversionKind {
     CONSTRUCTOR,
     VOID_PTR,
     POINTER,
-    FUNCTION
+    FUNCTION,
+    METHOD
 }
 
 sealed class ConversionInfo {

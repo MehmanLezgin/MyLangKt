@@ -120,6 +120,17 @@ data class FuncDatatypeNode(
     }
 }
 
+data class MethodDatatypeNode(
+    val ownerDatatype: QualifiedDatatypeNode,
+    val funcDatatype: FuncDatatypeNode,
+    override val range: SourceRange
+) : BaseDatatypeNode() {
+    override fun toString(): String {
+        return "$ownerDatatype::$funcDatatype"
+    }
+    override fun mapRecursive(mapper: NodeTransformFunc) =
+        mapper(this)
+}
 
 data class ErrorDatatypeNode(
     override val range: SourceRange,

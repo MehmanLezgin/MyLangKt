@@ -12,6 +12,14 @@ open class FuncType(
     flags = flags,
     declaration = null
 ) {
+    fun toMethodType(ownerType: Type) =
+        MethodType(
+            ownerType = ownerType,
+            paramTypes = paramTypes,
+            returnType = returnType,
+            flags = flags,
+        )
+
     override fun copyWithFlags(flags: TypeFlags) =
         FuncType(
             paramTypes = paramTypes,

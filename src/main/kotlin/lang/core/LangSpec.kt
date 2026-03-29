@@ -7,7 +7,7 @@ import lang.core.operators.operatorPrecedence
 object LangSpec {
     val moduleNameSeparator: OperatorType = OperatorType.SCOPE
 
-    val keywords = KeywordType.values().associate { type ->
+    val keywords = KeywordType.entries.associate { type ->
         type.value to KeywordInfo(type = type)
     }
 

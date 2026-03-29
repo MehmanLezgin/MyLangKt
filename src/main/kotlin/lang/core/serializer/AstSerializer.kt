@@ -185,6 +185,11 @@ object AstSerializer {
                 "returnDatatype" to expr.returnDatatype
             )
 
+            is MethodDatatypeNode -> mapOf(
+                "ownerDatatype" to expr.ownerDatatype,
+                "funcDatatype" to expr.funcDatatype
+            )
+
             is DatatypeNode -> mapOf(
                 "name" to expr.identifier,
                 "isConst" to expr.isConst,
