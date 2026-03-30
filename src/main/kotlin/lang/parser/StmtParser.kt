@@ -611,6 +611,7 @@ class StmtParser(
                             handleTypeNames = handleTypeNames,
                             handleParams = handleParams,
                             handleSuperType = handleSuperType,
+                            datatypeSeparator = datatypeSeparator,
                             handleInitializer = {}
 
                         )
