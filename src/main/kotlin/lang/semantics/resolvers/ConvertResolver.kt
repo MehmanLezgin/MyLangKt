@@ -22,7 +22,8 @@ class ConvertResolver(
         val funcSym = analyzer.withScope(typeScope) {
             analyzer.overloadResolver.resolveConstructor(
                 from = fromScope,
-                argTypes = listOf(fromType)
+                argTypes = listOf(fromType),
+                onlyImplicit = true
             )
         }
 

@@ -204,7 +204,7 @@ open class BaseLexer(
             TokenType.QUOTES_STR -> Token.Str(value, value, range)
             TokenType.QUOTES_CHAR -> Token.Character(value[0], value, range)
 
-            TokenType.IDENTIFIER -> Token.Identifier(value, value, range)
+            TokenType.IDENTIFIER -> Token.Identifier(value, range)
 
             TokenType.INT32 -> parseIntegerToken(value, range)
             TokenType.INT64 -> parseIntegerToken(value, range)
@@ -216,6 +216,7 @@ open class BaseLexer(
             TokenType.FALSE -> Token.Bool(false, value, range)
             TokenType.NULL -> Token.Null(value, range)
             TokenType.THIS -> Token.This(value, range)
+            TokenType.SUPER -> Token.Super(value, range)
 
             TokenType.KEYWORD -> {
                 val keywordType = langSpec.keywords[value]?.type ?: return Token.Unknown(raw = value, range = range)

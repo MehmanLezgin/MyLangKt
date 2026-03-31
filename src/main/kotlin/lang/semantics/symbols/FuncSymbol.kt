@@ -52,7 +52,7 @@ class FuncParamListSymbol(
 
 open class OverloadedFuncSymbol(
     override val name: String,
-    val kind: FuncKind,
+    open val kind: FuncKind,
     open val overloads: MutableList<FuncSymbol> = mutableListOf(),
     open val accessScope: Scope
 ) : Symbol(name = name, modifiers = Modifiers()) {
@@ -68,11 +68,12 @@ open class OverloadedFuncSymbol(
 
 class OverloadedMethodSymbol(
     override val name: String,
+    override val kind: FuncKind,
     override val overloads: MutableList<FuncSymbol> = mutableListOf(),
     override val accessScope: InstanceScope
 ) : OverloadedFuncSymbol(
     name = name,
-    kind = FuncKind.METHOD,
+    kind = kind,
     overloads = overloads,
     accessScope = accessScope
 )
@@ -198,6 +199,7 @@ open class MethodFuncSymbol(
     override fun toOverloadedFuncSymbol(accessScope: Scope) =
         OverloadedMethodSymbol(
             name = name,
+            kind = kind,
             overloads = mutableListOf(this),
             accessScope = accessScope as InstanceScope
         )

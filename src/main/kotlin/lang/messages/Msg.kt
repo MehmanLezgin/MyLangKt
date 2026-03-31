@@ -7,6 +7,8 @@ import lang.semantics.symbols.FuncSymbol
 interface FormattableMsg
 
 object Msg {
+    const val EXPECTED_NAME = "expected name"
+
     const val EXPECTED_FUNC_TYPE = "Expected function type"
 
     const val CANNOT_DOT_ACCESS_MULTI_LEVEL_POINTER =
@@ -61,6 +63,11 @@ object Msg {
 
     interface DirectoryMsg : FormattableMsg {
         fun format(path: String): String
+    }
+
+    object TypeDoesNotHaveSuper : FormattableMsg {
+        fun format(typeName: String) =
+            "Type '$typeName' does not have a super type"
     }
 
     object F_NO_SUCH_DIRECTORY : DirectoryMsg {
@@ -161,6 +168,11 @@ object Msg {
     object SymbolIsInaccessible : FormattableMsg {
         fun format(itemKind: String = Terms.SYMBOL, name: String) =
             "$itemKind '$name' is inaccessible"
+    }
+
+    object NoImplicitConversion : FormattableMsg {
+        fun format(fromType: String, toType: String) =
+            "no implicit conversion of '$fromType' to '$toType'"
     }
 
     object SymbolAlreadyDefinedIn : FormattableMsg {

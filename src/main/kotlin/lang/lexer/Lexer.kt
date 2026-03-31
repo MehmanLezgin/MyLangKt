@@ -176,6 +176,7 @@ class Lexer(
                 LexSymbols.FALSE -> TokenType.FALSE
                 LexSymbols.NULL -> TokenType.NULL
                 LexSymbols.THIS -> TokenType.THIS
+                LexSymbols.SUPER -> TokenType.SUPER
                 else -> TokenType.IDENTIFIER
             }
         }

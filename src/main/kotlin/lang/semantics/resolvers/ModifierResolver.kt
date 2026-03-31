@@ -14,12 +14,25 @@ import lang.semantics.scopes.ModuleScope
 import lang.semantics.symbols.Modifiers
 import lang.semantics.symbols.Visibility
 import kotlin.collections.forEach
+import kotlin.let
 import kotlin.reflect.KClass
 
-class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNode?, Modifiers>(analyzer) {
+class ModifierResolver(
+    analyzer: ISemanticAnalyzer
+) : BaseResolver<ModifierSetNode?, Modifiers>(analyzer) {
+    private val modifiersCache = mutableMapOf<ModifierSetNode, Modifiers>()
+
+    private fun checkCache(node: ModifierSetNode?): Modifiers? {
+        if (node == null) return null
+        val cached = modifiersCache[node] ?: return null
+        modifiersCache[node] = cached
+        return cached
+    }
+
     private val moduleAllowedModifiers = setOf(
         ModifierNode.Private::class,
         ModifierNode.Public::class,
+        ModifierNode.Internal::class,
         ModifierNode.Static::class,
     )
 
@@ -28,33 +41,53 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
     private val classAllowedModifiers = setOf(
         ModifierNode.Private::class,
         ModifierNode.Public::class,
+        ModifierNode.Internal::class,
         ModifierNode.Open::class,
         ModifierNode.Abstract::class,
     )
 
     private val interfaceAllowedModifiers = setOf(
         ModifierNode.Public::class,
+        ModifierNode.Private::class,
+        ModifierNode.Internal::class,
         ModifierNode.Abstract::class,
     )
 
     private val enumAllowedModifiers = setOf(
         ModifierNode.Public::class,
+        ModifierNode.Private::class,
+        ModifierNode.Internal::class
     )
 
     private val varAllowedModifiers = setOf(
         ModifierNode.Private::class,
         ModifierNode.Public::class,
+        ModifierNode.Internal::class,
         ModifierNode.Static::class,
     )
 
     private val funcAllowedModifiers = setOf(
         ModifierNode.Private::class,
         ModifierNode.Public::class,
+        ModifierNode.Internal::class,
         ModifierNode.Static::class,
         ModifierNode.Override::class,
         ModifierNode.Open::class,
         ModifierNode.Abstract::class,
         ModifierNode.Infix::class
+    )
+
+    private val constructorAllowedModifiers = setOf(
+        ModifierNode.Private::class,
+        ModifierNode.Public::class,
+        ModifierNode.Internal::class,
+        ModifierNode.Implicit::class,
+    )
+
+    private val destructorAllowedModifiers = setOf(
+        ModifierNode.Private::class,
+        ModifierNode.Public::class,
+        ModifierNode.Internal::class,
     )
 
     override fun resolve(target: ModifierSetNode?): Modifiers {
@@ -71,6 +104,8 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
     }
 
     fun resolveModuleModifiers(node: ModifierSetNode?): Modifiers {
+        checkCache(node)?.let { return it }
+
         return resolveModifiers(
             node = node,
             allowedModifiers = moduleAllowedModifiers,
@@ -79,6 +114,8 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
     }
 
     fun resolveUsingModifiers(node: ModifierSetNode?): Modifiers {
+        checkCache(node)?.let { return it }
+
         return resolveModifiers(
             node = node,
             allowedModifiers = usingAllowedModifiers,
@@ -87,6 +124,8 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
     }
 
     fun resolveClassModifiers(node: ModifierSetNode?): Modifiers {
+        checkCache(node)?.let { return it }
+
         return resolveModifiers(
             node = node,
             allowedModifiers = classAllowedModifiers,
@@ -95,6 +134,8 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
     }
 
     fun resolveInterfaceModifiers(node: ModifierSetNode?): Modifiers {
+        checkCache(node)?.let { return it }
+
         return resolveModifiers(
             node = node,
             allowedModifiers = interfaceAllowedModifiers,
@@ -103,6 +144,8 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
     }
 
     fun resolveEnumModifiers(node: ModifierSetNode?): Modifiers {
+        checkCache(node)?.let { return it }
+
         val modifiers = resolveModifiers(
             node = node,
             allowedModifiers = enumAllowedModifiers,
@@ -115,6 +158,8 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
     }
 
     fun resolveVarModifiers(node: ModifierSetNode?): Modifiers {
+        checkCache(node)?.let { return it }
+
         val modifiers = resolveModifiers(
             node = node,
             allowedModifiers = varAllowedModifiers,
@@ -124,7 +169,33 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         return modifiers
     }
 
+    fun resolveConstructorModifiers(node: ModifierSetNode?): Modifiers {
+        checkCache(node)?.let { return it }
+
+        val modifiers = resolveModifiers(
+            node = node,
+            allowedModifiers = constructorAllowedModifiers,
+            declKindName = Terms.CONSTRUCTOR
+        )
+
+        return modifiers
+    }
+
+    fun resolveDestructorModifiers(node: ModifierSetNode?): Modifiers {
+        checkCache(node)?.let { return it }
+
+        val modifiers = resolveModifiers(
+            node = node,
+            allowedModifiers = destructorAllowedModifiers,
+            declKindName = Terms.DESTRUCTOR
+        )
+
+        return modifiers
+    }
+
     fun resolveFuncModifiers(node: ModifierSetNode?): Modifiers {
+        checkCache(node)?.let { return it }
+
         val modifiers = resolveModifiers(
             node = node,
             allowedModifiers = funcAllowedModifiers,
@@ -210,7 +281,6 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
         return visibility ?: Visibility.PUBLIC
     }
 
-
     private fun resolveModifiers(
         node: ModifierSetNode?,
         allowedModifiers: Set<KClass<out ModifierNode>>,
@@ -222,22 +292,23 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
             return cls in allowedModifiers && node.get(cls) != null
         }
 
-        allowedModifiers.forEach { cls ->
-            val modifierNode = node.get(cls)
-            if (modifierNode != null) return@forEach
-            modifierNode?.error(
+        node.nodes.forEach { modifierNode ->
+            if (allowedModifiers.any { it.isInstance(modifierNode) })
+                return@forEach
+
+            modifierNode.error(
                 Msg.F_MODIFIER_IS_NOT_ALLOWED_ON.format(
                     modifierNode.keyword.value, declKindName
                 )
             )
         }
 
-
         var isStatic = scope is ModuleScope || hasAllowed(ModifierNode.Static::class)
         val isAbstract = hasAllowed(ModifierNode.Abstract::class)
         val isOpen = hasAllowed(ModifierNode.Open::class)
         val isOverride = hasAllowed(ModifierNode.Override::class)
         val isInfix = hasAllowed(ModifierNode.Infix::class)
+        val isImplicit = hasAllowed(ModifierNode.Implicit::class)
         var visibility = resolveVisibility(modifiers = node)
 
         checkModifier(
@@ -264,8 +335,11 @@ class ModifierResolver(analyzer: ISemanticAnalyzer) : BaseResolver<ModifierSetNo
             isOpen = finalIsOpen,
             isOverride = isOverride,
             isInfix = isInfix,
+            isImplicit = isImplicit,
             visibility = visibility
-        )
+        ).also {
+            modifiersCache[node] = it
+        }
     }
 
     private inline fun checkModifier(

@@ -234,7 +234,7 @@ class ExprParser(
         return when (val t = ts.peek()) {
             is Token.Identifier -> {
                 ts.next()
-                val id = IdentifierNode(value = t.value, range = t.range)
+                val id = t.toIdentifierNode()
                 parseDotChain(startChain = id, ctx = ctx)
             }
 
@@ -260,10 +260,6 @@ class ExprParser(
 
             is Token.Null -> {
                 ts.next(); NullLiteralNode(range = t.range)
-            }
-
-            is Token.This -> {
-                ts.next(); ThisLiteralNode(range = t.range)
             }
 
             is Token.Str -> {

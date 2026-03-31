@@ -2,6 +2,7 @@ package lang.nodes
 
 import lang.core.operators.OperatorType
 import lang.core.SourceRange
+import lang.messages.Terms
 
 typealias NodeTransformFunc = (ExprNode) -> ExprNode
 
@@ -33,6 +34,26 @@ data class OperNode(
     override val range: SourceRange
 ) : IdentifierNode(
     value = operatorType.fullName,
+    range = range
+) {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
+        mapper(this)
+}
+
+data class SuperIdentifierNode(
+    override val range: SourceRange
+) : IdentifierNode(
+    value = Terms.SUPER,
+    range = range
+) {
+    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
+        mapper(this)
+}
+
+data class ThisIdentifierNode(
+    override val range: SourceRange
+) : IdentifierNode(
+    value = Terms.THIS,
     range = range
 ) {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =

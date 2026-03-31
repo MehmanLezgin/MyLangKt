@@ -16,6 +16,7 @@ sealed class ModifierNode(
     data class Open         (override val range: SourceRange) : ModifierNode(KeywordType.OPEN, range)
     data class Abstract     (override val range: SourceRange) : ModifierNode(KeywordType.ABSTRACT, range)
     data class Infix        (override val range: SourceRange) : ModifierNode(KeywordType.INFIX, range)
+    data class Implicit     (override val range: SourceRange) : ModifierNode(KeywordType.IMPLICIT, range)
 
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }

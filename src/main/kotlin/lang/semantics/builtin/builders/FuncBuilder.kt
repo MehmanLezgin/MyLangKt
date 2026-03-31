@@ -21,7 +21,7 @@ class ConstructorBuilder : FuncBuilder(name = FuncKind.CONSTRUCTOR.kindName) {
         return ConstructorSymbol(
             params = funcParams,
             returnType = returnType,
-            modifiers = modifiers,
+            modifiers = modifiers
         )
     }
 }

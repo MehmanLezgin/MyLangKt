@@ -8,6 +8,7 @@ import lang.semantics.resolvers.BaseResolver
 import lang.semantics.scopes.FileScope
 import lang.semantics.scopes.ModuleScope
 import lang.semantics.scopes.Scope
+import lang.semantics.symbols.Modifiers
 import lang.semantics.symbols.ModuleSymbol
 import lang.semantics.symbols.Symbol
 
@@ -43,6 +44,7 @@ class ModuleRegPass(
     private fun createModule(
         name: String,
         sharedSymbols: MutableMap<String, Symbol> = mutableMapOf(),
+        modifiers: Modifiers,
     ): ModuleSymbol {
         val moduleScope = ModuleScope(
             parent = curScope,
@@ -52,7 +54,8 @@ class ModuleRegPass(
 
         val moduleSym = ModuleSymbol(
             name = name,
-            scope = moduleScope
+            scope = moduleScope,
+            modifiers = modifiers
         )
 
         moduleScope.ownerSymbol = moduleSym
@@ -61,28 +64,33 @@ class ModuleRegPass(
     }
 
 
-    fun getOrCreateModule(name: String): ModuleSymbol {
+    fun getOrCreateModule(name: String, modifiers: Modifiers): ModuleSymbol {
         val existing = modulesContainer.resolveModule(name = name, fromScope = scope)
             .handle(null) {
                 sym as ModuleSymbol
             }
 
         if (existing == null)
-            return createModule(name).also { module ->
+            return createModule(name = name, modifiers = modifiers).also { module ->
                 modulesContainer.define(sym = module)
             }
 
         if (curScope is FileScope)
             return createModule(
                 name = name,
-                sharedSymbols = existing.scope.symbols
+                sharedSymbols = existing.scope.symbols,
+                modifiers = modifiers
             )
 
         return existing
     }
 
     private fun registerModule(node: ModuleStmtNode) {
-        val moduleSym = getOrCreateModule(node.name.value)
+        val moduleSym = getOrCreateModule(
+            name = node.name.value,
+            modifiers = analyzer.modResolver.resolveModuleModifiers(node.modifiers)
+        )
+
         curScope?.define(moduleSym)
 
         node bind moduleSym

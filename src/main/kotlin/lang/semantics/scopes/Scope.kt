@@ -1,5 +1,6 @@
 package lang.semantics.scopes
 
+import lang.core.LangSpec
 import lang.nodes.*
 import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isUnaryOperator
@@ -30,6 +31,9 @@ open class Scope(
 
     private fun <T : Symbol> defineRaw(sym: T): ScopeResult {
         val name = sym.name
+        if (LangSpec.isReservedName(name = name))
+            return ScopeError.ExpectedName.err()
+
         val definedSym = symbols[name]
 
         if (definedSym != null)
@@ -60,11 +64,15 @@ open class Scope(
     }
 
     fun isSymAccessibleFrom(sym: Symbol, from: Scope, asMember: Boolean = false): Boolean {
+        val visibility = sym.modifiers.visibility
+        if (visibility == Visibility.PUBLIC) return true
+
         val fromEnclosing = from.getEnclosingScope<BaseTypeScope>()
         val thisEnclosing = this.getEnclosingScope<BaseTypeScope>()
 
-        return when (sym.modifiers.visibility) {
-            Visibility.PUBLIC -> true
+        if (fromEnclosing == thisEnclosing) return true
+
+        return when (visibility) {
             Visibility.PRIVATE -> !asMember && thisEnclosing == fromEnclosing
             Visibility.INTERNAL -> {
                 if (thisEnclosing == null) return false
@@ -383,6 +391,7 @@ open class Scope(
             this is InstanceScope ->
                 OverloadedMethodSymbol(
                     name = name,
+                    kind = kind,
                     overloads = mutableListOf(),
                     accessScope = this
                 )

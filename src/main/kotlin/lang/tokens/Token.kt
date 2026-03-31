@@ -30,11 +30,13 @@ sealed class Token(
     data class Double64(val value: Double, override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Bool(val value: Boolean, override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Null(override val raw: String, override val range: SourceRange) : Token(raw, range)
-    data class This(override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Str(val value: String, override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Character(val value: Char, override val raw: String, override val range: SourceRange) : Token(raw, range)
 
-    data class Identifier(val value: String, override val raw: String, override val range: SourceRange) : Token(raw, range)
+    open class Identifier(override val raw: String, override val range: SourceRange) : Token(raw, range)
+    data class This(override val raw: String, override val range: SourceRange) : Identifier(raw, range)
+    data class Super(override val raw: String, override val range: SourceRange) : Identifier(raw, range)
+
     data class Keyword(val type: KeywordType, override val raw: String, override val range: SourceRange) : Token(raw, range)
     data class Operator(
         val type: OperatorType,

@@ -54,57 +54,55 @@ class StmtParser(
             return expr
         }
 
-        fun errorStmt(msg: String): () -> ExprNode {
+        fun errorStmt(msg: String): VoidNode {
             syntaxError(msg, t.range)
             ts.next()
-            return ::voidExprFunc
+            return VoidNode
         }
 
-        val parserFunc = when (t.type) {
+        return when (t.type) {
             KeywordType.VAR,
-            KeywordType.LET -> ::parseVarDeclStmt
+            KeywordType.LET -> parseVarDeclStmt()
 
-            KeywordType.FUNC -> ::parseFuncDeclStmt
+            KeywordType.FUNC -> parseFuncDeclStmt()
 
-            KeywordType.DO -> ::parseDoWhileStmt
-            KeywordType.WHILE -> ::parseWhileStmt
-            KeywordType.MATCH -> ::parseMatchStmt
-            KeywordType.IF -> ::parseIfElseStmt
-            KeywordType.ELSE -> ::parseElseEntryStmt
+            KeywordType.DO -> parseDoWhileStmt()
+            KeywordType.WHILE -> parseWhileStmt()
+            KeywordType.MATCH -> parseMatchStmt()
+            KeywordType.IF -> parseIfElseStmt()
+            KeywordType.ELSE -> parseElseEntryStmt()
             KeywordType.ELIF -> errorStmt(Msg.EXPECTED_IF)
-
-            KeywordType.CONST, KeywordType.STATIC,
-            KeywordType.OPEN, KeywordType.ABSTRACT,
-            KeywordType.OVERRIDE, KeywordType.INFIX,
 
             KeywordType.PRIVATE,
             KeywordType.PUBLIC,
-            KeywordType.INTERNAL ->
-                ::parseDeclarationWithModifiers
+            KeywordType.INTERNAL,
+            KeywordType.IMPLICIT,
+            KeywordType.CONST, KeywordType.STATIC,
+            KeywordType.OPEN, KeywordType.ABSTRACT,
+            KeywordType.OVERRIDE, KeywordType.INFIX ->
+                parseDeclarationWithModifiers()
 
-            KeywordType.CONTINUE -> ::parseContinueStmt
-            KeywordType.BREAK -> ::parseBreakStmt
+            KeywordType.CONTINUE -> parseContinueStmt()
+            KeywordType.BREAK -> parseBreakStmt()
 
             KeywordType.CATCH,
             KeywordType.FINALLY -> errorStmt(Msg.EXPECTED_TRY)
 
-            KeywordType.RETURN -> ::parseReturnStmt
-            KeywordType.CLASS -> ::parseClassStmt
-            KeywordType.INTERFACE -> ::parseInterfaceStmt
-            KeywordType.ENUM -> ::parseEnumStmt
-            KeywordType.CONSTRUCTOR -> ::parseConstructorStmt
-            KeywordType.DESTRUCTOR -> ::parseDestructorStmt
+            KeywordType.RETURN -> parseReturnStmt()
+            KeywordType.CLASS -> parseClassStmt()
+            KeywordType.INTERFACE -> parseInterfaceStmt()
+            KeywordType.ENUM -> parseEnumStmt()
+            KeywordType.CONSTRUCTOR -> parseConstructorStmt()
+            KeywordType.DESTRUCTOR -> parseDestructorStmt()
 
-            KeywordType.FOR -> ::parseForLoopStmt
-            KeywordType.TRY -> ::parseTryCatchStmt
-            KeywordType.MODULE -> ::parseModuleStmt
-            KeywordType.USING -> ::parseUsingStmt
+            KeywordType.FOR -> parseForLoopStmt()
+            KeywordType.TRY -> parseTryCatchStmt()
+            KeywordType.MODULE -> parseModuleStmt()
+            KeywordType.USING -> parseUsingStmt()
             KeywordType.OPERATOR -> errorStmt(Msg.EXPECTED_FUNC_DECL)
-            KeywordType.IMPORT -> ::parseImportModuleStmt
-            KeywordType.FROM -> ::parseFromImportStmt
-        }
-
-        return parserFunc() ?: VoidNode
+            KeywordType.IMPORT -> parseImportModuleStmt()
+            KeywordType.FROM -> parseFromImportStmt()
+        } ?: VoidNode
     }
 
     private fun parseUsingStmt(): StmtNode {
@@ -873,8 +871,6 @@ class StmtParser(
             ModifierSetNode(nodes = modifiers, range = resultRange)
         }
     }
-
-    private fun voidExprFunc() = VoidNode
 
     private fun parseConditionAndBody(): Pair<ExprNode, BlockNode> {
         val isConditionWithParens = ts.match(Token.LParen::class)

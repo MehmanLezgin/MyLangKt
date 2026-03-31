@@ -3,6 +3,7 @@ package lang.core
 import lang.core.operators.OperatorInfo
 import lang.core.operators.OperatorType
 import lang.core.operators.operatorPrecedence
+import lang.messages.Terms
 
 object LangSpec {
     val moduleNameSeparator: OperatorType = OperatorType.SCOPE
@@ -10,6 +11,11 @@ object LangSpec {
     val keywords = KeywordType.entries.associate { type ->
         type.value to KeywordInfo(type = type)
     }
+
+    val reservedIdentifierNames = setOf(
+        Terms.THIS,
+        Terms.SUPER
+    )
 
     val operators: Map<String, OperatorInfo>
 
@@ -35,4 +41,8 @@ object LangSpec {
     fun getOperatorInfo(type: OperatorType): OperatorInfo? {
         return operators[type.raw]
     }
+
+    fun isReservedName(name: String) =
+        reservedIdentifierNames.contains(name)
+
 }

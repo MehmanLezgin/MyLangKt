@@ -9,6 +9,7 @@ class NameCollectionPass(
     override val analyzer: ISemanticAnalyzer
 ) : BaseResolver<BlockNode?, Unit>(analyzer = analyzer) {
     private val modResolver = analyzer.modResolver
+    val visited = mutableMapOf<ExprNode, Boolean>()
 
     override fun resolve(target: BlockNode?) {
         target?.nodes?.forEach { node ->
@@ -24,6 +25,13 @@ class NameCollectionPass(
         }
     }
 
+    private fun checkVisited(node: ExprNode): Boolean {
+        if (visited[node] == true) return true
+        visited[node] = true
+        return false
+    }
+
+
     private fun resolveBody(sym: TypeSymbol, body: BlockNode?) {
         analyzer.withScope(sym.staticScope) {
             resolve(body)
@@ -31,6 +39,8 @@ class NameCollectionPass(
     }
 
     fun resolve(node: VarDeclStmtNode) {
+        if (checkVisited(node)) return
+
         val modifiers = modResolver.resolveVarModifiers(node.modifiers)
 
         withEffectiveScope(isStatic = modifiers.isStatic) {
@@ -45,8 +55,21 @@ class NameCollectionPass(
         }
     }
 
+    private fun FuncDeclStmtNode.resolveFuncModifiers() = when (this) {
+        is ConstructorDeclStmtNode ->
+            modResolver.resolveConstructorModifiers(this.modifiers)
+
+        is DestructorDeclStmtNode ->
+            modResolver.resolveDestructorModifiers(this.modifiers)
+
+        else ->
+            modResolver.resolveFuncModifiers(this.modifiers)
+    }
+
+
     fun resolve(node: FuncDeclStmtNode) {
-        val modifiers = modResolver.resolveFuncModifiers(node.modifiers)
+        if (checkVisited(node)) return
+        val modifiers = node.resolveFuncModifiers()
 
         withEffectiveScope(isStatic = modifiers.isStatic) {
             scope.defineFuncNameIfNotExist(
@@ -57,6 +80,8 @@ class NameCollectionPass(
     }
 
     fun resolve(node: ModuleStmtNode) {
+        if (checkVisited(node)) return
+
         val moduleSym = node.getResolvedSymbol() as? ModuleSymbol
             ?: return
 
@@ -66,6 +91,8 @@ class NameCollectionPass(
     }
 
     fun resolve(node: InterfaceDeclStmtNode) {
+        if (checkVisited(node)) return
+
         val modifiers = modResolver.resolveInterfaceModifiers(node.modifiers)
 
         scope.defineInterface(node, modifiers = modifiers)
@@ -78,6 +105,8 @@ class NameCollectionPass(
     }
 
     fun resolve(node: ClassDeclStmtNode) {
+        if (checkVisited(node)) return
+
         val modifiers = modResolver.resolveClassModifiers(node.modifiers)
 
         scope.defineClass(node = node, modifiers = modifiers)
@@ -90,6 +119,8 @@ class NameCollectionPass(
     }
 
     fun resolve(node: EnumDeclStmtNode) {
+        if (checkVisited(node)) return
+
         val modifiers = modResolver.resolveEnumModifiers(node.modifiers)
         scope.defineEnum(node, modifiers = modifiers)
             .handle(node.name.range) {
@@ -99,31 +130,4 @@ class NameCollectionPass(
                 resolveBody(sym, node.body)
             }
     }
-
-    /*fun resolve(node: UsingDirectiveNode) {
-        val clause = node.clause
-        val modifiers = modResolver.resolveUsingModifiers(node.modifiers)
-
-        when (clause) {
-            is NameClause.Items -> {
-                clause.items.forEach { item ->
-                    when (item) {
-                        is NameSpecifier.Alias -> {
-                            scope.defineAlias(
-                                name = item.alias.value,
-                                sym = null,
-                                visibility = modifiers.visibility
-                            ).handle(item.alias.range) {
-                                node bind sym
-                            }
-                        }
-
-                        else -> Unit
-                    }
-                }
-            }
-
-            NameClause.Wildcard -> Unit
-        }
-    }*/
 }

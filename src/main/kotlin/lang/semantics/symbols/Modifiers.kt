@@ -6,5 +6,6 @@ data class Modifiers(
     var isAbstract: Boolean = false,
     var isOpen: Boolean = false,
     var isOverride: Boolean = false,
-    var isInfix: Boolean = false
+    var isInfix: Boolean = false,
+    var isImplicit: Boolean = false
 )

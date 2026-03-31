@@ -104,7 +104,6 @@ class DeclarationHeaderPass(
         sym.type = type
     }
 
-
     fun resolve(target: FuncDeclStmtNode) {
         val modifiers = modResolver.resolveFuncModifiers(target.modifiers)
 

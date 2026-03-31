@@ -49,6 +49,14 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
 
             is ScopeError.Inaccessible ->
                 Msg.SymbolIsInaccessible.format(name = a.symName)
+
+            is ScopeError.ExpectedName -> Msg.EXPECTED_NAME
+
+            is ScopeError.NoImplicitConversion ->
+                Msg.NoImplicitConversion.format(
+                    fromType = a.fromType.toString(),
+                    toType = a.toType.toString()
+                )
         }
     }
 }

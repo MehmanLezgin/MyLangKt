@@ -24,6 +24,7 @@ enum class TokenType {
     FALSE,
     NULL,
     THIS,
+    SUPER,
 
     IDENTIFIER,
     QUOTES_STR,

@@ -1,25 +1,12 @@
 package lang.parser
 
+import lang.core.KeywordType
 import lang.core.SourceRange
+import lang.core.operators.OperatorType
 import lang.mappers.BinOpTypeMapper
 import lang.mappers.UnaryOpTypeMapper
-import lang.core.KeywordType
-import lang.core.operators.OperatorType
-import lang.nodes.AutoDatatypeNode
-import lang.nodes.BaseDatatypeNode
-import lang.nodes.BinOpNode
-import lang.nodes.BinOpType
-import lang.nodes.BlockNode
-import lang.nodes.DatatypeNode
-import lang.nodes.ExprNode
-import lang.nodes.IdentifierNode
-import lang.nodes.QualifiedDatatypeNode
-import lang.nodes.ScopedDatatypeNode
-import lang.nodes.UnaryOpNode
-import lang.nodes.UnaryOpType
-import lang.nodes.VoidDatatypeNode
+import lang.nodes.*
 import lang.tokens.Token
-import kotlin.reflect.KClass
 
 object ParserUtils {
     fun ExprNode.wrapToBlock(check: Boolean = true): BlockNode {
@@ -28,9 +15,6 @@ object ParserUtils {
     }
 
     infix fun Token.isKeyword(type: KeywordType) = this is Token.Keyword && this.type == type
-    infix fun Token.isNotKeyword(type: KeywordType) = this !is Token.Keyword || this.type != type
-
-    fun Token.isKeyword(vararg types: KeywordType) = this is Token.Keyword && types.any { it == this.type }
 
     infix fun Token.isOperator(type: OperatorType) = this is Token.Operator && this.type == type
 
@@ -41,12 +25,11 @@ object ParserUtils {
 
     infix fun Token.isNotOperator(type: OperatorType) = this !is Token.Operator || this.type != type
 
-    fun Token.isOperator(vararg types: KClass<out OperatorType>) =
-        this is Token.Operator && types.any { it.isInstance(this.type) }
-
-    fun Token.Identifier.toIdentifierNode() = IdentifierNode(
-        value = value, range = range
-    )
+    fun Token.Identifier.toIdentifierNode() = when (this) {
+        is Token.This -> ThisIdentifierNode(range = range)
+        is Token.Super -> SuperIdentifierNode(range = range)
+        else -> IdentifierNode(value = raw, range = range)
+    }
 
     fun ExprNode.flattenCommaNode(): List<ExprNode> {
         if (this !is BinOpNode || operator != BinOpType.COMMA) return listOf(this)
@@ -55,9 +38,6 @@ object ParserUtils {
         list.addAll(right.flattenCommaNode())
         return list
     }
-
-    fun List<ExprNode>.toBlockNode(range: SourceRange) =
-        BlockNode(nodes = this, range = range)
 
     fun IdentifierNode.toDatatype(): BaseDatatypeNode {
         return when (value) {
@@ -84,15 +64,6 @@ object ParserUtils {
     fun OperatorType.isBinOperator() = binOpTypeMapper.toSecond(this) != null
 
     fun OperatorType.isUnaryOperator() = unaryOpTypeMapper.toSecond(this) != null
-
-
-    infix fun ExprNode.isBinOperator(type: BinOpType) = this is BinOpNode && this.operator == type
-
-    infix fun ExprNode.isNotBinOperator(type: BinOpType) = this !is BinOpNode || this.operator != type
-
-    infix fun ExprNode.isUnaryOperator(type: UnaryOpType) = this is UnaryOpNode && this.operator == type
-
-    infix fun ExprNode.isNotUnaryOperator(type: UnaryOpType) = this !is UnaryOpNode || this.operator != type
 
     fun <T : ExprNode> List<T>.range(defaultEmpty: SourceRange): SourceRange {
         return when (size) {

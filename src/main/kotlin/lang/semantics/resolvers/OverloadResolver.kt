@@ -13,7 +13,6 @@ import lang.semantics.symbols.FuncSymbol
 import lang.semantics.symbols.OverloadedFuncSymbol
 import lang.semantics.symbols.Symbol
 import lang.semantics.types.Type
-import kotlin.math.abs
 
 class OverloadResolver(
     override val analyzer: SemanticAnalyzer,
@@ -27,7 +26,8 @@ class OverloadResolver(
     fun resolveBestOverloads(
         overloads: List<FuncSymbol>,
         from: Scope,
-        argTypes: List<Type>
+        argTypes: List<Type>,
+        onlyImplicit: Boolean = false
     ): List<FuncSymbol> {
         val ranks = overloads.mapNotNull { func ->
             val paramCount = func.params.list.size
@@ -46,7 +46,11 @@ class OverloadResolver(
             var totalCost = 0
 
             if (!scope.isSymAccessibleFrom(func, from))
-                totalCost += Int.MAX_VALUE
+                totalCost += 1000
+
+            if (onlyImplicit && !func.modifiers.isImplicit)
+                totalCost += 1000
+
 
             for (i in argTypes.indices) {
                 val argType = argTypes[i]
@@ -56,6 +60,8 @@ class OverloadResolver(
 //                if (conversion.notExists()) return@mapNotNull null
                 totalCost += cost
             }
+
+//            if (implicit && func is ConstructorSymbol && func.is)
 
             func to totalCost
         }
@@ -70,9 +76,13 @@ class OverloadResolver(
         from: Scope,
         argTypes: List<Type>,
         kind: FuncKind,
-        overloads: List<FuncSymbol>?
+        overloads: List<FuncSymbol>?,
+        onlyImplicit: Boolean = false
     ): ScopeResult {
-        return if (overloads.isNullOrEmpty())
+        return if (
+            overloads.isNullOrEmpty() ||
+            (onlyImplicit && overloads.size == 1 && !overloads[0].modifiers.isImplicit)
+        )
             ScopeError.NoFuncOverload(
                 kind = kind,
                 symName = name,
@@ -90,7 +100,7 @@ class OverloadResolver(
                 from = from,
                 argTypes = argTypes,
                 kind = kind,
-                overloads = accessibleOverloads
+                overloads = accessibleOverloads,
             )
         } else {
             val best = overloads.first()
@@ -132,7 +142,7 @@ class OverloadResolver(
                         val bestOverloads = resolveBestOverloads(
                             overloads = sym.overloads,
                             from = from,
-                            argTypes = effectiveArgTypes
+                            argTypes = effectiveArgTypes,
                         )
 
                         if (bestOverloads.isEmpty())
@@ -157,7 +167,7 @@ class OverloadResolver(
                     from = from,
                     argTypes = argTypes,
                     kind = kind,
-                    overloads = overloads
+                    overloads = overloads,
                 )
             }
         }
@@ -167,11 +177,13 @@ class OverloadResolver(
         overloadedFunc: OverloadedFuncSymbol,
         from: Scope,
         argTypes: List<Type>,
+        onlyImplicit: Boolean = false
     ): ScopeResult {
         val costOverloads = resolveBestOverloads(
-            overloadedFunc.overloads,
-            from,
-            argTypes
+            overloads = overloadedFunc.overloads,
+            from = from,
+            argTypes = argTypes,
+            onlyImplicit = onlyImplicit
         )
 
         return pickSingleFuncSym(
@@ -179,7 +191,8 @@ class OverloadResolver(
             from = from,
             argTypes = argTypes,
             kind = overloadedFunc.kind,
-            overloads = costOverloads
+            overloads = costOverloads,
+            onlyImplicit = onlyImplicit
         )
     }
 
@@ -199,7 +212,8 @@ class OverloadResolver(
 
     fun resolveConstructor(
         argTypes: List<Type>,
-        from: Scope
+        from: Scope,
+        onlyImplicit: Boolean = false
     ): ScopeResult {
         val overloadedFunc = (scope.symbols.values.find { sym ->
             sym is OverloadedFuncSymbol && sym.kind == FuncKind.CONSTRUCTOR
@@ -214,7 +228,8 @@ class OverloadResolver(
         return resolveFunc(
             overloadedFunc = overloadedFunc,
             from = from,
-            argTypes = argTypes
+            argTypes = argTypes,
+            onlyImplicit = onlyImplicit
         )
     }
 }

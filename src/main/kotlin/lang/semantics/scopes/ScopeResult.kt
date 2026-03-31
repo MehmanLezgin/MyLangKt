@@ -35,9 +35,15 @@ sealed class ScopeError {
         val scopeName: String?,
     ) : ScopeError()
 
+    data class NoImplicitConversion(
+        val fromType: Type,
+        val toType: Type
+    ) : ScopeError()
+
     data class Inaccessible(val symName: String) : ScopeError()
 
     object ConflictingOverloads : ScopeError()
     object InvalidConstValue : ScopeError()
     data class AmbiguousOverloadedFunc(val list: List<FuncSymbol>) : ScopeError()
+    object ExpectedName : ScopeError()
 }

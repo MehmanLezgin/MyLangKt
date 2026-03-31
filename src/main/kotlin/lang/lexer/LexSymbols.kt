@@ -8,6 +8,7 @@ object LexSymbols {
     const val FALSE = Terms.FALSE
     const val NULL = Terms.NULL
     const val THIS = Terms.THIS
+    const val SUPER = Terms.SUPER
     const val DOT = '.'
     const val LPAREN = '('
     const val RPAREN = ')'

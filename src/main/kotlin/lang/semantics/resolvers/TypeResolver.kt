@@ -20,10 +20,11 @@ class TypeResolver(
     override fun resolve(target: ExprNode): Type {
         return when (target) {
             is LiteralNode<*> -> resolve(target)
-            is IdentifierNode -> resolve(target)
             is NullLiteralNode -> resolveNullLiteral()
 
-            is ThisLiteralNode -> resolve(target)
+            is ThisIdentifierNode -> resolve(target)
+            is SuperIdentifierNode -> resolve(target)
+            is IdentifierNode -> resolve(target)
 
             is VoidNode -> PrimitivesScope.void
 
@@ -36,6 +37,7 @@ class TypeResolver(
             is SizeofNode,
             is AlignofNode,
             is OffsetofNode -> resolveConst(target)
+
             is BlockNode -> resolve(target)
 
             else -> ErrorType
@@ -55,21 +57,55 @@ class TypeResolver(
         return a?.type ?: ErrorType
     }
 
-    private fun resolve(target: ThisLiteralNode): Type {
+    private fun resolveCurrentScopeType(target: ExprNode): UserType? {
         val typeScope = scope.getEnclosingScope<InstanceScope>()
             ?.parent
-            ?.takeIf { it is ClassScope }
-            ?: return target.error(
+
+        if (typeScope !is ClassScope) {
+            target.error(
                 Msg.SymbolNotDefinedIn.format(
                     name = Terms.THIS,
                     scopeName = null
                 )
             )
 
-        val baseType = (typeScope as ClassScope).ownerSymbol.type
+            return null
+        }
+
+        return typeScope.ownerSymbol.type
+    }
+
+    private fun resolve(target: ThisIdentifierNode): Type {
+        val type = resolveCurrentScopeType(target)
+            ?: return ErrorType
 
         return PointerType(
-            base = baseType,
+            base = type,
+            level = 1,
+            flags = TypeFlags(
+                isConst = true,
+                isLvalue = false,
+                isExprType = true
+            )
+        )
+    }
+
+
+    private fun resolve(target: SuperIdentifierNode): Type {
+        val type = resolveCurrentScopeType(target)
+            ?: return ErrorType
+
+        val superType = type.declaration?.superType
+
+        if (superType !is UserType)
+            return target.error(
+                Msg.TypeDoesNotHaveSuper.format(
+                    typeName = type.name
+                )
+            )
+
+        return PointerType(
+            base = superType,
             level = 1,
             flags = TypeFlags(
                 isConst = true,
@@ -125,22 +161,21 @@ class TypeResolver(
         val targetScope = baseType.declaration?.staticScope?.instanceScope
 
 
+
         if (targetScope == null) {
             target.base.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(baseType.toString()))
             return ErrorType
         }
 
-
         val member = target.member
 
-        val result = targetScope.resolve(name = member.value, from = scope, asMember = true)
+        val fromScope = when (target.base) {
+            is SuperIdentifierNode -> scope.getEnclosingScope<InstanceScope>()
+            else -> scope
+        } ?: scope
 
-        return result.handle(member.range) {
-            target bind sym
-            target.member bind sym
-            analyzer.withScope(targetScope) {
-                resolve(member, asMember = true)
-            }
+        return analyzer.withScope(targetScope) {
+            resolve(member, fromScope = fromScope, asMember = true)
         }.also {
             target attach it
             target.member attach it
@@ -255,8 +290,8 @@ class TypeResolver(
 
                 val funcSym = analyzer.withScope(typeScope) {
                     analyzer.overloadResolver.resolveConstructor(
+                        argTypes = argTypes,
                         from = fromScope,
-                        argTypes = argTypes
                     ).handle<FuncSymbol>(target.range) {
                         sym as? FuncSymbol
                     }
@@ -463,8 +498,18 @@ class TypeResolver(
         }
     }
 
-    fun resolve(target: IdentifierNode, asMember: Boolean = false, isNamespace: Boolean = false): Type {
-        val result = scope.resolve(name = target.value, asMember = asMember)
+    fun resolve(
+        target: IdentifierNode,
+        fromScope: Scope = scope,
+        asMember: Boolean = false,
+        isNamespace: Boolean = false
+    ): Type {
+        when (target) {
+            is ThisIdentifierNode -> return resolve(target)
+            is SuperIdentifierNode -> return resolve(target)
+        }
+
+        val result = scope.resolve(name = target.value, from = fromScope, asMember = asMember)
 
         return result.handle(target.range) {
             resolveIdentifierWithSym(target, sym, isNamespace)

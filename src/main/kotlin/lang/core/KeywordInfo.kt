@@ -1,6 +1,7 @@
 package lang.core
 
 enum class KeywordType(val value: String) {
+    IMPLICIT("implicit"),
     INFIX("infix"),
     IMPORT("import"),
     FROM("from"),

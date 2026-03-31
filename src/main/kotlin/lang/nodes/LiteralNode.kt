@@ -28,10 +28,3 @@ data class NullLiteralNode(
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
         mapper(this)
 }
-
-data class ThisLiteralNode(
-    override val range: SourceRange
-) : ExprNode {
-    override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
-        mapper(this)
-}

@@ -6,6 +6,7 @@ object Terms {
     const val FALSE = "false"
     const val NULL = "null"
     const val THIS = "this"
+    const val SUPER = "super"
     const val MIN_VALUE = "MIN_VALUE"
     const val MAX_VALUE = "MAX_VALUE"
     const val OTHER = "other"
