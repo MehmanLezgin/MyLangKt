@@ -113,7 +113,7 @@ sealed interface BaseDeclStmtNode : StmtNode {
     var modifiers: ModifierSetNode?
 }
 
-open class DeclStmtNamedNode(
+sealed class DeclStmtNamedNode(
     override var modifiers: ModifierSetNode?,
     override val range: SourceRange,
     open val name: IdentifierNode? = null,

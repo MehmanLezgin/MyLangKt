@@ -162,7 +162,7 @@ class DeclarationHeaderPass(
 
         val sym = FuncParamSymbol(
             name = target.name.value,
-            type = type,
+            initialType = type,
             range = target.range
         )
 

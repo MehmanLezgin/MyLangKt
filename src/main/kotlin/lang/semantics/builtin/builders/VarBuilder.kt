@@ -18,7 +18,7 @@ class ConstVarBuilder(
 
     fun build() = VarSymbol(
         name = name,
-        type = type,
+        initialType = type,
         constValue = value,
         modifiers = modifiers,
         isMutable = false

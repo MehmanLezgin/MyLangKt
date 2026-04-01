@@ -3,6 +3,7 @@ package lang.semantics.symbols
 import lang.semantics.types.ConstValue
 import lang.semantics.types.Type
 import lang.semantics.types.UnresolvedType
+import lang.semantics.types.lazyType
 
 sealed class Symbol(
     open val name: String,
@@ -11,12 +12,19 @@ sealed class Symbol(
 
 open class VarSymbol(
     override val name: String,
-    open var type: Type = UnresolvedType,
+    open var initialType: Type = UnresolvedType,
     val isMutable: Boolean,
     val isParameter: Boolean = false,
     var constValue: ConstValue<*>? = null,
     override val modifiers: Modifiers = Modifiers()
 ) : Symbol(name = name, modifiers = modifiers) {
+    private var lazyType = lazyType { initialType }
+
+    var type: Type
+        get() = lazyType.type
+        set(value) {
+            lazyType = lazyType { value }
+        }
 
     fun toConstValueSymbol() = ConstValueSymbol(
         type = type,

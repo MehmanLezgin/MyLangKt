@@ -12,11 +12,11 @@ import lang.semantics.types.lazyType
 
 open class FuncParamSymbol(
     override val name: String,
-    override var type: Type,
+    override var initialType: Type,
     val range: SourceRange? = null
 ) : VarSymbol(
     name = name,
-    type = type,
+    initialType = initialType,
     isMutable = false,
     isParameter = true,
     modifiers = Modifiers()

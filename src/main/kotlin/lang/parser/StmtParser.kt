@@ -310,7 +310,7 @@ class StmtParser(
             if (ts.match(Token.LParen::class))
                 analiseParams(parser.parseArgsList()) { params = it }
 
-            val body = parseBlock()
+            val body = parseBodyForDeclStmt()
 
             ConstructorDeclStmtNode(
                 modifiers = null,
@@ -974,7 +974,6 @@ class StmtParser(
             )
         }
     }
-
 
     private fun parseElseEntryStmt(): ElseEntryNode? {
         return ts.captureRange {
