@@ -1,6 +1,6 @@
 package lang.nodes
 
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 import lang.semantics.symbols.FuncKind
 
 sealed interface StmtNode : ExprNode

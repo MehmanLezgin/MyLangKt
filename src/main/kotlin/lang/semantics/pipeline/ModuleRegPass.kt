@@ -3,7 +3,7 @@ package lang.semantics.pipeline
 import lang.nodes.BlockNode
 import lang.nodes.ModuleStmtNode
 import lang.semantics.ISemanticAnalyzer
-import lang.semantics.builtin.PrimitivesScope
+import lang.core.PrimitivesScope
 import lang.semantics.resolvers.BaseResolver
 import lang.semantics.scopes.FileScope
 import lang.semantics.scopes.ModuleScope

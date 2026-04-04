@@ -1,7 +1,7 @@
 package lang.semantics.resolvers
 
-import lang.core.KeywordType
-import lang.core.SourceRange
+import lang.infrastructure.KeywordType
+import lang.infrastructure.SourceRange
 import lang.messages.Msg
 import lang.messages.Terms
 import lang.nodes.ModifierNode

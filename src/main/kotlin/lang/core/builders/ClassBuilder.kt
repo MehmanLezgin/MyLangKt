@@ -1,0 +1,31 @@
+package lang.core.builders
+
+import lang.semantics.scopes.BaseTypeScope
+import lang.semantics.scopes.ClassScope
+import lang.semantics.scopes.Scope
+import lang.semantics.symbols.ClassSymbol
+
+class ClassBuilder(
+    override val name: String,
+    override val parent: Scope
+) : BaseTypeBuilder<ClassSymbol>(name, parent) {
+    override var typeScope: BaseTypeScope = ClassScope(
+        parent = parent,
+        scopeName = name,
+    )
+
+    override fun build(): ClassSymbol {
+        val classScope = typeScope as ClassScope
+
+        val clazz = ClassSymbol(
+            name = name,
+            modifiers = modifiers,
+            scope = classScope
+        )
+
+        classScope.ownerSymbol = clazz
+
+        return clazz
+    }
+}
+

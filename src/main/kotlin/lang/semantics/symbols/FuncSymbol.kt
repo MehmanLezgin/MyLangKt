@@ -1,7 +1,7 @@
 package lang.semantics.symbols
 
-import lang.core.SourceRange
-import lang.core.operators.OperatorType
+import lang.infrastructure.SourceRange
+import lang.infrastructure.operators.OperatorType
 import lang.semantics.scopes.InstanceScope
 import lang.semantics.scopes.Scope
 import lang.semantics.types.FuncType

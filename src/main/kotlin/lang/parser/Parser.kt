@@ -1,8 +1,8 @@
 package lang.parser
 
-import lang.core.LangSpec.moduleNameSeparator
-import lang.core.SourceRange
-import lang.core.operators.OperatorType
+import lang.infrastructure.LangSpec.moduleNameSeparator
+import lang.infrastructure.SourceRange
+import lang.infrastructure.operators.OperatorType
 import lang.messages.CompileStage
 import lang.messages.Msg
 import lang.messages.MsgHandler

@@ -1,9 +1,9 @@
 package lang.parser
 
-import lang.core.KeywordType
-import lang.core.LangSpec.moduleNameSeparator
-import lang.core.SourceRange
-import lang.core.operators.OperatorType
+import lang.infrastructure.KeywordType
+import lang.infrastructure.LangSpec.moduleNameSeparator
+import lang.infrastructure.SourceRange
+import lang.infrastructure.operators.OperatorType
 import lang.mappers.ModifierMapper
 import lang.messages.Msg
 import lang.nodes.*

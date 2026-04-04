@@ -1,7 +1,7 @@
 package lang.nodes
 
-import lang.core.SourceRange
-import lang.core.KeywordType
+import lang.infrastructure.SourceRange
+import lang.infrastructure.KeywordType
 import kotlin.reflect.KClass
 
 sealed class ModifierNode(

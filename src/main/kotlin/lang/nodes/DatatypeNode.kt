@@ -1,6 +1,6 @@
 package lang.nodes
 
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 
 abstract class BaseDatatypeNode : ExprNode {
     override val range: SourceRange = SourceRange()

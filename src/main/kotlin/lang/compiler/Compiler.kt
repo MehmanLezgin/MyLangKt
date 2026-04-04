@@ -1,8 +1,8 @@
 package lang.compiler
 
-import lang.core.FileSourceCode
-import lang.core.ISourceCode
-import lang.core.LangSpec
+import lang.infrastructure.FileSourceCode
+import lang.infrastructure.ISourceCode
+import lang.infrastructure.LangSpec
 import lang.lexer.ILexer
 import lang.lexer.Lexer
 import lang.messages.Msg

@@ -2,7 +2,7 @@
 
 package lang.nodes
 
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 
 sealed class LiteralNode<T: Any>(
     open val value: T,

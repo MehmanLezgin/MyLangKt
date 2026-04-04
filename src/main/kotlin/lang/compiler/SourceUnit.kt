@@ -1,7 +1,7 @@
 package lang.compiler
 
-import lang.core.ISourceCode
-import lang.core.serializer.AstSerializer
+import lang.infrastructure.ISourceCode
+import lang.infrastructure.serializer.AstSerializer
 import lang.nodes.BlockNode
 import lang.semantics.SemanticContext
 import lang.semantics.scopes.FileScope

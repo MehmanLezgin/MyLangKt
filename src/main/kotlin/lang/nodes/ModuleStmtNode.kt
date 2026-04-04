@@ -1,6 +1,6 @@
 package lang.nodes
 
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 
 data class ModuleStmtNode(
     override val name: IdentifierNode,

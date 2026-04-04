@@ -1,8 +1,8 @@
 package lang.parser
 
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 import lang.nodes.*
-import lang.core.operators.OperatorType
+import lang.infrastructure.operators.OperatorType
 
 interface IParser {
     fun parseSource(sourceId: String) : BlockNode

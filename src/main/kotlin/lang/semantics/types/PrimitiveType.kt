@@ -1,8 +1,8 @@
 package lang.semantics.types
 
-import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.builtin.builders.init
-import lang.semantics.builtin.builders.registerImplicitCasts
+import lang.core.PrimitivesScope
+import lang.core.builders.init
+import lang.core.builders.registerImplicitCasts
 import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.symbols.PrimitiveTypeSymbol
 

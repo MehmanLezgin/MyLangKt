@@ -2,9 +2,9 @@
 
 package lang.tokens
 
-import lang.core.KeywordType
-import lang.core.operators.OperatorType
-import lang.core.SourceRange
+import lang.infrastructure.KeywordType
+import lang.infrastructure.operators.OperatorType
+import lang.infrastructure.SourceRange
 
 sealed class Token(
     open val raw: String,

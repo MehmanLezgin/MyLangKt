@@ -1,8 +1,8 @@
 package lang.lexer
 
-import lang.core.Pos
-import lang.core.ISourceCode
-import lang.core.SourceRange
+import lang.infrastructure.Pos
+import lang.infrastructure.ISourceCode
+import lang.infrastructure.SourceRange
 
 internal data class LexerState(
     var index: Int = 0,

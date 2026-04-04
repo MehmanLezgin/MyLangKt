@@ -1,7 +1,7 @@
 package lang.semantics
 
 import lang.compiler.SourceUnit
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 import lang.mappers.ScopeErrorMapper
 import lang.messages.CompileStage
 import lang.messages.MsgHandler
@@ -9,7 +9,7 @@ import lang.nodes.BaseDeclStmtNode
 import lang.nodes.BaseImportStmtNode
 import lang.nodes.BlockNode
 import lang.nodes.ExprNode
-import lang.semantics.builtin.PrimitivesScope
+import lang.core.PrimitivesScope
 import lang.semantics.pipeline.*
 import lang.semantics.resolvers.*
 import lang.semantics.scopes.FileScope

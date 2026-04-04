@@ -1,6 +1,6 @@
 package lang.semantics.scopes
 
-import lang.core.LangSpec
+import lang.infrastructure.LangSpec
 import lang.nodes.*
 import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isUnaryOperator

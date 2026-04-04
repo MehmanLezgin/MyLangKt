@@ -4,6 +4,7 @@ import lang.messages.Msg
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.scopes.ClassScope
+import lang.semantics.scopes.FuncParamsScope
 import lang.semantics.scopes.FuncScope
 import lang.semantics.scopes.Scope
 import lang.semantics.symbols.*
@@ -21,13 +22,11 @@ class DeclarationResolver(
             is InterfaceDeclStmtNode -> resolve(target)
             is EnumDeclStmtNode -> resolve(target)
             is ClassDeclStmtNode -> resolve(target)
-
             is VarDeclStmtNode -> resolve(target)
             is ConstructorDeclStmtNode -> resolve(target)
             is DestructorDeclStmtNode -> resolve(target)
             is FuncDeclStmtNode -> resolve(target)
             is UsingDirectiveNode -> resolve(target)
-            else -> {}
         }
     }
 
@@ -77,7 +76,7 @@ class DeclarationResolver(
         val sym = target.getResolvedSymbol() as? FuncSymbol ?: return
 
         withEffectiveScope(isStatic = sym.modifiers.isStatic) {
-            val paramsScope = Scope(parent = scope) // allow sym shadowing in func scope
+            val paramsScope = FuncParamsScope(parent = scope) // allow sym shadowing in func scope
 
             val funcScope = FuncScope(
                 parent = paramsScope,

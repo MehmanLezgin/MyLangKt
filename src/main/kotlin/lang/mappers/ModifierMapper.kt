@@ -1,6 +1,6 @@
 package lang.mappers
 
-import lang.core.KeywordType
+import lang.infrastructure.KeywordType
 import lang.nodes.ModifierNode
 import lang.nodes.ModifierNode.*
 import lang.tokens.Token

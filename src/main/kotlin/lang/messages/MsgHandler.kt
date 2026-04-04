@@ -1,9 +1,9 @@
 package lang.messages
 
-import lang.core.ISourceCode
-import lang.core.Pos
-import lang.core.SourceRange
-import lang.core.toSourceRange
+import lang.infrastructure.ISourceCode
+import lang.infrastructure.Pos
+import lang.infrastructure.SourceRange
+import lang.infrastructure.toSourceRange
 import java.lang.StringBuilder
 
 class MsgHandler {
@@ -75,7 +75,6 @@ class MsgHandler {
             stage = CompileStage.LEXICAL_ANALYSIS,
             msg = msg,
             range = pos?.toSourceRange(src)
-
         )
     }
 

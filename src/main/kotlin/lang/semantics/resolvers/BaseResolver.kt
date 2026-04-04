@@ -1,6 +1,6 @@
 package lang.semantics.resolvers
 
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 import lang.messages.MsgHandler
 import lang.nodes.ExprNode
 import lang.semantics.ISemanticAnalyzer

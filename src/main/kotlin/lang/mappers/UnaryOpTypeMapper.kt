@@ -1,6 +1,6 @@
 package lang.mappers
 
-import lang.core.operators.OperatorType
+import lang.infrastructure.operators.OperatorType
 import lang.nodes.UnaryOpType
 
 class UnaryOpTypeMapper : IOneWayMapper<OperatorType, UnaryOpType?> {

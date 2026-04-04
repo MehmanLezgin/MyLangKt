@@ -1,12 +1,12 @@
 package lang.parser
 
-import lang.core.Constants
-import lang.core.KeywordType
-import lang.core.LangSpec
-import lang.core.RangeBuilder
-import lang.core.SourceRange
-import lang.core.operators.OperatorMaps
-import lang.core.operators.OperatorType
+import lang.infrastructure.Constants
+import lang.infrastructure.KeywordType
+import lang.infrastructure.LangSpec
+import lang.infrastructure.RangeBuilder
+import lang.infrastructure.SourceRange
+import lang.infrastructure.operators.OperatorMaps
+import lang.infrastructure.operators.OperatorType
 import lang.mappers.BinOpTypeMapper
 import lang.mappers.UnaryOpTypeMapper
 import lang.messages.Msg
@@ -15,7 +15,6 @@ import lang.parser.ParserUtils.flattenCommaNode
 import lang.parser.ParserUtils.isKeyword
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.isOperator
-import lang.parser.ParserUtils.range
 import lang.parser.ParserUtils.toDatatype
 import lang.parser.ParserUtils.toIdentifierNode
 import lang.parser.ParserUtils.tryConvertToDatatype

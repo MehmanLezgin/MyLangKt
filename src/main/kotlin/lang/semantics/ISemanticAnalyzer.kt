@@ -1,7 +1,7 @@
 package lang.semantics
 
 import lang.compiler.SourceUnit
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 import lang.messages.MsgHandler
 import lang.nodes.BlockNode
 import lang.semantics.pipeline.AnalysisPipeline

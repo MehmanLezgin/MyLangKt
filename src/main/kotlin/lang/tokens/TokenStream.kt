@@ -1,11 +1,11 @@
 package lang.tokens
 
 import lang.messages.MsgHandler
-import lang.core.LangSpec
-import lang.core.ISourceCode
-import lang.core.operators.OperatorMaps
-import lang.core.operators.OperatorType
-import lang.core.SourceRange
+import lang.infrastructure.LangSpec
+import lang.infrastructure.ISourceCode
+import lang.infrastructure.operators.OperatorMaps
+import lang.infrastructure.operators.OperatorType
+import lang.infrastructure.SourceRange
 import lang.lexer.ILexer
 
 

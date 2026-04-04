@@ -1,12 +1,12 @@
 package lang.lexer
 
 import lang.messages.MsgHandler
-import lang.core.LangSpec
+import lang.infrastructure.LangSpec
 import lang.messages.Msg
-import lang.core.ISourceCode
-import lang.core.Pos
-import lang.core.SourceRange
-import lang.core.toSourceRange
+import lang.infrastructure.ISourceCode
+import lang.infrastructure.Pos
+import lang.infrastructure.SourceRange
+import lang.infrastructure.toSourceRange
 import lang.tokens.Token
 import lang.tokens.TokenType
 import kotlin.text.iterator

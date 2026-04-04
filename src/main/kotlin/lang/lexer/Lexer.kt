@@ -1,10 +1,10 @@
 package lang.lexer
 
 import lang.messages.MsgHandler
-import lang.core.LangSpec
-import lang.core.LangSpec.operators
+import lang.infrastructure.LangSpec
+import lang.infrastructure.LangSpec.operators
 import lang.messages.Msg
-import lang.core.ISourceCode
+import lang.infrastructure.ISourceCode
 import lang.tokens.Token
 import lang.tokens.TokenType
 

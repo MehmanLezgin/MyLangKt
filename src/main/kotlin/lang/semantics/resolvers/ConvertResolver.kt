@@ -2,7 +2,7 @@ package lang.semantics.resolvers
 
 import lang.nodes.ExprNode
 import lang.semantics.ISemanticAnalyzer
-import lang.semantics.builtin.PrimitivesScope
+import lang.core.PrimitivesScope
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.ConstructorSymbol
 import lang.semantics.types.*

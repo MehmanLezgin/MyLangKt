@@ -1,13 +1,11 @@
 package lang.parser
 
-import lang.core.SourceRange
-import lang.nodes.BaseDatatypeNode
+import lang.infrastructure.SourceRange
 import lang.nodes.BlockNode
 import lang.nodes.ExprNode
 import lang.nodes.IdentifierNode
 import lang.nodes.IfElseStmtNode
 import lang.nodes.ModuleStmtNode
-import lang.nodes.VarDeclStmtNode
 
 interface IStmtParser {
     fun parse(isSingleLine: Boolean = false): ExprNode

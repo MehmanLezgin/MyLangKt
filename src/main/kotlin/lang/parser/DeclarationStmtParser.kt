@@ -1,8 +1,8 @@
 package lang.parser
 
-import lang.core.KeywordType
-import lang.core.SourceRange
-import lang.core.operators.OperatorType
+import lang.infrastructure.KeywordType
+import lang.infrastructure.SourceRange
+import lang.infrastructure.operators.OperatorType
 import lang.messages.Msg
 import lang.messages.Terms
 import lang.nodes.*

@@ -1,6 +1,6 @@
 package lang.nodes
 
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 
 data class QualifiedName(
     val parts: List<IdentifierNode>

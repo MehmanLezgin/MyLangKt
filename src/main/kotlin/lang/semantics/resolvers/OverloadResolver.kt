@@ -1,10 +1,10 @@
 package lang.semantics.resolvers
 
-import lang.core.operators.OperatorType
+import lang.infrastructure.operators.OperatorType
 import lang.messages.Terms
 import lang.semantics.SemanticAnalyzer
-import lang.semantics.builtin.PrimitivesScope.err
-import lang.semantics.builtin.PrimitivesScope.ok
+import lang.core.PrimitivesScope.err
+import lang.core.PrimitivesScope.ok
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
 import lang.semantics.scopes.ScopeResult

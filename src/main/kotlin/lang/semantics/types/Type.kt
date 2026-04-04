@@ -1,8 +1,8 @@
 package lang.semantics.types
 
 import lang.messages.Msg
-import lang.semantics.builtin.PrimitivesScope.void
-import lang.semantics.builtin.PrimitivesScope.voidPtr
+import lang.core.PrimitivesScope.void
+import lang.core.PrimitivesScope.voidPtr
 import lang.semantics.symbols.TypeSymbol
 
 abstract class Type(

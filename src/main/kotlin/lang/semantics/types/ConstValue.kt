@@ -3,20 +3,32 @@
 package lang.semantics.types
 
 import lang.nodes.LiteralNode
-import lang.semantics.builtin.PrimitivesScope.boolConst
-import lang.semantics.builtin.PrimitivesScope.charConst
-import lang.semantics.builtin.PrimitivesScope.constCharPtr
-import lang.semantics.builtin.PrimitivesScope.float32Const
-import lang.semantics.builtin.PrimitivesScope.float64Const
-import lang.semantics.builtin.PrimitivesScope.int16Const
-import lang.semantics.builtin.PrimitivesScope.int32Const
-import lang.semantics.builtin.PrimitivesScope.int64Const
-import lang.semantics.builtin.PrimitivesScope.int8Const
-import lang.semantics.builtin.PrimitivesScope.uint16Const
-import lang.semantics.builtin.PrimitivesScope.uint32Const
-import lang.semantics.builtin.PrimitivesScope.uint64Const
-import lang.semantics.builtin.PrimitivesScope.uint8Const
-import lang.semantics.builtin.types.*
+import lang.core.PrimitivesScope.boolConst
+import lang.core.PrimitivesScope.charConst
+import lang.core.PrimitivesScope.constCharPtr
+import lang.core.PrimitivesScope.float32Const
+import lang.core.PrimitivesScope.float64Const
+import lang.core.PrimitivesScope.int16Const
+import lang.core.PrimitivesScope.int32Const
+import lang.core.PrimitivesScope.int64Const
+import lang.core.PrimitivesScope.int8Const
+import lang.core.PrimitivesScope.uint16Const
+import lang.core.PrimitivesScope.uint32Const
+import lang.core.PrimitivesScope.uint64Const
+import lang.core.PrimitivesScope.uint8Const
+import lang.core.types.BoolPrimitive
+import lang.core.types.CharPrimitive
+import lang.core.types.Float32Primitive
+import lang.core.types.Float64Primitive
+import lang.core.types.Int16Primitive
+import lang.core.types.Int32Primitive
+import lang.core.types.Int64Primitive
+import lang.core.types.Int8Primitive
+import lang.core.types.UCharPrimitive
+import lang.core.types.UInt16Primitive
+import lang.core.types.UInt32Primitive
+import lang.core.types.UInt64Primitive
+import lang.core.types.UInt8Primitive
 
 
 @OptIn(ExperimentalStdlibApi::class)

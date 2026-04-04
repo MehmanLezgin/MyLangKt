@@ -1,14 +1,14 @@
 package lang.semantics.resolvers
 
-import lang.core.SourceRange
-import lang.core.Utils.toInt
-import lang.core.operators.OperatorType
+import lang.infrastructure.SourceRange
+import lang.infrastructure.Utils.toInt
+import lang.infrastructure.operators.OperatorType
 import lang.messages.Msg
 import lang.messages.Terms
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
-import lang.semantics.builtin.PrimitivesScope
-import lang.semantics.builtin.isBuiltInFuncReturnsPtr
+import lang.core.PrimitivesScope
+import lang.core.isBuiltInFuncReturnsPtr
 import lang.semantics.scopes.*
 import lang.semantics.symbols.*
 import lang.semantics.types.*
@@ -37,11 +37,64 @@ class TypeResolver(
             is SizeofNode,
             is AlignofNode,
             is OffsetofNode -> resolveConst(target)
+            is LambdaNode -> resolve(target)
 
             is BlockNode -> resolve(target)
 
             else -> ErrorType
         }.also { target attach it }
+    }
+
+    /*private fun resolve(target: LambdaNode, withType: FuncType): Type {
+        val paramsScope = FuncParamsScope(parent = scope) // allow sym shadowing in func scope
+
+        val lambdaScope = LambdaScope(
+            parent = paramsScope
+        )
+
+        val params = resolveFuncParams(params = target.params)
+
+        val body = target.body
+    }*/
+
+    fun resolveFuncParams(params: List<VarDeclStmtNode>?): FuncParamListSymbol {
+        if (params == null) return FuncParamListSymbol()
+        return params.map { decl ->
+            resolveFuncParam(target = decl)
+        }.let {
+            FuncParamListSymbol(list = it.toList())
+        }
+    }
+
+    private fun resolveFuncParam(target: VarDeclStmtNode): FuncParamSymbol {
+        val type = when {
+            target.datatype is AutoDatatypeNode -> {
+                target.error(Msg.EXPECTED_TYPE_NAME)
+                ErrorType
+            }
+
+            else -> {
+                when (val type = analyzer.typeResolver.resolve(target.datatype)) {
+                    PrimitivesScope.void -> {
+                        semanticError(Msg.VOID_CANNOT_BE_PARAM_TYPE, target.name.range)
+                        ErrorType
+                    }
+
+                    else -> type
+                }
+            }
+        }
+
+
+        val sym = FuncParamSymbol(
+            name = target.name.value,
+            initialType = type,
+            range = target.range
+        )
+
+        target bind sym
+
+        return sym
     }
 
     private fun resolve(target: BlockNode): Type {

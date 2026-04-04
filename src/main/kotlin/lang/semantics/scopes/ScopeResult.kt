@@ -2,7 +2,7 @@ package lang.semantics.scopes
 
 import lang.semantics.symbols.Symbol
 import lang.semantics.types.Type
-import lang.core.operators.OperatorType
+import lang.infrastructure.operators.OperatorType
 import lang.messages.Terms
 import lang.semantics.symbols.FuncKind
 import lang.semantics.symbols.FuncSymbol

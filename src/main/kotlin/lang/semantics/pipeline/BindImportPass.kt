@@ -1,12 +1,12 @@
 package lang.semantics.pipeline
 
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 import lang.messages.Msg
 import lang.messages.Terms
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
-import lang.semantics.builtin.PrimitivesScope.err
-import lang.semantics.builtin.PrimitivesScope.ok
+import lang.core.PrimitivesScope.err
+import lang.core.PrimitivesScope.ok
 import lang.semantics.resolvers.BaseResolver
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError

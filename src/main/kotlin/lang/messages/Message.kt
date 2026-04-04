@@ -1,6 +1,6 @@
 package lang.messages
 
-import lang.core.SourceRange
+import lang.infrastructure.SourceRange
 
 data class Message(
     val stage: CompileStage,

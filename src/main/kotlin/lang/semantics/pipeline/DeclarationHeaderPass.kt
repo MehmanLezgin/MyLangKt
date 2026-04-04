@@ -4,7 +4,7 @@ import lang.messages.Msg
 import lang.messages.Terms
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
-import lang.semantics.builtin.PrimitivesScope
+import lang.core.PrimitivesScope
 import lang.semantics.resolvers.BaseResolver
 import lang.semantics.scopes.Scope
 import lang.semantics.symbols.*
@@ -117,11 +117,7 @@ class DeclarationHeaderPass(
             else -> analyzer.typeResolver.resolve(target.returnType)
         }
 
-        val params = target.params.map { decl ->
-            resolveFuncParam(target = decl)
-        }.let {
-            FuncParamListSymbol(list = it.toList())
-        }
+        val params = analyzer.typeResolver.resolveFuncParams(params = target.params)
 
         withEffectiveScope(modifiers.isStatic) {
             val result = scope.defineFunc(
@@ -138,37 +134,6 @@ class DeclarationHeaderPass(
                 target bind sym
             }
         }
-    }
-
-    private fun resolveFuncParam(target: VarDeclStmtNode): FuncParamSymbol {
-        val type = when {
-            target.datatype is AutoDatatypeNode -> {
-                target.error(Msg.EXPECTED_TYPE_NAME)
-                ErrorType
-            }
-
-            else -> {
-                when (val type = analyzer.typeResolver.resolve(target.datatype)) {
-                    PrimitivesScope.void -> {
-                        semanticError(Msg.VOID_CANNOT_BE_PARAM_TYPE, target.name.range)
-                        ErrorType
-                    }
-
-                    else -> type
-                }
-            }
-        }
-
-
-        val sym = FuncParamSymbol(
-            name = target.name.value,
-            initialType = type,
-            range = target.range
-        )
-
-        target bind sym
-
-        return sym
     }
 
     private fun withScopeResolve(targetScope: Scope, body: BlockNode?) {
