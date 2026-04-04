@@ -25,27 +25,27 @@ data class ScopedDatatypeNode(
 
 data class DatatypeNode(
     val identifier: IdentifierNode,
-    val typeNames: TypeNameListNode? = null,
+    val typeArgs: TypeArgsListNode? = null,
     val isConst: Boolean = false,
     var isReference: Boolean = false,
     var ptrLvl: Int = 0,
     override val range: SourceRange
 ) : QualifiedDatatypeNode(range) {
-    fun isSimple() = typeNames == null && !isConst && !isReference && ptrLvl == 0
+    fun isSimple() = typeArgs == null && !isConst && !isReference && ptrLvl == 0
 
     val isPointer: Boolean
         get() = ptrLvl > 0
 
     override fun toString(): String {
-        if (typeNames == null) return identifier.value
-        return identifier.value + typeNames
+        if (typeArgs == null) return identifier.value
+        return identifier.value + typeArgs
     }
 
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = this.copy(
             identifier = identifier.mapRecursive(mapper) as? IdentifierNode
                 ?: identifier,
-            typeNames = typeNames?.mapRecursive(mapper) as? TypeNameListNode ?: typeNames
+            typeArgs = typeArgs?.mapRecursive(mapper) as? TypeArgsListNode ?: typeArgs
         )
         return mapper(newNode)
     }
@@ -60,7 +60,7 @@ data class DatatypeNode(
         if (ptrLvl != other.ptrLvl) return false
         if (isReference != other.isReference) return false
         if (identifier.value != other.identifier.value) return false
-        if (typeNames != other.typeNames) return false
+        if (typeArgs != other.typeArgs) return false
 
         return true
     }
@@ -70,7 +70,7 @@ data class DatatypeNode(
         result = 31 * result + ptrLvl
         result = 31 * result + isReference.hashCode()
         result = 31 * result + identifier.hashCode()
-        result = 31 * result + (typeNames?.hashCode() ?: 0)
+        result = 31 * result + (typeArgs?.hashCode() ?: 0)
         return result
     }
 }
@@ -128,6 +128,7 @@ data class MethodDatatypeNode(
     override fun toString(): String {
         return "$ownerDatatype::$funcDatatype"
     }
+
     override fun mapRecursive(mapper: NodeTransformFunc) =
         mapper(this)
 }

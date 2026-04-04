@@ -92,13 +92,13 @@ class DeclarationHeaderPass(
     fun resolve(target: VarDeclStmtNode) {
         val sym = target.getResolvedSymbol() as? VarSymbol ?: return
 
-        if (target.dataType is AutoDatatypeNode) return
+        if (target.datatype is AutoDatatypeNode) return
 
-        var type = analyzer.typeResolver.resolve(target.dataType)
+        var type = analyzer.typeResolver.resolve(target.datatype)
 
         if (type.isExprType) {
             type = ErrorType
-            target.dataType.error(Msg.EXPECTED_TYPE_NAME)
+            target.datatype.error(Msg.EXPECTED_TYPE_NAME)
         }
 
         sym.type = type
@@ -142,13 +142,13 @@ class DeclarationHeaderPass(
 
     private fun resolveFuncParam(target: VarDeclStmtNode): FuncParamSymbol {
         val type = when {
-            target.dataType is AutoDatatypeNode -> {
+            target.datatype is AutoDatatypeNode -> {
                 target.error(Msg.EXPECTED_TYPE_NAME)
                 ErrorType
             }
 
             else -> {
-                when (val type = analyzer.typeResolver.resolve(target.dataType)) {
+                when (val type = analyzer.typeResolver.resolve(target.datatype)) {
                     PrimitivesScope.void -> {
                         semanticError(Msg.VOID_CANNOT_BE_PARAM_TYPE, target.name.range)
                         ErrorType

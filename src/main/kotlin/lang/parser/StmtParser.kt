@@ -25,6 +25,11 @@ class StmtParser(
 
     private val modifierMapper = ModifierMapper()
 
+    private val declStmtParser: DeclarationStmtParser = DeclarationStmtParser(
+        ts = ts,
+        parser = parser
+    )
+
     override fun parse(isSingleLine: Boolean): ExprNode {
         ts.skipTokens(Token.Semicolon::class)
         val t = ts.peek()
@@ -62,9 +67,13 @@ class StmtParser(
 
         return when (t.type) {
             KeywordType.VAR,
-            KeywordType.LET -> parseVarDeclStmt()
-
-            KeywordType.FUNC -> parseFuncDeclStmt()
+            KeywordType.LET -> declStmtParser.parseVarDeclStmt()
+            KeywordType.CLASS -> declStmtParser.parseClassStmt()
+            KeywordType.INTERFACE -> declStmtParser.parseInterfaceStmt()
+            KeywordType.ENUM -> declStmtParser.parseEnumStmt()
+            KeywordType.FUNC -> declStmtParser.parseFuncDeclStmt()
+            KeywordType.CONSTRUCTOR -> declStmtParser.parseConstructorStmt()
+            KeywordType.DESTRUCTOR -> declStmtParser.parseDestructorStmt()
 
             KeywordType.DO -> parseDoWhileStmt()
             KeywordType.WHILE -> parseWhileStmt()
@@ -89,11 +98,6 @@ class StmtParser(
             KeywordType.FINALLY -> errorStmt(Msg.EXPECTED_TRY)
 
             KeywordType.RETURN -> parseReturnStmt()
-            KeywordType.CLASS -> parseClassStmt()
-            KeywordType.INTERFACE -> parseInterfaceStmt()
-            KeywordType.ENUM -> parseEnumStmt()
-            KeywordType.CONSTRUCTOR -> parseConstructorStmt()
-            KeywordType.DESTRUCTOR -> parseDestructorStmt()
 
             KeywordType.FOR -> parseForLoopStmt()
             KeywordType.TRY -> parseTryCatchStmt()
@@ -301,73 +305,7 @@ class StmtParser(
         return module
     }
 
-    private fun parseConstructorStmt(): ConstructorDeclStmtNode {
-        return ts.captureRange {
-            ts.next()
-
-            var params: List<VarDeclStmtNode>? = null
-
-            if (ts.match(Token.LParen::class))
-                analiseParams(parser.parseArgsList()) { params = it }
-
-            val body = parseBodyForDeclStmt()
-
-            ConstructorDeclStmtNode(
-                modifiers = null,
-                params = params ?: emptyList(),
-                body = body,
-                range = resultRange
-            )
-        }
-    }
-
-    private fun parseDestructorStmt(): DestructorDeclStmtNode {
-        return ts.captureRange {
-            ts.next()
-
-            if (ts.match(Token.LParen::class)) {
-                val args = parser.parseArgsList() // skipping
-
-                if (args.isNotEmpty())
-                    syntaxError(Msg.CONSTRUCTORS_CANNOT_HAVE_PARAMS, startRange)
-            }
-
-            val body = parseBlock()
-
-            DestructorDeclStmtNode(
-                modifiers = null,
-                body = body,
-                range = resultRange
-            )
-        }
-    }
-
-    override fun analiseDatatypeList(exprList: List<ExprNode>?): List<BaseDatatypeNode>? {
-        if (exprList.isNullOrEmpty())
-            return null
-
-        val datatypes: MutableList<BaseDatatypeNode> = mutableListOf()
-
-        exprList.forEach { expr ->
-            val typeName: BaseDatatypeNode? = when (expr) {
-                is IdentifierNode -> expr.toDatatype()
-
-                is BaseDatatypeNode -> expr
-
-                else -> {
-                    syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
-                    null
-                }
-            }
-
-            if (typeName != null)
-                datatypes.add(typeName)
-        }
-
-        return datatypes
-    }
-
-    private fun buildVarDeclHeader(
+    /*private fun buildVarDeclHeader(
         header: ExprNode,
         range: SourceRange = header.range,
         isMutable: Boolean = true
@@ -634,122 +572,9 @@ class StmtParser(
                 return
             }
         }
-    }
+    }*/
 
-    private fun parseBodyForDeclStmt(): BlockNode? {
-        return when {
-            ts.match(Token.LBrace::class) -> parseBlock()
-
-            else -> {
-                ts.expectSemicolonOrLinebreak(Msg.EXPECTED_SEMICOLON)
-                null
-            }
-        }
-    }
-
-    private fun parseFuncDeclStmt(): FuncDeclStmtNode? {
-        return ts.captureRange {
-            ts.next()
-
-            val typeNames = if (ts.matchOperator(OperatorType.LESS))
-                parser.parseTypenameList() else null
-
-            val header = parser.parseExpr(ctx = ParsingContext.FuncHeader)
-
-            val body = if (ts.match(Token.LBrace::class))
-                parseBodyForDeclStmt()
-            else null
-
-            buildFuncDeclStmt(header, typeNames, body, resultRange)
-        }
-    }
-
-    private fun parseClassStmt(): ClassDeclStmtNode? {
-        return ts.captureRange {
-            ts.next()
-
-            val header = parser.parseExpr(ctx = ParsingContext.Header)
-
-            val body = parseBodyForDeclStmt()
-
-            buildClassStmt(
-                header = header,
-                body = body,
-                range = resultRange
-            )
-        }
-    }
-
-    private fun parseInterfaceStmt(): InterfaceDeclStmtNode? {
-        return ts.captureRange {
-            ts.next()
-            val header = parser.parseExpr(ctx = ParsingContext.Header)
-            val body = parseBodyForDeclStmt()
-
-            buildInterfaceStmt(
-                header = header,
-                body = body,
-                range = resultRange
-            )
-        }
-    }
-
-    private fun parseVarDeclStmt(): VarDeclStmtNode? {
-        val isMutable = ts.peek() isKeyword KeywordType.VAR
-        return ts.captureRange {
-            ts.next()
-            val expr = parser.parseExpr(ctx = ParsingContext.Header)
-
-            buildVarDeclHeader(
-                header = expr,
-                range = resultRange,
-                isMutable = isMutable
-            )
-        }
-    }
-
-    private fun parseEnumStmt(): EnumDeclStmtNode? {
-        return ts.captureRange {
-            ts.next()
-
-            val nameToken = ts.peek()
-
-            val enumName = if (nameToken is Token.Identifier) {
-                ts.next()
-                nameToken.toIdentifierNode()
-            } else {
-                syntaxError(Msg.NAME_EXPECTED, nameToken.range)
-                return@captureRange null
-            }
-
-            if (!ts.match(Token.LBrace::class)) {
-                syntaxError(Msg.UNEXPECTED_TOKEN, ts.range)
-                ts.skipUntil(
-                    Token.LBrace::class,
-                    Token.RBrace::class,
-                    Token.Keyword::class,
-                    Token.Identifier::class
-                )
-                return@captureRange EnumDeclStmtNode(
-                    modifiers = null,
-                    name = enumName,
-                    body = BlockNode.empty(resultRange),
-                    range = resultRange
-                )
-            }
-
-            val body = parseBodyForDeclStmt()
-
-            EnumDeclStmtNode(
-                modifiers = null,
-                name = enumName,
-                body = body,
-                range = resultRange
-            )
-        }
-    }
-
-    private fun analiseNameNode(
+    /*private fun analiseNameNode(
         expr: ExprNode,
         msg: String,
         handleName: (ExprNode) -> Unit,
@@ -818,7 +643,7 @@ class StmtParser(
                 syntaxError(Msg.EXPECTED_FUNC_DECL, expr.range)
             }
         }
-    }
+    }*/
 
     private fun parseContinueStmt() = ContinueStmtNode(range = ts.next().range)
 
@@ -1036,7 +861,4 @@ class StmtParser(
 
     private fun syntaxError(msg: String, range: SourceRange) =
         parser.syntaxError(msg = msg, range = range)
-
-    private fun warning(msg: String, range: SourceRange) =
-        parser.warning(msg = msg, range = range)
 }

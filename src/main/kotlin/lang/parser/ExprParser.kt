@@ -16,6 +16,7 @@ import lang.parser.ParserUtils.isKeyword
 import lang.parser.ParserUtils.isNotOperator
 import lang.parser.ParserUtils.isOperator
 import lang.parser.ParserUtils.range
+import lang.parser.ParserUtils.toDatatype
 import lang.parser.ParserUtils.toIdentifierNode
 import lang.parser.ParserUtils.tryConvertToDatatype
 import lang.tokens.ITokenStream
@@ -31,6 +32,9 @@ class ExprParser(
 
     override fun parse(ctx: ParsingContext): ExprNode {
         ts.skipTokens(Token.Semicolon::class)
+        if (ctx is ParsingContext.Datatype)
+            return parseDatatype(startIdentifier = null, ctx = ctx)
+
         return parseBinaryExpr(minPrec = 1, null, ctx)
     }
 
@@ -150,7 +154,7 @@ class ExprParser(
             val param = VarDeclStmtNode(
                 modifiers = null,
                 name = identifier.toIdentifierNode(),
-                dataType = datatype,
+                datatype = datatype,
                 initializer = null,
                 isMutable = false,
                 range = resultRange
@@ -327,7 +331,7 @@ class ExprParser(
 
                 FuncCallNode(
                     receiver = expr,
-                    typeNames = null,
+                    typeArgs = null,
                     args = listOf(parseLambda()),
                     range = resultRange
                 )
@@ -348,7 +352,7 @@ class ExprParser(
 
                         FuncCallNode(
                             receiver = expr2,
-                            typeNames = null,
+                            typeArgs = null,
                             args = args,
                             range = resultRange
                         )
@@ -470,7 +474,7 @@ class ExprParser(
 
                     return FuncCallNode(
                         receiver = datatypeNode.identifier,
-                        typeNames = datatypeNode.typeNames,
+                        typeArgs = datatypeNode.typeArgs,
                         args = args,
                         range = expr.range
                     )
@@ -497,7 +501,7 @@ class ExprParser(
         }
     }
 
-    override fun parseTypenameList(): TypeNameListNode? {
+    override fun parseTypeArgsList(): TypeArgsListNode? {
         // require '<'
         if (ts.peek() isNotOperator OperatorType.LESS) {
             syntaxError(Msg.EXPECTED_LESS_OP, ts.range)
@@ -515,13 +519,14 @@ class ExprParser(
             return null
 
         // step inside of <...>
-        val list = ts.captureRange {
+
+        return ts.captureRange {
             ts.next()
 
             // handling empty '<>'
             if (ts.peek() isOperator OperatorType.GREATER) {
                 ts.next()
-                return@captureRange emptyList()
+                return@captureRange null
             }
 
             val list = parseBinaryExpr(1, closeToken, ParsingContext.TypeArg)
@@ -532,22 +537,23 @@ class ExprParser(
             else
                 syntaxError(Msg.EXPECTED_GREATER_OP, ts.range)
 
-            list
+            TypeArgsListNode(
+                nodes = list,
+                range = resultRange
+            )
         }
-
-        return analiseTemplateList(list)
     }
 
-    override fun analiseTemplateList(exprList: List<ExprNode>?): TypeNameListNode? {
+    /*override fun analiseTemplateList(exprList: List<ExprNode>?): TemplateParamsListNode? {
         if (exprList.isNullOrEmpty())
             return null
 
-        val params: MutableList<TypeNameNode> = mutableListOf()
+        val params: MutableList<TemplateParamNode> = mutableListOf()
 
         exprList.forEach { expr ->
-            val typeName: TypeNameNode? = when (expr) {
+            val typeName: TemplateParamNode? = when (expr) {
                 is IdentifierNode -> {
-                    TypeNameNode(
+                    TemplateParamNode(
                         name = expr,
                         bound = null,
                         range = expr.range
@@ -567,7 +573,7 @@ class ExprParser(
                         val datatype = analiseAsDatatype(expr.right, allowAsExpression = false)
 
                         if (datatype is DatatypeNode)
-                            TypeNameNode(
+                            TemplateParamNode(
                                 name = identifier,
                                 bound = datatype,
                                 range = expr.range
@@ -589,11 +595,11 @@ class ExprParser(
                 params.add(typeName)
         }
 
-        return TypeNameListNode(
+        return TemplateParamsListNode(
             params = params,
             range = exprList.range(defaultEmpty = SourceRange())
         )
-    }
+    }*/
 
     override fun analiseAsDatatype(
         expr: ExprNode,
@@ -610,15 +616,7 @@ class ExprParser(
 
         if (datatype !is DatatypeNode) return datatype
 
-        var successful = true
-
-        datatype.typeNames?.params?.forEach { typeName ->
-            successful = successful && analiseAsDatatype(typeName.name, true) != null
-            if (typeName.bound != null)
-                successful = successful && analiseAsDatatype(typeName.bound, true) != null
-        }
-
-        return if (successful) datatype else null
+        return datatype
     }
 
     private fun parseOperator(): OperNode {
@@ -774,7 +772,7 @@ class ExprParser(
 
         val paramDatatypes = if (ts.match(Token.LParen::class)) {
             val rawParamTypes = parseArgsList(ctx = ParsingContext.Header)
-            parser.analiseDatatypeList(rawParamTypes) ?: emptyList()
+            analiseDatatypeList(rawParamTypes) ?: emptyList()
         } else emptyList()
 
         val returnDatatype = if (ts.matchOperator(Constants.funcRetTypeSeparator)) {
@@ -790,6 +788,31 @@ class ExprParser(
             isReference = isReference,
             range = range
         )
+    }
+
+    fun analiseDatatypeList(exprList: List<ExprNode>?): List<BaseDatatypeNode>? {
+        if (exprList.isNullOrEmpty())
+            return null
+
+        val datatypes: MutableList<BaseDatatypeNode> = mutableListOf()
+
+        exprList.forEach { expr ->
+            val typeName: BaseDatatypeNode? = when (expr) {
+                is IdentifierNode -> expr.toDatatype()
+
+                is BaseDatatypeNode -> expr
+
+                else -> {
+                    syntaxError(Msg.EXPECTED_TYPE_PARAM_NAME, expr.range)
+                    null
+                }
+            }
+
+            if (typeName != null)
+                datatypes.add(typeName)
+        }
+
+        return datatypes
     }
 
     private fun parseDatatype(
@@ -876,7 +899,7 @@ class ExprParser(
             } else startIdentifier
 
 
-            var typeNames: TypeNameListNode? = null
+            var typeNames: TypeArgsListNode? = null
 
 
             if (ts.matchOperator(OperatorType.SCOPE)) {
@@ -891,12 +914,12 @@ class ExprParser(
             val range = resultRange
 
             if (ts.matchOperator(OperatorType.LESS)) {
-                typeNames = parseTypenameList()
+                typeNames = parseTypeArgsList()
             }
 
             return@captureRange DatatypeNode(
                 identifier = identifier,
-                typeNames = typeNames,
+                typeArgs = typeNames,
                 range = range,
                 ptrLvl = 0,
                 isReference = false,
@@ -1002,11 +1025,6 @@ class ExprParser(
     ): ExprNode {
         return ts.captureRange {
             var left = parseUnaryExpr(ctx)
-//            infix fun Int.a(b: Int) : Int = 1
-//            infix fun Int.b(b: Int) : Int = 1
-//            fun c() : Int = 1
-//
-//            1 a c()
 
             while (true) {
                 val t = ts.peek()
@@ -1020,7 +1038,7 @@ class ExprParser(
 
                     left = InfixFuncCallNode(
                         receiver = receiver,
-                        typeNames = null,
+                        typeArgs = null,
                         args = listOf(left) + right,
                         range = resultRange
                     )
@@ -1039,18 +1057,16 @@ class ExprParser(
                             OperatorMaps.triBracketsMap[opType] != null)
                 ) break
 
-                if (op.type == OperatorType.DOT) {
+                if (opType == OperatorType.DOT) {
                     return@captureRange parseDotChain(
                         startChain = left,
                         ctx = ctx
                     )
                 }
 
-//                if (left isBinOperator BinOpType.COLON &&
-//                    op.type != OperatorType.COMMA &&
-//                    op.type != OperatorType.ASSIGN
-//                ) break
 
+                if (opType == OperatorType.COMMA && ctx is ParsingContext.UntilComma)
+                    break
 
                 ts.next()
 

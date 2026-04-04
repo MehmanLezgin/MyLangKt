@@ -18,6 +18,14 @@ object ParserUtils {
 
     infix fun Token.isOperator(type: OperatorType) = this is Token.Operator && this.type == type
 
+    fun Token.isCloseBracketGroup() =
+        when (this) {
+            is Token.LParen,
+            is Token.LBracket,
+            is Token.LBrace -> true
+            else -> false
+        }
+
     /*fun Token.isAccessOperator() = this is Token.Operator && (when (this.type) {
         OperatorType.DOT, OperatorType.SCOPE,  -> true
         else -> false
@@ -44,7 +52,7 @@ object ParserUtils {
             AutoDatatypeNode.NAME -> AutoDatatypeNode(range = range)
             VoidDatatypeNode.NAME -> VoidDatatypeNode(range = range)
             else -> DatatypeNode(
-                identifier = this, typeNames = null, isReference = false, isConst = false, range = range
+                identifier = this, typeArgs = null, isReference = false, isConst = false, range = range
             )
         }
     }

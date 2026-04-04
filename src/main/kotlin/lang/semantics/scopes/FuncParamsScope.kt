@@ -11,7 +11,6 @@ data class FuncParamsScope(
     parent = parent,
     scopeName = ""
 ) {
-
     private val params = mutableListOf<FuncParamSymbol>()
 
     fun defineParam(node: VarDeclStmtNode, type: Type) : ScopeResult {
@@ -19,7 +18,7 @@ data class FuncParamsScope(
 
         val param = FuncParamSymbol(
             name = name.value,
-            type = type
+            initialType = type
         )
 
         params.add(param)

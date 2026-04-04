@@ -7,18 +7,14 @@ import lang.core.operators.OperatorType
 interface IParser {
     fun parseSource(sourceId: String) : BlockNode
     fun parseExpr(ctx: ParsingContext = ParsingContext.Default) : ExprNode
+    fun parseDatatype() : BaseDatatypeNode
     fun parseStmt(isSingleLine: Boolean = false): ExprNode
-    fun parseTypenameList(): TypeNameListNode?
     fun parseArgsList(ctx: ParsingContext = ParsingContext.Header): List<ExprNode>
-    fun analiseParams(exprList: List<ExprNode>): List<VarDeclStmtNode>?
     fun syntaxError(msg: String, range: SourceRange)
     fun warning(msg: String, range: SourceRange)
-    fun analiseDatatypeList(exprList: List<ExprNode>?): List<BaseDatatypeNode>?
     fun parseMultilineBlock(): BlockNode
     fun parseBlock(): BlockNode
     fun parseIdsWithSeparatorOper(separator: OperatorType): List<IdentifierNode>?
-    fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean = false): ExprNode?
-    fun analiseTemplateList(exprList: List<ExprNode>?): TypeNameListNode?
     fun parseNameClause(): NameClause
     fun parseNameSpecifier(): NameSpecifier?
     var moduleName: QualifiedName?

@@ -91,19 +91,12 @@ class Parser(
     }*/
 
     override fun parseExpr(ctx: ParsingContext) = exprParser.parse(ctx = ctx)
+    override fun parseDatatype() = exprParser.parse(ctx = ParsingContext.Datatype) as BaseDatatypeNode
 
     override fun parseStmt(isSingleLine: Boolean) = stmtParser.parse(isSingleLine = isSingleLine)
-    override fun parseTypenameList() = exprParser.parseTypenameList()
     override fun parseArgsList(ctx: ParsingContext) = exprParser.parseArgsList(ctx = ctx)
-    override fun analiseParams(exprList: List<ExprNode>) = stmtParser.analiseParams(exprList)
-    override fun analiseDatatypeList(exprList: List<ExprNode>?) = stmtParser.analiseDatatypeList(exprList)
     override fun parseBlock() = stmtParser.parseBlock()
     override fun parseMultilineBlock() = stmtParser.parseMultilineBlock()
-    override fun analiseAsDatatype(expr: ExprNode, allowAsExpression: Boolean) =
-        exprParser.analiseAsDatatype(expr, allowAsExpression)
-
-    override fun analiseTemplateList(exprList: List<ExprNode>?) =
-        exprParser.analiseTemplateList(exprList)
 
     override fun parseIdsWithSeparatorOper(separator: OperatorType): List<IdentifierNode>? {
         fun checkSeparator(): Boolean {

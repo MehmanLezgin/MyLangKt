@@ -96,7 +96,7 @@ object AstSerializer {
 
             is FuncCallNode -> mapOf(
                 "name" to expr.receiver,
-                "typeNames" to expr.typeNames,
+                "typeNames" to expr.typeArgs,
                 "args" to expr.args
             )
 
@@ -132,7 +132,7 @@ object AstSerializer {
                 "modifiers" to expr.modifiers,
                 "isMutable" to expr.isMutable,
                 "name" to expr.name,
-                "dataType" to expr.dataType,
+                "dataType" to expr.datatype,
                 "initializer" to expr.initializer
             )
 
@@ -150,7 +150,7 @@ object AstSerializer {
             is FuncDeclStmtNode -> mapOf(
                 "modifiers" to expr.modifiers,
                 "name" to expr.name,
-                "typeNames" to expr.typeNames,
+                "typeNames" to expr.templates,
                 "params" to expr.params,
                 "returnType" to expr.returnType,
                 "isExpressionBodied" to expr.isExpressionBodied,
@@ -160,7 +160,7 @@ object AstSerializer {
             is InterfaceDeclStmtNode -> mapOf(
                 "modifiers" to expr.modifiers,
                 "name" to expr.name,
-                "typeNames" to expr.typeNames,
+                "typeNames" to expr.templates,
                 "superInterface" to expr.superInterface,
                 "body" to expr.body,
             )
@@ -168,7 +168,7 @@ object AstSerializer {
             is ClassDeclStmtNode -> mapOf(
                 "modifiers" to expr.modifiers,
                 "name" to expr.name,
-                "typeNames" to expr.typeNames,
+                "typeNames" to expr.templates,
                 "primaryConstrParams" to expr.primaryConstrParams,
                 "superClass" to expr.superClass,
                 "body" to expr.body,
@@ -196,7 +196,7 @@ object AstSerializer {
                 "isConst" to expr.isConst,
                 "isReference" to expr.isReference,
                 "ptrLvl" to expr.ptrLvl,
-                "typeNames" to expr.typeNames
+                "typeNames" to expr.typeArgs
             )
 
             is ScopedDatatypeNode -> mapOf(
