@@ -7,7 +7,7 @@ import lang.core.operators.OperatorType
 interface IParser {
     fun parseSource(sourceId: String) : BlockNode
     fun parseExpr(ctx: ParsingContext = ParsingContext.Default) : ExprNode
-    fun parseDatatype() : BaseDatatypeNode
+    fun parseDatatype(startIdentifier: IdentifierNode? = null) : BaseDatatypeNode
     fun parseStmt(isSingleLine: Boolean = false): ExprNode
     fun parseArgsList(ctx: ParsingContext = ParsingContext.Header): List<ExprNode>
     fun syntaxError(msg: String, range: SourceRange)

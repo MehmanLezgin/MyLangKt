@@ -1,6 +1,7 @@
 package lang.messages
 
 object Terms {
+    const val TYPE_PARAM = "type parameter"
     const val INT = "int"
     const val TRUE = "true"
     const val FALSE = "false"

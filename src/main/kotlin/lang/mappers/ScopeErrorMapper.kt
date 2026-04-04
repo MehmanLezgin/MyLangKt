@@ -50,7 +50,7 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
             is ScopeError.Inaccessible ->
                 Msg.SymbolIsInaccessible.format(name = a.symName)
 
-            is ScopeError.ExpectedName -> Msg.EXPECTED_NAME
+            is ScopeError.ExpectedName -> Msg.FNameExpected.format(Terms.SYMBOL)
 
             is ScopeError.NoImplicitConversion ->
                 Msg.NoImplicitConversion.format(

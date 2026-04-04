@@ -147,6 +147,7 @@ open class FuncDeclStmtNode(
     val returnType: BaseDatatypeNode,
     open val body: BlockNode?,
     val isExpressionBodied: Boolean = false,
+    val extensionDatatype: BaseDatatypeNode? = null,
     override val range: SourceRange
 ) : DeclStmtNamedNode(modifiers, range, name) {
     val kind by lazy {

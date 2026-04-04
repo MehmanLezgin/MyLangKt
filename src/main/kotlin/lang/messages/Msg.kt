@@ -7,8 +7,6 @@ import lang.semantics.symbols.FuncSymbol
 interface FormattableMsg
 
 object Msg {
-    const val EXPECTED_NAME = "expected name"
-
     const val EXPECTED_FUNC_TYPE = "Expected function type"
 
     const val CANNOT_DOT_ACCESS_MULTI_LEVEL_POINTER =
@@ -22,8 +20,18 @@ object Msg {
     const val INVALID_CONST_VALUE = "Invalid const value"
 
 
+    object MutModNotAllowedInParam : FormattableMsg {
+        fun format(name: String) =
+            "Mutability modifier '$name' is not allowed in parameter declaration"
+    }
+
     object VarMustBeInitialized : FormattableMsg {
         fun format(name: String) = "Variable '$name' must be initialized"
+    }
+
+    object FNameExpected : FormattableMsg {
+        fun format(kind: String) =
+            "$kind name expected"
     }
 
     object AutoVarCannotBeInferred : FormattableMsg {
@@ -258,8 +266,8 @@ object Msg {
     const val EXPECTED_LESS_OP = "Expected '<'"
     const val EXPECTED_GREATER_OP = "Expected '>'"
     const val EXPECTED_TYPE_NAME = "Expected type name"
-    const val EXPECTED_QUOTE = "Expecting '\"'"
-    const val EXPECTED_COMMENT_END = "Expecting '*/'"
+    const val EXPECTED_QUOTE = "Expected '\"'"
+    const val EXPECTED_COMMENT_END = "Expected '*/'"
     const val EXPECTED_TRY = "Expected 'try'"
     const val EXPECTED_CATCH = "Expected 'catch'"
     const val EXPECTED_A_DECLARATION = "Expected a declaration"

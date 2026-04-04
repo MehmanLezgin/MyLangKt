@@ -154,6 +154,7 @@ object AstSerializer {
                 "params" to expr.params,
                 "returnType" to expr.returnType,
                 "isExpressionBodied" to expr.isExpressionBodied,
+                "extensionDatatype" to expr.extensionDatatype,
                 "body" to expr.body,
             )
 
@@ -263,6 +264,14 @@ object AstSerializer {
                 "body" to expr.body
             )
 
+            is TemplateParamsListNode -> mapOf(
+                "params" to expr.params
+            )
+
+            is TemplateParamNode -> mapOf(
+                "name" to expr.name,
+                "bound" to expr.bound
+            )
             else -> emptyMap()
         }
 

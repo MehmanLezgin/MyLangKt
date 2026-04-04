@@ -815,9 +815,9 @@ class ExprParser(
         return datatypes
     }
 
-    private fun parseDatatype(
-        startIdentifier: IdentifierNode? = null,
-        ctx: ParsingContext = ParsingContext.Datatype
+    override fun parseDatatype(
+        startIdentifier: IdentifierNode?,
+        ctx: ParsingContext
     ): BaseDatatypeNode {
         val datatype = parseSimpleDatatype(startIdentifier = startIdentifier)
         return parseDatatype(startDatatype = datatype, ctx = ctx)

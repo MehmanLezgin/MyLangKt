@@ -91,7 +91,8 @@ class Parser(
     }*/
 
     override fun parseExpr(ctx: ParsingContext) = exprParser.parse(ctx = ctx)
-    override fun parseDatatype() = exprParser.parse(ctx = ParsingContext.Datatype) as BaseDatatypeNode
+    override fun parseDatatype(startIdentifier: IdentifierNode?) =
+        exprParser.parseDatatype(startIdentifier = startIdentifier)
 
     override fun parseStmt(isSingleLine: Boolean) = stmtParser.parse(isSingleLine = isSingleLine)
     override fun parseArgsList(ctx: ParsingContext) = exprParser.parseArgsList(ctx = ctx)
