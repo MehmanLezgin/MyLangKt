@@ -251,7 +251,7 @@ object Msg {
     const val INVALID_INT_LITERAL = "Invalid integer literal"
     const val ILLEGAL_ESCAPE_SEQUENCE = "Illegal escape sequence"
     const val EXPECTED_TOP_LEVEL_DECL = "Expected a top-level declaration"
-    const val CONSTRUCTORS_CANNOT_HAVE_PARAMS = "Constructors cannot have parameters"
+    const val DESTRUCTORS_CANNOT_HAVE_PARAMS = "Destructors cannot have parameters"
     const val TYPE_NAMES_MUST_BE_PLACES_BEFORE_FUNC_NAME = "Type parameters must be placed before function name"
     const val EXPECTED_ARROW_OPERATOR = "Expected '->'"
     const val EXPECTED_INTERFACE_DECL = "Expected an interface declaration"

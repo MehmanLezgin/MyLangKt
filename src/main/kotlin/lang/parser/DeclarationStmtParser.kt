@@ -99,7 +99,7 @@ class DeclarationStmtParser(
         return ts.captureRange {
             ts.next()
 
-            val typeNames = parseTemplateList()
+            val templates = parseTemplateList()
 
             val pair = parseFuncExtensionTypeAndName()
                 ?: return@captureRange null
@@ -127,7 +127,7 @@ class DeclarationStmtParser(
                 modifiers = null,
                 name = name,
                 params = params,
-                templates = typeNames,
+                templates = templates,
                 returnType = returnType,
                 isExpressionBodied = isExpressionBodied,
                 extensionDatatype = extensionDatatype,
@@ -141,17 +141,10 @@ class DeclarationStmtParser(
         return ts.captureRange {
             ts.next()
 
-            var params: List<VarDeclStmtNode>? = null
-
-            if (ts.match(Token.LParen::class))
-                params = parseParams()
-
-            val body = parseBodyForDeclStmt()
-
             ConstructorDeclStmtNode(
                 modifiers = null,
-                params = params ?: emptyList(),
-                body = body,
+                params = parseParams(),
+                body = parseBodyForDeclStmt(),
                 range = resultRange
             )
         }
@@ -161,52 +154,63 @@ class DeclarationStmtParser(
         return ts.captureRange {
             ts.next()
 
-            if (ts.match(Token.LParen::class)) {
-                val args = parser.parseArgsList() // skipping
-
-                if (args.isNotEmpty())
-                    syntaxError(Msg.CONSTRUCTORS_CANNOT_HAVE_PARAMS, startRange)
+            parseParams().let {
+                if (it.isNotEmpty())
+                    syntaxError(Msg.DESTRUCTORS_CANNOT_HAVE_PARAMS, startRange)
             }
-
-            val body = parser.parseBlock()
 
             DestructorDeclStmtNode(
                 modifiers = null,
+                body = parser.parseBlock(),
+                range = resultRange
+            )
+        }
+    }
+
+    private fun parseSuperType() =
+        if (ts.matchOperator(OperatorType.COLON)) {
+            ts.next()
+            parser.parseDatatype()
+        } else null
+
+    fun parseClassStmt(): ClassDeclStmtNode? {
+        return ts.captureRange {
+            ts.next()
+
+            val name = parseName(kind = Terms.CLASS) ?: return@captureRange null
+            val templates = parseTemplateList()
+            val superClass = parseSuperType()
+            val body = parseBodyForDeclStmt()
+
+            ClassDeclStmtNode(
+                modifiers = null,
+                name = name,
+                primaryConstrParams = emptyList(),
+                templates = templates,
+                superClass = superClass,
                 body = body,
                 range = resultRange
             )
         }
     }
 
-    fun parseClassStmt(): ClassDeclStmtNode? {
-        return ts.captureRange {
-            ts.next()
-
-            val header = parser.parseExpr(ctx = ParsingContext.Header)
-
-            val body = parseBodyForDeclStmt()
-
-            /*buildClassStmt(
-                header = header,
-                body = body,
-                range = resultRange
-            )*/
-            null
-        }
-    }
-
     fun parseInterfaceStmt(): InterfaceDeclStmtNode? {
         return ts.captureRange {
             ts.next()
-            val header = parser.parseExpr(ctx = ParsingContext.Header)
+
+            val name = parseName(kind = Terms.INTERFACE) ?: return@captureRange null
+            val templates = parseTemplateList()
+            val superInterface = parseSuperType()
             val body = parseBodyForDeclStmt()
 
-            /*buildInterfaceStmt(
-                header = header,
+            InterfaceDeclStmtNode(
+                modifiers = null,
+                name = name,
+                templates = templates,
+                superInterface = superInterface,
                 body = body,
                 range = resultRange
-            )*/
-            null
+            )
         }
     }
 
@@ -214,38 +218,12 @@ class DeclarationStmtParser(
         return ts.captureRange {
             ts.next()
 
-            val nameToken = ts.peek()
-
-            val enumName = if (nameToken is Token.Identifier) {
-                ts.next()
-                nameToken.toIdentifierNode()
-            } else {
-                syntaxError(Msg.NAME_EXPECTED, nameToken.range)
-                return@captureRange null
-            }
-
-            if (!ts.match(Token.LBrace::class)) {
-                syntaxError(Msg.UNEXPECTED_TOKEN, ts.range)
-                ts.skipUntil(
-                    Token.LBrace::class,
-                    Token.RBrace::class,
-                    Token.Keyword::class,
-                    Token.Identifier::class
-                )
-                return@captureRange EnumDeclStmtNode(
-                    modifiers = null,
-                    name = enumName,
-                    body = BlockNode.empty(resultRange),
-                    range = resultRange
-                )
-            }
-
-            val body = parseBodyForDeclStmt()
+            val name = parseName(kind = Terms.ENUM) ?: return@captureRange null
 
             EnumDeclStmtNode(
                 modifiers = null,
-                name = enumName,
-                body = body,
+                name = name,
+                body = parseBodyForDeclStmt(),
                 range = resultRange
             )
         }

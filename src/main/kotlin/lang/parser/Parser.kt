@@ -59,37 +59,6 @@ class Parser(
         }
     }
 
-    /*override fun parseModuleName(withModuleKeyword: Boolean): NameSpecifier? {
-        ts.save()
-        var restored = false
-
-        val result = run {
-            if (withModuleKeyword && ts.peek() isNotKeyword KeywordType.MODULE)
-                return@run null
-
-            if (withModuleKeyword)
-                ts.next()
-
-            return@run ts.captureRange {
-                val name = parseNameSpecifier()
-                    ?: return@captureRange null
-
-                if (ts.match(Token.LBrace::class)) {
-                    ts.restore()
-                    restored = true
-                } else if (withModuleKeyword)
-                    ts.expectSemicolonOrLinebreak(Msg.EXPECTED_SEMICOLON)
-
-                return@captureRange name
-            }
-        }
-
-        if (!restored)
-            ts.clearLastSave()
-
-        return result
-    }*/
-
     override fun parseExpr(ctx: ParsingContext) = exprParser.parse(ctx = ctx)
     override fun parseDatatype(startIdentifier: IdentifierNode?) =
         exprParser.parseDatatype(startIdentifier = startIdentifier)
