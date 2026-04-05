@@ -4,11 +4,9 @@ import lang.semantics.symbols.TypeSymbol
 
 class NamespaceType(
     val name: String,
-    override var declaration: TypeSymbol?
-) : Type(
-    flags = TypeFlags(),
-    declaration = declaration
-) {
+    override var declaration: TypeSymbol?,
+    override var flags: TypeFlags = TypeFlags()
+) : Type() {
     override fun copyWithFlags(flags: TypeFlags) =
         NamespaceType(
             name = name,

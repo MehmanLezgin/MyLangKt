@@ -1,8 +1,11 @@
 package lang.messages
 
+import lang.messages.Terms.exactly
 import lang.messages.Terms.ordinal
+import lang.messages.Terms.plural
+import lang.semantics.symbols.CallableSymbol
 import lang.semantics.symbols.FuncKind
-import lang.semantics.symbols.FuncSymbol
+import lang.semantics.symbols.stringifyAsFunc
 
 interface FormattableMsg
 
@@ -71,6 +74,11 @@ object Msg {
 
     interface DirectoryMsg : FormattableMsg {
         fun format(path: String): String
+    }
+
+    object TypeArgsRequired : FormattableMsg {
+        fun format(count: Int, item: String) =
+            "${count.exactly()} type ${"argument".plural(count)} required for $item"
     }
 
     object TypeDoesNotHaveSuper : FormattableMsg {
@@ -155,12 +163,17 @@ object Msg {
     }
 
     object NoFuncOverload : FormattableMsg {
-        fun format(kind: FuncKind, funcName: String, paramsStr: String, scopeName: String?) =
-            SymbolNotDefinedIn.format(
-                kind.kindName,
-                "$funcName($paramsStr)",
-                scopeName
+        fun format(kind: FuncKind, funcName: String, paramsStr: String, scopeName: String?, templateArgsStr: String?): String {
+            val templateArgsStr = templateArgsStr.let {
+                if (it.isNullOrEmpty()) "" else "<$it>"
+            }
+
+            return SymbolNotDefinedIn.format(
+                itemKind = kind.kindName,
+                name = "$funcName$templateArgsStr($paramsStr)",
+                scopeName = scopeName
             )
+        }
     }
 
     object SymRequiresItem : FormattableMsg {
@@ -194,7 +207,7 @@ object Msg {
     }
 
     object AmbiguousOverloadedFunc : FormattableMsg {
-        fun format(list: List<FuncSymbol>) = buildString {
+        fun format(list: List<CallableSymbol>) = buildString {
             append("Ambiguous overloaded function:\n")
 
             list.forEach { sym ->

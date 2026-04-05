@@ -6,88 +6,71 @@ import lang.semantics.scopes.InstanceScope
 import lang.semantics.scopes.Scope
 import lang.semantics.types.FuncType
 import lang.semantics.types.MethodType
+import lang.semantics.types.TemplateParam
 import lang.semantics.types.Type
 import lang.semantics.types.TypeFlags
 import lang.semantics.types.lazyType
 
-open class FuncParamSymbol(
-    override val name: String,
-    override var initialType: Type,
-    val range: SourceRange? = null
-) : VarSymbol(
-    name = name,
-    initialType = initialType,
-    isMutable = false,
-    isParameter = true,
-    modifiers = Modifiers()
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is FuncParamSymbol) return false
+sealed interface CallableSymbol : Symbol {
+    val params: FuncParamListSymbol
+    val returnType: Type
 
-        return type == other.type
-    }
-
-    override fun hashCode(): Int {
-        return type.hashCode()
-    }
+    fun toOverloadedFuncSymbol(accessScope: Scope) : OverloadedFuncSymbol
 }
 
-class FuncParamListSymbol(
-    val list: List<FuncParamSymbol> = listOf()
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+fun CallableSymbol.stringifyAsFunc() = buildString {
+    append(name)
 
-        other as FuncParamListSymbol
+    if (this@stringifyAsFunc is TemplateFuncSymbol) {
+        val templateParams = this@stringifyAsFunc.templateParams
+        append('<')
+        for (param in templateParams) {
+            append(param.name)
 
-        return list == other.list
+            when (param) {
+                is TemplateParam.TypeParam -> {
+                    if (param.bound != null) {
+                        append(": ")
+                        append(param.bound)
+                    }
+                }
+                is TemplateParam.ConstValueParam -> {
+                    append(": ")
+                    append(param.type)
+                }
+            }
+
+            if (templateParams.last() != param)
+                append(", ")
+        }
+        append('>')
     }
 
-    override fun hashCode(): Int {
-        return list.hashCode()
+    val params = params.list
+
+    append("(")
+
+    for (param in params) {
+        append(param.name)
+        append(": ")
+        append(param.type)
+        if (params.last() != param)
+            append(", ")
     }
+    append(") : ")
+    append(returnType.toString())
 }
-
-open class OverloadedFuncSymbol(
-    override val name: String,
-    open val kind: FuncKind,
-    open val overloads: MutableList<FuncSymbol> = mutableListOf(),
-    open val accessScope: Scope
-) : Symbol(name = name, modifiers = Modifiers()) {
-    fun hasOverload(funcSym: FuncSymbol?): Boolean {
-        if (funcSym == null) return false
-        return overloads.find { it == funcSym } != null
-    }
-
-    override fun toString(): String {
-        return "OverloadedFuncSymbol(name='$name', kind=$kind, overloads=$overloads)"
-    }
-}
-
-class OverloadedMethodSymbol(
-    override val name: String,
-    override val kind: FuncKind,
-    override val overloads: MutableList<FuncSymbol> = mutableListOf(),
-    override val accessScope: InstanceScope
-) : OverloadedFuncSymbol(
-    name = name,
-    kind = kind,
-    overloads = overloads,
-    accessScope = accessScope
-)
 
 open class FuncSymbol(
     override val name: String,
-    open val params: FuncParamListSymbol,
+    override val params: FuncParamListSymbol,
     val isExtension: Boolean = false,
     initialReturnType: Type,
     override val modifiers: Modifiers = Modifiers()
-) : Symbol(name = name, modifiers = modifiers) {
+) : Symbol, CallableSymbol {
     private var lazyReturnType = lazyType { initialReturnType }
 
-    var returnType: Type
+    override var returnType: Type
         get() = lazyReturnType.type
         set(value) {
             lazyReturnType = lazyType { value }
@@ -99,27 +82,11 @@ open class FuncSymbol(
     val paramTypes: List<Type>
         get() = params.list.map { it.type }
 
-    fun stringifyAsFunc() = buildString {
-        append(name)
-        append("(")
-        val params = params.list
-
-        for (param in params) {
-            append(param.name)
-            append(": ")
-            append(param.type)
-            if (params.last() != param)
-                append(", ")
-        }
-        append(") : ")
-        append(returnType.toString())
-    }
-
-    open fun toOverloadedFuncSymbol(accessScope: Scope) =
+    override fun toOverloadedFuncSymbol(accessScope: Scope) =
         OverloadedFuncSymbol(
             name = name,
             kind = kind,
-            overloads = mutableListOf(this),
+            candidates = mutableListOf(this),
             accessScope = accessScope
         )
 
@@ -157,6 +124,82 @@ open class FuncSymbol(
         return "FuncSymbol(name='$name', params=$params, returnType=$returnType)"
     }
 }
+
+open class FuncParamSymbol(
+    override val name: String,
+    override var initialType: Type,
+    val range: SourceRange? = null
+) : VarSymbol(
+    name = name,
+    initialType = initialType,
+    isMutable = false,
+    isParameter = true,
+    modifiers = Modifiers()
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is FuncParamSymbol) return false
+        if (name != other.name) return false
+
+        return type == other.type
+    }
+
+    override fun hashCode(): Int {
+        return type.hashCode()
+    }
+}
+
+class FuncParamListSymbol(
+    val list: List<FuncParamSymbol> = listOf()
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as FuncParamListSymbol
+
+        return list == other.list
+    }
+
+    override fun hashCode(): Int {
+        return list.hashCode()
+    }
+}
+
+open class OverloadedFuncSymbol(
+    override val name: String,
+    open val kind: FuncKind,
+    open val candidates: MutableList<CallableSymbol> = mutableListOf(),
+    open val accessScope: Scope,
+    override val modifiers: Modifiers = Modifiers()
+) : Symbol {
+    val overloads
+        get() = candidates.filterIsInstance<FuncSymbol>()
+
+    val templateOverloads
+        get() = candidates.filterIsInstance<TemplateFuncSymbol>()
+
+    fun hasOverload(funcSym: CallableSymbol?): Boolean {
+        if (funcSym == null) return false
+        return candidates.find { it == funcSym } != null
+    }
+
+    override fun toString(): String {
+        return "OverloadedFuncSymbol(name='$name', kind=$kind, candidates=$candidates)"
+    }
+}
+
+class OverloadedMethodSymbol(
+    override val name: String,
+    override val kind: FuncKind,
+    override val candidates: MutableList<CallableSymbol> = mutableListOf(),
+    override val accessScope: InstanceScope
+) : OverloadedFuncSymbol(
+    name = name,
+    kind = kind,
+    candidates = candidates,
+    accessScope = accessScope
+)
 
 open class OperatorFuncSymbol(
     open val operator: OperatorType,
@@ -200,7 +243,7 @@ open class MethodFuncSymbol(
         OverloadedMethodSymbol(
             name = name,
             kind = kind,
-            overloads = mutableListOf(this),
+            candidates = mutableListOf(this),
             accessScope = accessScope as InstanceScope
         )
 }

@@ -20,7 +20,7 @@ class StmtParser(
 
     private val modifierMapper = ModifierMapper()
 
-    private val declStmtParser: DeclarationStmtParser = DeclarationStmtParser(
+    private val declStmtParser = DeclarationStmtParser(
         ts = ts,
         parser = parser
     )

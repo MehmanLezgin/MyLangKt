@@ -1,12 +1,13 @@
 package lang.semantics.types
 
+import lang.semantics.symbols.TypeSymbol
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
-object UnresolvedType : Type(
-    flags = TypeFlags(),
-    declaration = null
-) {
+object UnresolvedType : Type() {
+    override var declaration: TypeSymbol? = null
+    override var flags: TypeFlags = TypeFlags()
+
     override fun copyWithFlags(flags: TypeFlags) : Type {
         return this
     }

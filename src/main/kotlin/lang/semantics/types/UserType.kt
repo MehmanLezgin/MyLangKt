@@ -7,10 +7,7 @@ class UserType(
     val templateArgs: List<TemplateArg>,
     override var declaration: TypeSymbol?,
     override var flags: TypeFlags = TypeFlags()
-) : Type(
-    flags = flags,
-    declaration = declaration
-) {
+) : Type() {
     override fun copyWithFlags(flags: TypeFlags) =
         UserType(
             name = name,

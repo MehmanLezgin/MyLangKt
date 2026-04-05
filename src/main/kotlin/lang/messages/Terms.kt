@@ -28,6 +28,7 @@ object Terms {
     const val INTERFACE = "interface"
     const val ENUM = "enum"
     const val FUNCTION = "function"
+    const val TEMPLATE_FUNCTION = "template function"
     const val METHOD = "method"
     const val VARIABLE = "variable"
     const val SYMBOL = "symbol"
@@ -45,7 +46,7 @@ object Terms {
 
     fun Int.exactly(): String {
         if (this == 0) return NO
-        return "${Terms.EXACTLY} $this"
+        return "$EXACTLY $this"
     }
 
     fun String.plural(count: Int = 2): String =

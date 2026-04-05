@@ -200,7 +200,23 @@ class ExprParser(
 
                 ts.next()
                 val expr = when (val t = ts.peek()) {
-                    is Token.Identifier -> t.toIdentifierNode()
+                    is Token.Identifier -> {
+                        val identifier = t.toIdentifierNode()
+                        ts.next()
+
+                        if (ts.matchOperator(OperatorType.SCOPE)) {
+                            ts.next()
+
+                            val datatypeNode = parseDatatype(startIdentifier = identifier)
+
+                            if (datatypeNode !is DatatypeNode) {
+                                syntaxError(Msg.EXPECTED_IDENTIFIER, t.range)
+                                break
+                            }
+
+                            datatypeNode
+                        } else identifier
+                    }
 
                     else -> {
                         syntaxError(Msg.EXPECTED_IDENTIFIER, t.range)
@@ -208,7 +224,7 @@ class ExprParser(
                     }
                 }
 
-                ts.next()
+//                ts.next()
 
                 chain = when (op.type) {
                     OperatorType.DOT ->

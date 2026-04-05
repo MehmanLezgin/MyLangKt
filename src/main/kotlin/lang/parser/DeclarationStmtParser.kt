@@ -16,6 +16,21 @@ class DeclarationStmtParser(
     private val ts: ITokenStream,
     private val parser: IParser
 ) {
+    private fun withTemplates(
+        templates: TemplateParamsListNode,
+        declStmtProvider: () -> DeclStmtNamedNode
+    ): StmtNode {
+        val declStmt = declStmtProvider()
+        if (templates.params.isEmpty()) return declStmt
+
+        return TemplateStmtNode(
+            declStmt = declStmt,
+            params = templates,
+            modifiers = null,
+            range = declStmt.range
+        )
+    }
+
     private fun handleVarMutability(asParam: Boolean): Boolean {
         val t = ts.peek()
 
@@ -95,7 +110,7 @@ class DeclarationStmtParser(
         return extensionDatatype to name
     }
 
-    fun parseFuncDeclStmt(): FuncDeclStmtNode? {
+    fun parseFuncDeclStmt(): StmtNode? {
         return ts.captureRange {
             ts.next()
 
@@ -123,17 +138,18 @@ class DeclarationStmtParser(
             else
                 null
 
-            FuncDeclStmtNode(
-                modifiers = null,
-                name = name,
-                params = params,
-                templates = templates,
-                returnType = returnType,
-                isExpressionBodied = isExpressionBodied,
-                extensionDatatype = extensionDatatype,
-                body = body,
-                range = resultRange
-            )
+            withTemplates(templates) {
+                FuncDeclStmtNode(
+                    modifiers = null,
+                    name = name,
+                    params = params,
+                    returnType = returnType,
+                    isExpressionBodied = isExpressionBodied,
+                    extensionDatatype = extensionDatatype,
+                    body = body,
+                    range = resultRange
+                )
+            }
         }
     }
 
@@ -173,7 +189,7 @@ class DeclarationStmtParser(
             parser.parseDatatype()
         } else null
 
-    fun parseClassStmt(): ClassDeclStmtNode? {
+    fun parseClassStmt(): StmtNode? {
         return ts.captureRange {
             ts.next()
 
@@ -182,19 +198,20 @@ class DeclarationStmtParser(
             val superClass = parseSuperType()
             val body = parseBodyForDeclStmt()
 
-            ClassDeclStmtNode(
-                modifiers = null,
-                name = name,
-                primaryConstrParams = emptyList(),
-                templates = templates,
-                superClass = superClass,
-                body = body,
-                range = resultRange
-            )
+            withTemplates(templates) {
+                ClassDeclStmtNode(
+                    modifiers = null,
+                    name = name,
+                    primaryConstrParams = emptyList(),
+                    superClass = superClass,
+                    body = body,
+                    range = resultRange
+                )
+            }
         }
     }
 
-    fun parseInterfaceStmt(): InterfaceDeclStmtNode? {
+    fun parseInterfaceStmt(): StmtNode? {
         return ts.captureRange {
             ts.next()
 
@@ -203,29 +220,33 @@ class DeclarationStmtParser(
             val superInterface = parseSuperType()
             val body = parseBodyForDeclStmt()
 
-            InterfaceDeclStmtNode(
-                modifiers = null,
-                name = name,
-                templates = templates,
-                superInterface = superInterface,
-                body = body,
-                range = resultRange
-            )
+            withTemplates(templates) {
+                InterfaceDeclStmtNode(
+                    modifiers = null,
+                    name = name,
+                    superInterface = superInterface,
+                    body = body,
+                    range = resultRange
+                )
+            }
         }
     }
 
-    fun parseEnumStmt(): EnumDeclStmtNode? {
+    fun parseEnumStmt(): StmtNode? {
         return ts.captureRange {
             ts.next()
 
             val name = parseName(kind = Terms.ENUM) ?: return@captureRange null
+            val templates = parseTemplateList()
 
-            EnumDeclStmtNode(
-                modifiers = null,
-                name = name,
-                body = parseBodyForDeclStmt(),
-                range = resultRange
-            )
+            withTemplates(templates) {
+                EnumDeclStmtNode(
+                    modifiers = null,
+                    name = name,
+                    body = parseBodyForDeclStmt(),
+                    range = resultRange
+                )
+            }
         }
     }
 

@@ -5,6 +5,7 @@ import lang.core.builders.init
 import lang.core.builders.registerImplicitCasts
 import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.symbols.PrimitiveTypeSymbol
+import lang.semantics.symbols.TypeSymbol
 
 enum class PrimitiveFamily() {
     BOOL,
@@ -20,11 +21,9 @@ open class PrimitiveType(
     val family: PrimitiveFamily = PrimitiveFamily.INT,
     val signed: Boolean = true,
     val primitiveSize: PrimitiveSize,
-    override var flags: TypeFlags = TypeFlags()
-) : Type(
-    flags = flags,
-    declaration = null
-) {
+    override var flags: TypeFlags = TypeFlags(),
+    override var declaration: TypeSymbol? = null
+) : Type() {
     private var constVersion: PrimitiveType? = null
 
     fun toConst(): PrimitiveType {

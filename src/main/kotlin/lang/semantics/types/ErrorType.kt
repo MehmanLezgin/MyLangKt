@@ -1,9 +1,11 @@
 package lang.semantics.types
 
-object ErrorType : Type(
-    flags = TypeFlags(),
-    declaration = null
-) {
+import lang.semantics.symbols.TypeSymbol
+
+object ErrorType : Type() {
+    override var flags: TypeFlags = TypeFlags()
+    override var declaration: TypeSymbol? = null
+
     override fun copyWithFlags(flags: TypeFlags) : Type {
         return this
     }

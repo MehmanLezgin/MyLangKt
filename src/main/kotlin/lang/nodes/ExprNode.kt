@@ -24,7 +24,7 @@ data class UnknownNode(override val range: SourceRange) : ExprNode {
 open class IdentifierNode(
     val value: String,
     override val range: SourceRange
-) : ExprNode {
+) : ExprNode, DotMember {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode =
         mapper(this)
 }
@@ -79,15 +79,17 @@ open class BinOpNode(
     }
 }
 
+sealed interface DotMember : ExprNode
+
 data class DotAccessNode(
     val base: ExprNode,
-    val member: IdentifierNode,
+    val member: DotMember,
     override val range: SourceRange
 ) : ExprNode {
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = DotAccessNode(
             base = base.mapRecursive(mapper),
-            member = member.mapRecursive(mapper) as? IdentifierNode ?: member,
+            member = member.mapRecursive(mapper) as? DotMember ?: member,
             range = range
         )
         return mapper(newNode)

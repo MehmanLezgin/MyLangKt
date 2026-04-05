@@ -4,8 +4,16 @@ import lang.infrastructure.KeywordType
 import lang.infrastructure.SourceRange
 import lang.messages.Msg
 import lang.messages.Terms
+import lang.nodes.ClassDeclStmtNode
+import lang.nodes.EnumDeclStmtNode
+import lang.nodes.FuncDeclStmtNode
+import lang.nodes.InterfaceDeclStmtNode
 import lang.nodes.ModifierNode
 import lang.nodes.ModifierSetNode
+import lang.nodes.ModuleStmtNode
+import lang.nodes.TemplateStmtNode
+import lang.nodes.UsingDirectiveNode
+import lang.nodes.VarDeclStmtNode
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.ClassScope
@@ -100,6 +108,19 @@ class ModifierResolver(
             is ModifierNode.Private -> Visibility.PRIVATE
             is ModifierNode.Internal -> Visibility.INTERNAL
             else -> null
+        }
+    }
+
+    fun resolveTemplateModifiers(node: TemplateStmtNode): Modifiers {
+        val modifiersNode = node.modifiers
+
+        return when (node.declStmt) {
+            is ClassDeclStmtNode -> resolveClassModifiers(node = modifiersNode)
+            is EnumDeclStmtNode -> resolveEnumModifiers(node = modifiersNode)
+            is FuncDeclStmtNode -> resolveFuncModifiers(node = modifiersNode)
+            is InterfaceDeclStmtNode -> resolveInterfaceModifiers(node = modifiersNode)
+            is ModuleStmtNode -> resolveModuleModifiers(node = modifiersNode)
+            is VarDeclStmtNode -> resolveVarModifiers(node = modifiersNode)
         }
     }
 

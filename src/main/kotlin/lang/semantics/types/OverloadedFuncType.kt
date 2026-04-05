@@ -1,20 +1,19 @@
 package lang.semantics.types
 
 import lang.semantics.symbols.OverloadedFuncSymbol
+import lang.semantics.symbols.TypeSymbol
 
 open class OverloadedFuncType(
-    open val name: String,
     open val overloadedFuncSym: OverloadedFuncSymbol,
+    open val templateArgs: List<TemplateArg>,
     override var flags: TypeFlags = TypeFlags(),
-) : Type(
-    flags = flags,
-    declaration = null
-) {
+    override var declaration: TypeSymbol? = null,
+) : Type() {
     override fun copyWithFlags(flags: TypeFlags) =
         OverloadedFuncType(
-            name = name,
             overloadedFuncSym = overloadedFuncSym,
-            flags = flags
+            flags = flags,
+            templateArgs = templateArgs,
         )
 
     override fun equals(other: Any?): Boolean {
@@ -24,16 +23,11 @@ open class OverloadedFuncType(
 
         other as OverloadedFuncType
 
-        if (name != other.name) return false
-        if (overloadedFuncSym != other.overloadedFuncSym) return false
-
-        return true
+        return overloadedFuncSym == other.overloadedFuncSym
     }
 
     override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + name.hashCode()
-//        result = 31 * result + paramTypes.hashCode()
+        val result = super.hashCode()
         return result
     }
 
@@ -43,11 +37,11 @@ open class OverloadedFuncType(
 
 data class OverloadedMethodType(
     val ownerType: Type,
-    override val name: String,
     override val overloadedFuncSym: OverloadedFuncSymbol,
     override var flags: TypeFlags = TypeFlags(),
+    override val templateArgs: List<TemplateArg>,
 ) : OverloadedFuncType(
-    name = name,
     overloadedFuncSym = overloadedFuncSym,
     flags = flags,
+    templateArgs = templateArgs
 )

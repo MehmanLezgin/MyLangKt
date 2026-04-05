@@ -5,14 +5,22 @@ import lang.core.PrimitivesScope.void
 import lang.core.PrimitivesScope.voidPtr
 import lang.semantics.symbols.TypeSymbol
 
-abstract class Type(
-    open var flags: TypeFlags = TypeFlags(),
-    open var declaration: TypeSymbol?
-) {
+abstract class Type {
+    abstract var flags: TypeFlags
+    abstract var declaration: TypeSymbol?
+
     val isConst: Boolean get() = flags.isConst
     val isLvalue: Boolean get() = flags.isLvalue
     val isExprType: Boolean get() = flags.isExprType
     val isMutable: Boolean get() = flags.isMutable
+
+    fun extendsFrom(other: Type): Boolean {
+        if (this == other) return true
+        val decl = this.declaration ?: return false
+        val otherDecl = other.declaration ?: return false
+
+        return decl.staticScope.hasSuperTypeScope(otherDecl.staticScope)
+    }
 
     fun isVoidPtr() = this == voidPtr ||
             this is PointerType &&

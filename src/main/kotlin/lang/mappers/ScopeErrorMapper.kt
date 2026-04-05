@@ -42,6 +42,7 @@ object ScopeErrorMapper : IOneWayMapper<ScopeError, String> {
                 Msg.NoFuncOverload.format(
                     kind = a.kind,
                     funcName = a.symName,
+                    templateArgsStr = a.templateArgs?.joinToString(", "),
                     paramsStr = a.argTypes.joinToString(", "),
                     scopeName = a.scopeName,
                 )

@@ -116,7 +116,7 @@ sealed interface BaseDeclStmtNode : StmtNode {
 sealed class DeclStmtNamedNode(
     override var modifiers: ModifierSetNode?,
     override val range: SourceRange,
-    open val name: IdentifierNode? = null,
+    open val name: IdentifierNode
 ) : BaseDeclStmtNode {
     override fun mapRecursive(mapper: NodeTransformFunc) = mapper(this)
 }
@@ -142,7 +142,6 @@ data class VarDeclStmtNode(
 open class FuncDeclStmtNode(
     override var modifiers: ModifierSetNode?,
     override val name: IdentifierNode,
-    val templates: TemplateParamsListNode?,
     open val params: List<VarDeclStmtNode>,
     val returnType: BaseDatatypeNode,
     open val body: BlockNode?,
@@ -163,7 +162,6 @@ open class FuncDeclStmtNode(
         val newNode = FuncDeclStmtNode(
             modifiers = modifiers,
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
-            templates = templates?.mapRecursive(mapper) as? TemplateParamsListNode ?: templates,
             params = params,
             returnType = returnType.mapRecursive(mapper) as? BaseDatatypeNode ?: returnType,
             body = body?.mapRecursive(mapper) as? BlockNode ?: body,
@@ -182,7 +180,6 @@ data class ConstructorDeclStmtNode(
 ) : FuncDeclStmtNode(
     modifiers = modifiers,
     name = IdentifierNode(value = FuncKind.CONSTRUCTOR.kindName, range = range),
-    templates = null,
     params = params,
     returnType = VoidDatatypeNode(range),
     body = body,
@@ -205,7 +202,6 @@ data class DestructorDeclStmtNode(
 ) : FuncDeclStmtNode(
     modifiers = modifiers,
     name = IdentifierNode(value = FuncKind.DESTRUCTOR.kindName, range = range),
-    templates = null,
     params = emptyList(),
     returnType = VoidDatatypeNode(range),
     body = body,
@@ -254,7 +250,6 @@ data class DestructorDeclStmtNode(
 data class InterfaceDeclStmtNode(
     override var modifiers: ModifierSetNode?,
     override val name: IdentifierNode,
-    val templates: TemplateParamsListNode?,
     val superInterface: BaseDatatypeNode?,
     val body: BlockNode?,
     override val range: SourceRange
@@ -262,7 +257,6 @@ data class InterfaceDeclStmtNode(
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
-            templates = templates?.mapRecursive(mapper) as? TemplateParamsListNode ?: templates,
             superInterface = superInterface?.mapRecursive(mapper) as? BaseDatatypeNode? ?: superInterface,
             body = body?.mapRecursive(mapper) as? BlockNode ?: body
         )
@@ -273,7 +267,6 @@ data class InterfaceDeclStmtNode(
 data class ClassDeclStmtNode(
     override var modifiers: ModifierSetNode?,
     override val name: IdentifierNode,
-    val templates: TemplateParamsListNode?,
     val primaryConstrParams: List<VarDeclStmtNode>?,
     val superClass: BaseDatatypeNode?,
     val body: BlockNode?,
@@ -282,7 +275,6 @@ data class ClassDeclStmtNode(
     override fun mapRecursive(mapper: NodeTransformFunc): ExprNode {
         val newNode = copy(
             name = name.mapRecursive(mapper) as? IdentifierNode ?: name,
-            templates = templates?.mapRecursive(mapper) as? TemplateParamsListNode ?: templates,
             primaryConstrParams = primaryConstrParams?.map { it.mapRecursive(mapper) as? VarDeclStmtNode ?: it },
             superClass = superClass?.mapRecursive(mapper) as? BaseDatatypeNode? ?: superClass,
             body = body?.mapRecursive(mapper) as? BlockNode ?: body

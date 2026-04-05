@@ -150,7 +150,6 @@ object AstSerializer {
             is FuncDeclStmtNode -> mapOf(
                 "modifiers" to expr.modifiers,
                 "name" to expr.name,
-                "typeNames" to expr.templates,
                 "params" to expr.params,
                 "returnType" to expr.returnType,
                 "isExpressionBodied" to expr.isExpressionBodied,
@@ -161,7 +160,6 @@ object AstSerializer {
             is InterfaceDeclStmtNode -> mapOf(
                 "modifiers" to expr.modifiers,
                 "name" to expr.name,
-                "typeNames" to expr.templates,
                 "superInterface" to expr.superInterface,
                 "body" to expr.body,
             )
@@ -169,7 +167,6 @@ object AstSerializer {
             is ClassDeclStmtNode -> mapOf(
                 "modifiers" to expr.modifiers,
                 "name" to expr.name,
-                "typeNames" to expr.templates,
                 "primaryConstrParams" to expr.primaryConstrParams,
                 "superClass" to expr.superClass,
                 "body" to expr.body,
@@ -272,6 +269,12 @@ object AstSerializer {
                 "name" to expr.name,
                 "bound" to expr.bound
             )
+
+            is TemplateStmtNode -> mapOf(
+                "declStmt" to expr.declStmt,
+                "params" to expr.params
+            )
+            
             else -> emptyMap()
         }
 

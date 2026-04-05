@@ -27,6 +27,7 @@ class DeclarationResolver(
             is DestructorDeclStmtNode -> resolve(target)
             is FuncDeclStmtNode -> resolve(target)
             is UsingDirectiveNode -> resolve(target)
+            is TemplateStmtNode -> resolve(target)
         }
     }
 
@@ -34,11 +35,16 @@ class DeclarationResolver(
         analyzer.localDeclPipeline.execute(target)
     }
 
-    private fun ensureDeclared(target: DeclStmtNamedNode): Symbol? {
+    private fun ensureDeclared(target: StmtNode): Symbol? {
         target.getResolvedSymbol()?.let { return it }
         analyzer.localDeclPipeline.execute(target)
         return target.getResolvedSymbol()
     }
+
+    private fun resolve(target: TemplateStmtNode) {
+        ensureDeclared(target)
+    }
+
 
     private fun resolve(target: ModuleStmtNode) {
         val moduleSym = target.getResolvedSymbol() as? ModuleSymbol

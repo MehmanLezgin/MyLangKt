@@ -1,17 +1,21 @@
 package lang.semantics.resolvers
 
+import lang.core.PrimitivesScope.err
+import lang.core.PrimitivesScope.ok
 import lang.infrastructure.operators.OperatorType
 import lang.messages.Terms
 import lang.semantics.SemanticAnalyzer
-import lang.core.PrimitivesScope.err
-import lang.core.PrimitivesScope.ok
 import lang.semantics.scopes.Scope
 import lang.semantics.scopes.ScopeError
 import lang.semantics.scopes.ScopeResult
+import lang.semantics.symbols.CallableSymbol
+import lang.semantics.symbols.ConstructorSymbol
 import lang.semantics.symbols.FuncKind
 import lang.semantics.symbols.FuncSymbol
 import lang.semantics.symbols.OverloadedFuncSymbol
 import lang.semantics.symbols.Symbol
+import lang.semantics.symbols.TemplateFuncSymbol
+import lang.semantics.types.TemplateArg
 import lang.semantics.types.Type
 
 class OverloadResolver(
@@ -23,32 +27,70 @@ class OverloadResolver(
     override fun resolve(target: List<FuncSymbol>?): ScopeResult =
         error("Not Implemented")
 
+    private fun handleParamArgDiff(
+        paramCount: Int,
+        argCount: Int,
+        costFactor: Int
+    ): Int? {
+        if (paramCount < argCount)
+            return null
+
+        if (paramCount > argCount) {
+            val sizeDiff = paramCount - argCount
+            val cost = sizeDiff * costFactor
+            return cost
+        }
+
+        return 0
+    }
+
     fun resolveBestOverloads(
-        overloads: List<FuncSymbol>,
+        overloadedFuncSym: OverloadedFuncSymbol,
         from: Scope,
         argTypes: List<Type>,
-        onlyImplicit: Boolean = false
-    ): List<FuncSymbol> {
+        onlyImplicit: Boolean = false,
+        templateArgs: List<TemplateArg>?,
+    ): List<CallableSymbol> {
+        val overloads = overloadedFuncSym.candidates
+
         val ranks = overloads.mapNotNull { func ->
-            val paramCount = func.params.list.size
-            val argCount = argTypes.size
+            var totalCost = 0
 
-            if (paramCount < argCount)
-                return@mapNotNull null
+            if (templateArgs?.isNotEmpty() == true) {
+                if (func !is TemplateFuncSymbol)
+                    return@mapNotNull func to Int.MAX_VALUE
 
-            if (paramCount > argCount) {
-                val sizeDiff = paramCount - argCount
-                val cost = sizeDiff * 1000
-                return@mapNotNull func to cost
+                val paramCost = handleParamArgDiff(
+                    paramCount = func.templateParams.size,
+                    argCount = templateArgs.size,
+                    costFactor = 1500
+                )
+
+                when {
+                    paramCost == null -> return@mapNotNull null
+                }
+
+                totalCost += paramCost
             }
 
+            val paramCost = handleParamArgDiff(
+                paramCount = func.params.list.size,
+                argCount = argTypes.size,
+                costFactor = 1000
+            )
+
+            when {
+                paramCost == null -> return@mapNotNull null
+                paramCost > 0 -> return@mapNotNull func to paramCost
+            }
+
+
             val params = func.params.list
-            var totalCost = 0
 
             if (!scope.isSymAccessibleFrom(func, from))
                 totalCost += 1000
 
-            if (onlyImplicit && !func.modifiers.isImplicit)
+            if (onlyImplicit && func is ConstructorSymbol && !func.modifiers.isImplicit)
                 totalCost += 1000
 
 
@@ -57,11 +99,8 @@ class OverloadResolver(
                 val paramType = params[i].type
 
                 val cost = convertResolver.conversionCost(argType, paramType)
-//                if (conversion.notExists()) return@mapNotNull null
                 totalCost += cost
             }
-
-//            if (implicit && func is ConstructorSymbol && func.is)
 
             func to totalCost
         }
@@ -76,16 +115,18 @@ class OverloadResolver(
         from: Scope,
         argTypes: List<Type>,
         kind: FuncKind,
-        overloads: List<FuncSymbol>?,
-        onlyImplicit: Boolean = false
+        overloads: List<CallableSymbol>,
+        onlyImplicit: Boolean = false,
+        templateArgs: List<TemplateArg>?
     ): ScopeResult {
         return if (
-            overloads.isNullOrEmpty() ||
+            overloads.isEmpty() ||
             (onlyImplicit && overloads.size == 1 && !overloads[0].modifiers.isImplicit)
         )
             ScopeError.NoFuncOverload(
                 kind = kind,
                 symName = name,
+                templateArgs = templateArgs,
                 argTypes = argTypes,
                 scopeName = scope.absoluteScopePath
             ).err()
@@ -99,8 +140,9 @@ class OverloadResolver(
                 name = name,
                 from = from,
                 argTypes = argTypes,
+                templateArgs = templateArgs,
                 kind = kind,
-                overloads = accessibleOverloads,
+                overloads = accessibleOverloads
             )
         } else {
             val best = overloads.first()
@@ -127,6 +169,7 @@ class OverloadResolver(
         kind: FuncKind,
         from: Scope,
         argTypes: List<Type>,
+        templateArgs: List<TemplateArg>?,
         isStatic: Boolean = false
     ): ScopeResult {
         return when (val result = scope.resolve(name, from, !isStatic)) {
@@ -140,9 +183,10 @@ class OverloadResolver(
                             if (isStatic) argTypes else argTypes.drop(1)
 
                         val bestOverloads = resolveBestOverloads(
-                            overloads = sym.overloads,
+                            overloadedFuncSym = sym,
                             from = from,
                             argTypes = effectiveArgTypes,
+                            templateArgs = templateArgs
                         )
 
                         if (bestOverloads.isEmpty())
@@ -150,7 +194,8 @@ class OverloadResolver(
                                 symName = name,
                                 kind = sym.kind,
                                 argTypes = argTypes,
-                                scopeName = scope.absoluteScopePath
+                                templateArgs = templateArgs,
+                                scopeName = scope.absoluteScopePath,
                             ).err()
 
                         bestOverloads
@@ -166,8 +211,9 @@ class OverloadResolver(
                     name = name,
                     from = from,
                     argTypes = argTypes,
+                    templateArgs = templateArgs,
                     kind = kind,
-                    overloads = overloads,
+                    overloads = overloads
                 )
             }
         }
@@ -177,12 +223,14 @@ class OverloadResolver(
         overloadedFunc: OverloadedFuncSymbol,
         from: Scope,
         argTypes: List<Type>,
+        templateArgs: List<TemplateArg>?,
         onlyImplicit: Boolean = false
     ): ScopeResult {
         val costOverloads = resolveBestOverloads(
-            overloads = overloadedFunc.overloads,
+            overloadedFuncSym = overloadedFunc,
             from = from,
             argTypes = argTypes,
+            templateArgs = templateArgs,
             onlyImplicit = onlyImplicit
         )
 
@@ -190,9 +238,10 @@ class OverloadResolver(
             name = overloadedFunc.name,
             from = from,
             argTypes = argTypes,
+            templateArgs = templateArgs,
             kind = overloadedFunc.kind,
             overloads = costOverloads,
-            onlyImplicit = onlyImplicit
+            onlyImplicit = onlyImplicit,
         )
     }
 
@@ -200,19 +249,22 @@ class OverloadResolver(
         operator: OperatorType,
         from: Scope,
         argTypes: List<Type>,
-        isStatic: Boolean
+        isStatic: Boolean,
+        templateArgs: List<TemplateArg>?,
     ): ScopeResult =
         resolveFunc(
             name = operator.fullName,
             kind = FuncKind.OPERATOR,
             from = from,
             argTypes = argTypes,
-            isStatic = isStatic
+            isStatic = isStatic,
+            templateArgs = templateArgs
         )
 
     fun resolveConstructor(
         argTypes: List<Type>,
         from: Scope,
+        templateArgs: List<TemplateArg>?,
         onlyImplicit: Boolean = false
     ): ScopeResult {
         val overloadedFunc = (scope.symbols.values.find { sym ->
@@ -222,14 +274,16 @@ class OverloadResolver(
                 symName = Terms.CONSTRUCTOR,
                 kind = FuncKind.CONSTRUCTOR,
                 argTypes = argTypes,
-                scopeName = scope.absoluteScopePath
+                templateArgs = templateArgs,
+                scopeName = scope.absoluteScopePath,
             ).err()
 
         return resolveFunc(
             overloadedFunc = overloadedFunc,
             from = from,
             argTypes = argTypes,
-            onlyImplicit = onlyImplicit
+            onlyImplicit = onlyImplicit,
+            templateArgs = templateArgs
         )
     }
 }

@@ -37,6 +37,7 @@ class TypeResolver(
             is SizeofNode,
             is AlignofNode,
             is OffsetofNode -> resolveConst(target)
+
             is LambdaNode -> resolve(target)
 
             is BlockNode -> resolve(target)
@@ -228,7 +229,19 @@ class TypeResolver(
         } ?: scope
 
         return analyzer.withScope(targetScope) {
-            resolve(member, fromScope = fromScope, asMember = true)
+            when (member) {
+                is DatatypeNode ->
+                    resolve(
+                        target = member.identifier,
+                        typeArgs = member.typeArgs,
+                        fromScope = fromScope,
+                        asMember = true
+                    )
+
+                is IdentifierNode ->
+                    resolve(target = member, typeArgs = null, fromScope = fromScope, asMember = true)
+            }
+
         }.also {
             target attach it
             target.member attach it
@@ -237,13 +250,13 @@ class TypeResolver(
 
     private fun resolveNamespace(target: ExprNode): Type {
         return when (target) {
-            is ScopedDatatypeNode -> resolve(target, isNamespaceCtx = true)
+            is ScopedDatatypeNode -> resolve(target, isNamespace = true)
             is QualifiedDatatypeNode -> resolve(target, isNamespaceCtx = true)
             else -> resolve(target)
         }
     }
 
-    private fun resolve(target: ScopedDatatypeNode, isNamespaceCtx: Boolean = false): Type {
+    private fun resolve(target: ScopedDatatypeNode, isNamespace: Boolean = false): Type {
         val type = resolveNamespace(target.base)
 
         val targetScope = type.declaration?.staticScope
@@ -267,7 +280,7 @@ class TypeResolver(
             target.member bind sym
 
             analyzer.withScope(targetScope) {
-                resolveIdentifierWithSym(member, sym, isNamespaceCtx)
+                sym.toTypeForNode(target, isNamespace)
             }
         }.also {
             target attach it
@@ -287,6 +300,14 @@ class TypeResolver(
 
         val receiverType = resolve(receiver)
 
+        val templateArgs = when (receiverType) {
+            is OverloadedFuncType -> receiverType.templateArgs
+            is UserType -> receiverType.templateArgs
+            else -> null
+        }
+
+        var templateParams: List<TemplateParam>? = null
+
         var params: FuncParamListSymbol? = null
         var returnType: Type = ErrorType
 
@@ -296,14 +317,14 @@ class TypeResolver(
             ).also { target attach it }
         }
 
-        val sym = when (receiverType) {
+        val funcSym = when (receiverType) {
             is ErrorType -> null
 
             is PointerType -> {
                 if (receiverType.level == 1 && receiverType.base is FuncType) {
                     val decl = receiverType.base.funcDeclaration
-                    params = decl?.params
                     returnType = receiverType.base.returnType
+                    params = decl?.params
                     decl
                 } else {
                     receiver.error(Msg.SYM_NOT_A_FUNC)
@@ -319,14 +340,14 @@ class TypeResolver(
                     analyzer.overloadResolver.resolveFunc(
                         overloadedFunc = receiverType.overloadedFuncSym,
                         from = fromScope,
-                        argTypes = argTypes
-                    ).handle<FuncSymbol>(target.range) {
-                        sym as? FuncSymbol
+                        argTypes = argTypes,
+                        templateArgs = templateArgs,
+                    ).handle<CallableSymbol>(target.range) {
+                        sym as? CallableSymbol
                     }
                 }
 
                 if (funcSym != null) {
-                    funcSym.paramTypes
                     params = funcSym.params
                     returnType = funcSym.returnType
                 }
@@ -345,8 +366,9 @@ class TypeResolver(
                     analyzer.overloadResolver.resolveConstructor(
                         argTypes = argTypes,
                         from = fromScope,
-                    ).handle<FuncSymbol>(target.range) {
-                        sym as? FuncSymbol
+                        templateArgs = templateArgs
+                    ).handle<CallableSymbol>(target.range) {
+                        sym as? CallableSymbol
                     }
                 }
 
@@ -357,17 +379,25 @@ class TypeResolver(
 
                 funcSym
             }
+        } ?: return ErrorType.also {
+            target attach it
         }
 
+        if (funcSym is TemplateFuncSymbol)
+            templateParams = funcSym.templateParams
+
         validateFuncArgs(
+            funcSym = funcSym,
             receiver = receiver,
             argNodes = argNodes,
             argTypes = argTypes,
             params = params,
+            templateParams = templateParams,
+            templateArgs = templateArgs
         )
 
 
-        target bind sym
+        target bind funcSym
 
         return returnType.setFlags(
             isExprType = true,
@@ -375,14 +405,31 @@ class TypeResolver(
     }
 
     private fun validateFuncArgs(
+        funcSym: CallableSymbol,
         receiver: ExprNode,
         argNodes: List<ExprNode>,
         argTypes: List<Type>,
         applyOffset: Boolean = false,
         params: FuncParamListSymbol?,
+        templateArgs: List<TemplateArg>?,
+        templateParams: List<TemplateParam>?,
     ) {
         val paramTypes = params?.list ?: return
         val argOffset = applyOffset.toInt()
+
+        val templateParamsCount = templateParams?.size ?: 0
+
+        if (!templateArgs.isNullOrEmpty()) {
+            if (templateArgs.size != templateParamsCount)
+                receiver.error(
+                    Msg.TypeArgsRequired.format(
+                        count = templateParamsCount,
+                        item = funcSym.stringifyAsFunc()
+                    )
+                )
+        }
+
+
 
         for (i in paramTypes.indices) {
             val param = params.list.getOrNull(i)
@@ -480,7 +527,8 @@ class TypeResolver(
 
     private fun Symbol.toTypeForNode(
         target: ExprNode,
-        isNamespaceCtx: Boolean = false
+        isNamespace: Boolean = false,
+        typeArgs: List<TemplateArg> = emptyList()
     ): Type {
         return when (this) {
             is VarSymbol -> {
@@ -492,28 +540,42 @@ class TypeResolver(
 
             is ConstValueSymbol -> type.setFlags(isExprType = true, isLvalue = true)
             is PrimitiveTypeSymbol -> primitiveType.setFlags(isExprType = false)
-            is ModuleSymbol -> if (isNamespaceCtx) {
+            is ModuleSymbol -> if (isNamespace) {
                 NamespaceType(name = name, declaration = this)
             } else {
                 target.error(Msg.F_SYM_NOT_ALLOWED_HERE.format(name))
             }
 
-            is TypeSymbol -> this.type.setFlags(isExprType = isNamespaceCtx)
+            is TypeSymbol -> this.type.setFlags(isExprType = isNamespace)
             is FuncSymbol -> toFuncType()
 
             is OverloadedMethodSymbol -> OverloadedMethodType(
                 ownerType = this.accessScope.parent.ownerSymbol.type,
-                name = name,
+                templateArgs = typeArgs,
                 overloadedFuncSym = this,
                 flags = TypeFlags(isExprType = true)
             )
 
             is OverloadedFuncSymbol -> OverloadedFuncType(
-                name = name,
+                templateArgs = typeArgs,
                 overloadedFuncSym = this,
                 flags = TypeFlags(isExprType = true)
             )
 
+            is TemplateParamSymbol -> TemplateParamType(
+                param = param,
+                flags = TypeFlags(
+                    isExprType = false,
+                    isConst = this.param is TemplateParam.ConstValueParam
+                )
+            )
+
+            is TemplateArgSymbol -> {
+                when (val arg = this.arg) {
+                    is TemplateArg.ArgType -> arg.type
+                    is TemplateArg.ArgConstValue -> arg.value.type
+                }
+            }
 
             else ->
                 target.error(
@@ -526,22 +588,19 @@ class TypeResolver(
         }.also { target attach it }
     }
 
-    private fun resolveIdentifierWithSym(
-        target: IdentifierNode,
-        sym: Symbol,
-        isNamespace: Boolean = false
-    ): Type {
-        target bind sym
-        return sym.toTypeForNode(target, isNamespace)
-    }
-
     private fun resolve(target: DatatypeNode, isNamespace: Boolean = false): Type {
         val result = scope.resolve(target.identifier.value)
+
+        val typeArgs = resolveTemplateArgs(args = target.typeArgs)
 
         return result.handle(target.identifier.range) {
             target bind sym
 
-            val baseType = sym.toTypeForNode(target.identifier, isNamespace)
+            val baseType = sym.toTypeForNode(
+                target = target.identifier,
+                isNamespace = isNamespace,
+                typeArgs = typeArgs
+            )
 
             baseType.applyTypeModifiers(
                 pointerLevel = target.ptrLvl,
@@ -553,6 +612,7 @@ class TypeResolver(
 
     fun resolve(
         target: IdentifierNode,
+        typeArgs: TypeArgsListNode? = null,
         fromScope: Scope = scope,
         asMember: Boolean = false,
         isNamespace: Boolean = false
@@ -564,8 +624,11 @@ class TypeResolver(
 
         val result = scope.resolve(name = target.value, from = fromScope, asMember = asMember)
 
+        val typeArgs = resolveTemplateArgs(args = typeArgs)
+
         return result.handle(target.range) {
-            resolveIdentifierWithSym(target, sym, isNamespace)
+            target bind sym
+            sym.toTypeForNode(target, isNamespace, typeArgs)
         }
     }
 
@@ -716,7 +779,8 @@ class TypeResolver(
                 operator = operator,
                 from = fromScope,
                 argTypes = argTypes,
-                isStatic = isStatic
+                isStatic = isStatic,
+                templateArgs = null
             )
         }
 
@@ -725,11 +789,14 @@ class TypeResolver(
                 ?: return@handle target.error(Msg.CANNOT_FIND_DECLARATION_OF_SYM.format(operator.name))
 
             validateFuncArgs(
+                funcSym = operFunc,
                 receiver = target,
                 argNodes = args,
                 argTypes = argTypes,
                 applyOffset = !isStatic,
-                params = operFunc.params
+                params = operFunc.params,
+                templateArgs = null,
+                templateParams = null,
             )
 
             val returnType = when {
@@ -899,38 +966,58 @@ class TypeResolver(
         }
     }
 
-    /*
-        private fun resolveTemplateArgs(typeNames: List<ExprNode>?): List<TemplateArg> {
-            if (typeNames == null) return emptyList()
+    fun resolveTemplateParams(params: TemplateParamsListNode): List<TemplateParam> {
+        if (params.params.isEmpty()) return emptyList()
 
-            return typeNames.map {
-                val type = resolve(target = it)
+        return params.params.map {
+            val name = it.name.value
 
-                if (type == ErrorType || it is BaseDatatypeNode)
-                    return@map TemplateArg.ArgType(type = type)
+            fun noBound() =
+                TemplateParam.TypeParam(name = name, bound = null)
 
-                if (type.isExprType || type.isConst) {
-                    val constValue = analyzer.constResolver.resolve(target = it)
-                    return@map if (constValue != null)
-                        TemplateArg.ArgConstValue(value = constValue)
-                    else {
-                        it.error(Msg.EXPECTED_CONST_VALUE)
-                        TemplateArg.ArgType(ErrorType)
-                    }
-                }
+            val bound = it.bound
+                ?: return@map noBound()
 
-                return@map TemplateArg.ArgType(type = type)
+            val type = resolve(target = it.bound)
+
+            if (type.isExprType) {
+                bound.error(Msg.EXPECTED_TYPE_NAME)
+                return@map noBound()
+            }
+
+            if (type.isConst)
+                return@map TemplateParam.ConstValueParam(name = name, type = type)
+
+            return@map TemplateParam.TypeParam(name = name, bound = type)
+        }
+    }
+
+    private fun resolveTemplateArgs(args: TypeArgsListNode?): List<TemplateArg> {
+        if (args == null) return emptyList()
+
+        return args.nodes.mapNotNull {
+            val type = resolve(target = it)
+
+            if (type == ErrorType || it is BaseDatatypeNode)
+                return@mapNotNull TemplateArg.ArgType(type = type)
+
+            if (!type.isExprType)
+                return@mapNotNull TemplateArg.ArgType(type = type)
+
+            if (!type.isConst) {
+                it.error(Msg.EXPECTED_CONST_VALUE)
+                return@mapNotNull null
+            }
+
+            val constValue = analyzer.constResolver.resolve(target = it)
+            return@mapNotNull if (constValue != null)
+                TemplateArg.ArgConstValue(value = constValue)
+            else {
+                it.error(Msg.EXPECTED_CONST_VALUE)
+                TemplateArg.ArgType(ErrorType)
             }
         }
-    */
-
-
-    /*private fun resolve(target: UserTypeSymbol): Type {
-        when (target) {
-
-        }
-    }*/
-
+    }
 
     private fun resolve(target: LiteralNode<*>): Type {
         val type = when (target) {
@@ -1009,7 +1096,8 @@ class TypeResolver(
                         analyzer.overloadResolver.resolveFunc(
                             overloadedFunc = overloaded,
                             from = fromScope,
-                            argTypes = type.paramTypes
+                            argTypes = type.paramTypes,
+                            templateArgs = null
                         ).handle<FuncSymbol>(target.range) {
                             sym as? FuncSymbol
                         }

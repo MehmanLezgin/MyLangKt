@@ -1,10 +1,10 @@
 package lang.semantics.pipeline
 
+import lang.core.PrimitivesScope
 import lang.messages.Msg
 import lang.messages.Terms
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
-import lang.core.PrimitivesScope
 import lang.semantics.resolvers.BaseResolver
 import lang.semantics.scopes.Scope
 import lang.semantics.symbols.*
@@ -20,57 +20,56 @@ class DeclarationHeaderPass(
     override fun resolve(target: BlockNode?) {
         target?.nodes?.forEach { node ->
             when (node) {
-                is ClassDeclStmtNode -> resolve(target = node)
-                is InterfaceDeclStmtNode -> resolve(target = node)
-                is EnumDeclStmtNode -> resolve(target = node)
-                is ModuleStmtNode -> resolve(target = node)
-                is VarDeclStmtNode -> resolve(target = node)
-                is FuncDeclStmtNode -> resolve(target = node)
+                is ClassDeclStmtNode -> resolve(node = node)
+                is InterfaceDeclStmtNode -> resolve(node = node)
+                is EnumDeclStmtNode -> resolve(node = node)
+                is ModuleStmtNode -> resolve(node = node)
+                is VarDeclStmtNode -> resolve(node = node)
+                is FuncDeclStmtNode -> resolve(node = node)
                 else -> Unit
             }
         }
     }
 
-
-    fun resolve(target: EnumDeclStmtNode) {
-        val sym = target.getResolvedSymbol() as? EnumSymbol ?: return
-        withScopeResolve(sym.scope, target.body)
+    fun resolve(node: EnumDeclStmtNode) {
+        val sym = node.getResolvedSymbol() as? EnumSymbol ?: return
+        withScopeResolve(sym.scope, node.body)
     }
 
-    fun resolve(target: ModuleStmtNode) {
-        val sym = target.getResolvedSymbol() as? ModuleSymbol ?: return
-        withScopeResolve(sym.scope, target.body)
+    fun resolve(node: ModuleStmtNode) {
+        val sym = node.getResolvedSymbol() as? ModuleSymbol ?: return
+        withScopeResolve(sym.scope, node.body)
     }
 
 
-    fun resolve(target: InterfaceDeclStmtNode) {
-        val sym = target.getResolvedSymbol() as? InterfaceSymbol ?: return
+    fun resolve(node: InterfaceDeclStmtNode) {
+        val sym = node.getResolvedSymbol() as? InterfaceSymbol ?: return
 
-        val superType = resolveSuperType(target.superInterface)
+        val superType = resolveSuperType(node.superInterface)
 
         if (superType != null && superType.declaration !is InterfaceSymbol) {
-            semanticError(Msg.INTERFACE_CAN_EXTEND_INTERFACE, target.superInterface?.range)
+            semanticError(Msg.INTERFACE_CAN_EXTEND_INTERFACE, node.superInterface?.range)
         }
 
         sym.superType = superType
 
-        withScopeResolve(sym.scope, target.body)
+        withScopeResolve(sym.scope, node.body)
     }
 
-    fun resolve(target: ClassDeclStmtNode) {
-        val sym = target.getResolvedSymbol() as? ClassSymbol ?: return
+    fun resolve(node: ClassDeclStmtNode) {
+        val sym = node.getResolvedSymbol() as? ClassSymbol ?: return
 
-        val superType = resolveSuperType(target.superClass)
+        val superType = resolveSuperType(node.superClass)
 
         val decl = superType?.declaration
 
         if (decl != null && (decl !is InterfaceSymbol && decl !is ClassSymbol)) {
-            semanticError(Msg.CLASS_CAN_EXTEND_INTERFACE_OR_CLASS, target.superClass?.range)
+            semanticError(Msg.CLASS_CAN_EXTEND_INTERFACE_OR_CLASS, node.superClass?.range)
         }
 
         sym.superType = superType
         sym.staticScope.superTypeScope = decl?.staticScope
-        withScopeResolve(sym.scope, target.body)
+        withScopeResolve(sym.scope, node.body)
     }
 
     private fun resolveSuperType(
@@ -89,49 +88,50 @@ class DeclarationHeaderPass(
         return type
     }
 
-    fun resolve(target: VarDeclStmtNode) {
-        val sym = target.getResolvedSymbol() as? VarSymbol ?: return
+    fun resolve(node: VarDeclStmtNode) {
+        val sym = node.getResolvedSymbol() as? VarSymbol ?: return
 
-        if (target.datatype is AutoDatatypeNode) return
+        if (node.datatype is AutoDatatypeNode) return
 
-        var type = analyzer.typeResolver.resolve(target.datatype)
+        var type = analyzer.typeResolver.resolve(node.datatype)
 
         if (type.isExprType) {
             type = ErrorType
-            target.datatype.error(Msg.EXPECTED_TYPE_NAME)
+            node.datatype.error(Msg.EXPECTED_TYPE_NAME)
         }
 
         sym.type = type
     }
 
-    fun resolve(target: FuncDeclStmtNode) {
-        val modifiers = modResolver.resolveFuncModifiers(target.modifiers)
+    fun resolve(node: FuncDeclStmtNode) {
+        val modifiers = modResolver.resolveFuncModifiers(node.modifiers)
 
-        val returnType = when (target.returnType) {
+        val returnType = when (node.returnType) {
             is AutoDatatypeNode -> {
-                when (target.body) {
+                when (node.body) {
                     null -> PrimitivesScope.void
                     else -> UnresolvedType
                 }
             }
-            else -> analyzer.typeResolver.resolve(target.returnType)
+
+            else -> analyzer.typeResolver.resolve(node.returnType)
         }
 
-        val params = analyzer.typeResolver.resolveFuncParams(params = target.params)
+        val params = analyzer.typeResolver.resolveFuncParams(params = node.params)
 
         withEffectiveScope(modifiers.isStatic) {
             val result = scope.defineFunc(
-                node = target,
-                nameId = target.name,
+                node = node,
+                nameId = node.name,
                 params = params,
                 returnType = returnType,
                 modifiers = modifiers
             )
 
-            result.handle(target.range) {
+            result.handle(node.range) {
                 if (sym !is FuncSymbol) return@handle null
 
-                target bind sym
+                node bind sym
             }
         }
     }

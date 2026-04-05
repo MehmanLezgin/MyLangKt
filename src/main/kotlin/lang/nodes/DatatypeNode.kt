@@ -30,7 +30,7 @@ data class DatatypeNode(
     var isReference: Boolean = false,
     var ptrLvl: Int = 0,
     override val range: SourceRange
-) : QualifiedDatatypeNode(range) {
+) : QualifiedDatatypeNode(range), DotMember {
     fun isSimple() = typeArgs == null && !isConst && !isReference && ptrLvl == 0
 
     val isPointer: Boolean

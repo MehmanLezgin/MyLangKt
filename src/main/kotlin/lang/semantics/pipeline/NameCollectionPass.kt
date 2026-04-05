@@ -3,6 +3,8 @@ package lang.semantics.pipeline
 import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.resolvers.BaseResolver
+import lang.semantics.scopes.ScopeResult
+import lang.semantics.scopes.TemplateParamScope
 import lang.semantics.symbols.*
 
 class NameCollectionPass(
@@ -20,6 +22,7 @@ class NameCollectionPass(
                 is EnumDeclStmtNode -> resolve(node = node)
                 is VarDeclStmtNode -> resolve(node = node)
                 is FuncDeclStmtNode -> resolve(node = node)
+                is TemplateStmtNode -> resolve(node = node)
                 else -> Unit
             }
         }
@@ -35,6 +38,56 @@ class NameCollectionPass(
     private fun resolveBody(sym: TypeSymbol, body: BlockNode?) {
         analyzer.withScope(sym.staticScope) {
             resolve(body)
+        }
+    }
+
+    fun resolve(node: TemplateStmtNode) {
+        if (checkVisited(node)) return
+
+        val modifiers = modResolver.resolveTemplateModifiers(node)
+        val templateParams = analyzer.typeResolver.resolveTemplateParams(params = node.params)
+
+        fun defineNormalTemplate() =
+            scope.defineTemplate(
+                name = node.name.value,
+                modifiers = modifiers,
+                ast = node.declStmt,
+                templateParams = templateParams,
+            )
+
+        fun defineFuncTemplate(ast: FuncDeclStmtNode): ScopeResult {
+            val templateParamScope = TemplateParamScope(parent = scope)
+
+
+            val (params, returnType) = analyzer.withScope(templateParamScope) {
+                templateParams.forEach { tParam ->
+                    templateParamScope.defineTemplateParam(tParam)
+                }
+
+                val params = analyzer.typeResolver.resolveFuncParams(params = ast.params)
+                val returnType = analyzer.typeResolver.resolve(target = ast.returnType)
+
+                params to returnType
+            }
+
+            return scope.defineFuncTemplate(
+                name = node.name.value,
+                modifiers = modifiers,
+                ast = ast,
+                templateParams = templateParams,
+                params = params,
+                returnType = returnType,
+            )
+
+        }
+
+        withEffectiveScope(isStatic = modifiers.isStatic) {
+            when (val ast = node.declStmt) {
+                is FuncDeclStmtNode -> defineFuncTemplate(ast)
+                else -> defineNormalTemplate()
+            }.handle(node.name.range) {
+                node bind sym
+            }
         }
     }
 

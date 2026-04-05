@@ -9,8 +9,8 @@ import lang.semantics.types.UserType
 abstract class TypeSymbol(
     override val name: String,
     val staticScope: BaseTypeScope,
-    override val modifiers: Modifiers
-) : Symbol(name = name, modifiers = modifiers) {
+    override val modifiers: Modifiers,
+) : Symbol {
     val type: UserType by lazy {
         UserType(
             name = name,
@@ -94,21 +94,5 @@ data class AliasSymbol(
     override val name: String,
     val visibility: Visibility,
     var sym: Symbol?,
-) : Symbol(name)
-
-/*
-data class LazyAliasSymbol(
-    override val name: String,
-    val bindImportPass: BindImportPass,
-    val qualifiedName: QualifiedName,
-    val clause: NameClause
-) : Symbol(name) {
-    private val cachedSym: Symbol? = null
-
-    val sym: Symbol?
-        get() {
-            cachedSym?.let { return it }
-            bindImportPass.resolve(node)
-            cachedSym
-        }
-}*/
+    override val modifiers: Modifiers = Modifiers()
+) : Symbol

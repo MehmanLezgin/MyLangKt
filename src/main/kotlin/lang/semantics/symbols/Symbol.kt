@@ -5,10 +5,10 @@ import lang.semantics.types.Type
 import lang.semantics.types.UnresolvedType
 import lang.semantics.types.lazyType
 
-sealed class Symbol(
-    open val name: String,
-    open val modifiers: Modifiers = Modifiers(),
-)
+sealed interface Symbol {
+    val name: String
+    val modifiers: Modifiers
+}
 
 open class VarSymbol(
     override val name: String,
@@ -17,7 +17,7 @@ open class VarSymbol(
     val isParameter: Boolean = false,
     var constValue: ConstValue<*>? = null,
     override val modifiers: Modifiers = Modifiers()
-) : Symbol(name = name, modifiers = modifiers) {
+) : Symbol {
     private var lazyType = lazyType { initialType }
 
     var type: Type
@@ -51,8 +51,10 @@ data class ConstVarSymbol(
 
 data class ConstValueSymbol(
     val type: Type,
-    val value: ConstValue<*>?
-) : Symbol(name = "") {
+    val value: ConstValue<*>?,
+    override val name: String = "",
+    override val modifiers: Modifiers = Modifiers()
+) : Symbol {
     companion object {
         fun from(constValue: ConstValue<*>): ConstValueSymbol {
             return ConstValueSymbol(

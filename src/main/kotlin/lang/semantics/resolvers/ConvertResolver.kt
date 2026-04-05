@@ -6,6 +6,7 @@ import lang.core.PrimitivesScope
 import lang.semantics.scopes.ScopeResult
 import lang.semantics.symbols.ConstructorSymbol
 import lang.semantics.types.*
+import lang.semantics.types.ConversionInfo
 
 class ConvertResolver(
     override val analyzer: ISemanticAnalyzer
@@ -23,7 +24,8 @@ class ConvertResolver(
             analyzer.overloadResolver.resolveConstructor(
                 from = fromScope,
                 argTypes = listOf(fromType),
-                onlyImplicit = true
+                onlyImplicit = true,
+                templateArgs = null
             )
         }
 
@@ -68,7 +70,7 @@ class ConvertResolver(
     private fun MethodType.castMethodType(toType: Type) =
         when {
             toType is MethodType &&
-            this.ownerType == toType.ownerType
+                    this.ownerType == toType.ownerType
                 -> this.castFuncType(toType)
 
             else -> ConversionInfo.None
@@ -91,6 +93,22 @@ class ConvertResolver(
 
             else -> cast(this, toType)
         }
+
+    private fun Type.templateConvert(toType: TemplateParamType): ConversionInfo {
+        return when (val param = toType.param) {
+            is TemplateParam.ConstValueParam -> ConversionInfo.None
+            is TemplateParam.TypeParam -> {
+                val bound = param.bound
+
+                when {
+                    bound?.extendsFrom(toType) == false ->
+                        ConversionInfo.None
+
+                    else -> ConversionInfo.Template(this, toType)
+                }
+            }
+        }
+    }
 
     private fun Type.constructorConvert(toType: Type): ConversionInfo {
         val constructor = findConversionConstructor(fromType = this, toType = toType)
@@ -132,6 +150,9 @@ class ConvertResolver(
             fromType is PrimitiveType && toType is PrimitiveType ->
                 ConversionKind.PRIMITIVE
 
+            toType is TemplateParamType ->
+                ConversionKind.TEMPLATE
+
             else ->
                 ConversionKind.CONSTRUCTOR
 
@@ -156,6 +177,8 @@ class ConvertResolver(
                     from = fromType as PrimitiveType,
                     to = toType as PrimitiveType
                 )
+
+            ConversionKind.TEMPLATE -> ConversionInfo.COST_TEMPLATE
         }
     }
 
@@ -206,6 +229,8 @@ class ConvertResolver(
             ConversionKind.CONSTRUCTOR ->
                 fromType.constructorConvert(toType)
 
+            ConversionKind.TEMPLATE ->
+                fromType.templateConvert(toType as TemplateParamType)
         }
     }
 }

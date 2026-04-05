@@ -5,11 +5,9 @@ import lang.semantics.symbols.TypeSymbol
 class PointerType(
     val base: Type,
     val level: Int = 1,
-    override var flags: TypeFlags = TypeFlags()
-) : Type(
-    flags = flags,
-    declaration = null
-) {
+    override var flags: TypeFlags = TypeFlags(),
+    override var declaration: TypeSymbol? = null
+) : Type() {
     override fun copyWithFlags(flags: TypeFlags) =
         PointerType(
             base = base,

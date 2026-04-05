@@ -1,8 +1,12 @@
 package lang.semantics.types
 
+import lang.semantics.symbols.TypeSymbol
+
 class LazyType(
     private val typeProvider: () -> Type,
-) : Type(declaration = null) {
+    override var declaration: TypeSymbol? = null,
+    override var flags: TypeFlags = TypeFlags()
+) : Type() {
     private var isResolving = false
     private var resolvedType: Type? = null
 

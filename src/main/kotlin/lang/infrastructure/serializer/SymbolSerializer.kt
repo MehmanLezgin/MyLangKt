@@ -47,14 +47,14 @@ object SymbolSerializer {
                 "name" to sym.name,
                 "[ownerType]" to sym.accessScope.parent.ownerSymbol.type,
                 "kind" to sym.kind,
-                "overloads" to sym.overloads,
+                "candidates" to sym.candidates,
                 "modifiers" to sym.modifiers
             )
 
             is OverloadedFuncSymbol -> mapOf(
                 "name" to sym.name,
                 "kind" to sym.kind,
-                "overloads" to sym.overloads,
+                "candidates" to sym.candidates,
                 "modifiers" to sym.modifiers
             )
 
@@ -77,6 +77,27 @@ object SymbolSerializer {
                 "isMutable" to sym.isMutable,
                 "isParameter" to sym.isParameter,
                 "modifiers" to sym.modifiers
+            )
+
+            is TemplateFuncSymbol -> mapOf(
+                "name" to sym.name,
+                "templateParams" to sym.templateParams,
+                "params" to sym.params,
+                "modifiers" to sym.modifiers
+            )
+
+            is TemplateSymbol -> mapOf(
+                "name" to sym.name,
+                "templateParams" to sym.templateParams
+            )
+
+            is TemplateArgSymbol -> mapOf(
+                "name" to sym.name,
+                "arg" to sym.arg
+            )
+            is TemplateParamSymbol -> mapOf(
+                "name" to sym.name,
+                "param" to sym.param
             )
         }
     }

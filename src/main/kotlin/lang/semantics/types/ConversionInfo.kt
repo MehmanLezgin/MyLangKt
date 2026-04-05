@@ -10,7 +10,8 @@ enum class ConversionKind {
     VOID_PTR,
     POINTER,
     FUNCTION,
-    METHOD
+    METHOD,
+    TEMPLATE
 }
 
 sealed class ConversionInfo {
@@ -20,7 +21,7 @@ sealed class ConversionInfo {
     companion object {
         const val COST_NONE = Int.MAX_VALUE
         const val COST_IDENTITY = 0
-//        const val COST_PRIMITIVE = 1
+        const val COST_TEMPLATE = 1
         const val COST_CAST = 60
         const val COST_CONSTRUCTOR = 100
     }
@@ -43,6 +44,11 @@ sealed class ConversionInfo {
     ) : ConversionInfo()
 
     data class Cast(
+        override val fromType: Type,
+        override val toType: Type,
+    ) : ConversionInfo()
+
+    data class Template(
         override val fromType: Type,
         override val toType: Type,
     ) : ConversionInfo()

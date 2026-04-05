@@ -5,7 +5,10 @@ import lang.nodes.*
 import lang.parser.ParserUtils.isBinOperator
 import lang.parser.ParserUtils.isUnaryOperator
 import lang.semantics.symbols.*
+import lang.semantics.types.TemplateArg
+import lang.semantics.types.TemplateParam
 import lang.semantics.types.Type
+import java.util.concurrent.Callable
 
 open class Scope(
     open val parent: Scope?,
@@ -49,7 +52,7 @@ open class Scope(
 
     fun <T : Symbol> define(sym: T): ScopeResult {
         return when (sym) {
-            is FuncSymbol -> defineFunc(sym)
+            is CallableSymbol -> defineFunc(sym)
             is OverloadedFuncSymbol -> defineFuncOverload(sym)
             else -> defineRaw(sym)
         }
@@ -101,6 +104,9 @@ open class Scope(
             sym is VarSymbol && sym.constValue != null ->
                 sym.toConstValueSymbol().ok()
 
+            sym is TemplateArgSymbol && sym.arg is TemplateArg.ArgConstValue ->
+                sym.arg.constValueSymbol.ok()
+
             else -> sym.ok()
         }
     }
@@ -139,29 +145,6 @@ open class Scope(
             from = from,
             asMember = asMember
         )
-    }
-
-    private fun checkArgumentTypes(
-        sym: OverloadedFuncSymbol,
-        argTypes: List<Type>,
-        condition: (argType: Type, paramType: Type) -> Boolean
-    ): FuncSymbol? {
-        return sym.overloads.find { funcSym ->
-            if (funcSym.params.list.size != argTypes.size)
-                return@find false
-
-            val targetParamTypes = funcSym.params.list.map { it.type }
-
-            for (i in targetParamTypes.indices) {
-                val argType = argTypes[i]
-                val paramType = targetParamTypes[i]
-
-                if (!condition(argType, paramType))
-                    return@find false
-            }
-
-            return@find true
-        }
     }
 
     fun defineFunc(
@@ -215,7 +198,7 @@ open class Scope(
         return defineFunc(funcSym)
     }
 
-    private fun checkOperatorFunc(funcSym: FuncSymbol): ScopeError? {
+    private fun checkOperatorFunc(funcSym: CallableSymbol): ScopeError? {
         if (funcSym !is OperatorFuncSymbol) return null
         val oper = funcSym.operator
 
@@ -264,7 +247,7 @@ open class Scope(
         }
     }
 
-    private fun defineFunc(funcSym: FuncSymbol): ScopeResult {
+    private fun defineFunc(funcSym: CallableSymbol): ScopeResult {
         checkOperatorFunc(funcSym)?.let {
             return it.err()
         }
@@ -279,14 +262,35 @@ open class Scope(
         }
     }
 
-    private fun defineOrOverloadFunction(funcSym: FuncSymbol, existingSym: Symbol): ScopeResult {
+
+    fun defineFuncTemplate(
+        name: String,
+        modifiers: Modifiers,
+        ast: FuncDeclStmtNode,
+        params: FuncParamListSymbol,
+        returnType: Type,
+        templateParams: List<TemplateParam>
+    ): ScopeResult {
+        val sym = TemplateFuncSymbol(
+            name = name,
+            modifiers = modifiers,
+            ast = ast,
+            templateParams = templateParams,
+            params = params,
+            returnType = returnType
+        )
+
+        return define(sym)
+    }
+
+    private fun defineOrOverloadFunction(funcSym: CallableSymbol, existingSym: Symbol): ScopeResult {
         when (existingSym) {
-            is FuncSymbol -> {
+            is CallableSymbol -> {
                 if (existingSym.params == funcSym.params)
                     return ScopeError.ConflictingOverloads.err()
 
                 val overloadedFunc = existingSym.toOverloadedFuncSymbol(accessScope = this).apply {
-                    overloads.add(funcSym)
+                    candidates.add(funcSym)
                 }
 
                 symbols[funcSym.name] = overloadedFunc
@@ -298,7 +302,7 @@ open class Scope(
                     return ScopeError.AlreadyDefined(funcSym.name, scopeName).err()
                 }
 
-                existingSym.overloads.add(funcSym)
+                existingSym.candidates.add(funcSym)
                 return funcSym.ok()
             }
 
@@ -392,7 +396,6 @@ open class Scope(
                 OverloadedMethodSymbol(
                     name = name,
                     kind = kind,
-                    overloads = mutableListOf(),
                     accessScope = this
                 )
 
@@ -400,7 +403,6 @@ open class Scope(
                 OverloadedFuncSymbol(
                     name = name,
                     kind = kind,
-                    overloads = mutableListOf(),
                     accessScope = this
                 )
         }
@@ -420,6 +422,22 @@ open class Scope(
         )
 
         return defineRaw(sym)
+    }
+
+    fun defineTemplate(
+        name: String,
+        modifiers: Modifiers,
+        ast: DeclStmtNamedNode,
+        templateParams: List<TemplateParam>
+    ): ScopeResult {
+        val sym = TemplateSymbol(
+            name = name,
+            modifiers = modifiers,
+            ast = ast,
+            templateParams = templateParams
+        )
+
+        return defineIfNotExist(sym)
     }
 
     inline fun <reified T : Scope> getEnclosingScope(): T? {

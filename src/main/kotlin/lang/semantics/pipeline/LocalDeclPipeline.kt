@@ -18,12 +18,16 @@ class LocalDeclPipeline(
             is EnumDeclStmtNode -> execute(node = node)
             is BaseImportStmtNode -> execute(node = node)
             is UsingDirectiveNode -> execute(node = node)
+            is TemplateStmtNode -> execute(node = node)
             else -> Unit
         }
     }
 
+    fun execute(node: TemplateStmtNode) {
+        nameCollectionPass.resolve(node)
+    }
+
     fun execute(node: UsingDirectiveNode) {
-//        nameCollectionPass.resolve(node)
         bindAliasPass.resolve(node)
     }
 
