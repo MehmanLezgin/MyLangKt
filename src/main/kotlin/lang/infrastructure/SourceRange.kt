@@ -9,10 +9,6 @@ data class SourceRange(
         return "[$start -> $end]"
     }
 
-    fun isInside(other: SourceRange): Boolean {
-        return start <= other.start && other.end <= end
-    }
-
     infix fun untilEndOf(other: SourceRange): SourceRange {
         return SourceRange(
             start = start,

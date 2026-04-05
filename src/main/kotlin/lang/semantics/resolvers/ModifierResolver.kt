@@ -4,16 +4,7 @@ import lang.infrastructure.KeywordType
 import lang.infrastructure.SourceRange
 import lang.messages.Msg
 import lang.messages.Terms
-import lang.nodes.ClassDeclStmtNode
-import lang.nodes.EnumDeclStmtNode
-import lang.nodes.FuncDeclStmtNode
-import lang.nodes.InterfaceDeclStmtNode
-import lang.nodes.ModifierNode
-import lang.nodes.ModifierSetNode
-import lang.nodes.ModuleStmtNode
-import lang.nodes.TemplateStmtNode
-import lang.nodes.UsingDirectiveNode
-import lang.nodes.VarDeclStmtNode
+import lang.nodes.*
 import lang.semantics.ISemanticAnalyzer
 import lang.semantics.scopes.BaseTypeScope
 import lang.semantics.scopes.ClassScope
@@ -21,8 +12,6 @@ import lang.semantics.scopes.InterfaceScope
 import lang.semantics.scopes.ModuleScope
 import lang.semantics.symbols.Modifiers
 import lang.semantics.symbols.Visibility
-import kotlin.collections.forEach
-import kotlin.let
 import kotlin.reflect.KClass
 
 class ModifierResolver(

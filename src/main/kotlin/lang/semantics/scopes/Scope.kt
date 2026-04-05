@@ -8,7 +8,6 @@ import lang.semantics.symbols.*
 import lang.semantics.types.TemplateArg
 import lang.semantics.types.TemplateParam
 import lang.semantics.types.Type
-import java.util.concurrent.Callable
 
 open class Scope(
     open val parent: Scope?,
@@ -237,7 +236,7 @@ open class Scope(
     private fun defineFuncOverload(funcSym: OverloadedFuncSymbol): ScopeResult {
         return when (val definedSymResult = resolve(funcSym.name)) {
             is ScopeResult.Success<*> -> {
-                funcSym.overloads.map { overload ->
+                funcSym.candidates.map { overload ->
                     defineOrOverloadFunction(funcSym = overload, existingSym = definedSymResult.sym)
                 }.asResultList()
             }

@@ -6,9 +6,7 @@ import lang.semantics.ISemanticAnalyzer
 import lang.semantics.scopes.ClassScope
 import lang.semantics.scopes.FuncParamsScope
 import lang.semantics.scopes.FuncScope
-import lang.semantics.scopes.Scope
 import lang.semantics.symbols.*
-import lang.semantics.types.LazyType
 import lang.semantics.types.UnresolvedType
 import lang.semantics.types.isNullOrUnresolved
 import lang.semantics.types.lazyType
@@ -75,7 +73,7 @@ class DeclarationResolver(
     }
 
     private fun resolve(target: VarDeclStmtNode) {
-        val sym = ensureDeclared(target) as? VarSymbol ?: return
+        ensureDeclared(target)
     }
 
     private fun resolve(target: FuncDeclStmtNode) {

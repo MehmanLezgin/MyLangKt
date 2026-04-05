@@ -176,9 +176,6 @@ open class OverloadedFuncSymbol(
     val overloads
         get() = candidates.filterIsInstance<FuncSymbol>()
 
-    val templateOverloads
-        get() = candidates.filterIsInstance<TemplateFuncSymbol>()
-
     fun hasOverload(funcSym: CallableSymbol?): Boolean {
         if (funcSym == null) return false
         return candidates.find { it == funcSym } != null

@@ -18,9 +18,6 @@ class TokenStream(
     lexer = lexer,
     msgHandler = msgHandler
 ) {
-    val cur: Token
-        get() = peek()
-
     private var tokens: MutableList<Token> = mutableListOf()
     private var index: Int = 0
     private val savedIndices: ArrayDeque<Int> = ArrayDeque()

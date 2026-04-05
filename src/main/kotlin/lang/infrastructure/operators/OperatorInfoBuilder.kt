@@ -3,7 +3,7 @@ package lang.infrastructure.operators
 typealias OperatorInfoMap = MutableMap<String, OperatorInfo>
 
 class OperatorInfoBuilder {
-    private var currentPrecedence: Int = OperatorType.values().size - 1
+    private var currentPrecedence: Int = OperatorType.entries.size - 1
     private val operators: OperatorInfoMap = mutableMapOf()
 
     fun addOper(operType: OperatorType): OperatorInfo {
